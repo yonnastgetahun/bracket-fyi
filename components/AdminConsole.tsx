@@ -26,6 +26,7 @@ interface Props {
   matches: TemplateMatch[];
   teamRegistry: TeamEntry[];
   initialResults: ResultRow[];
+  hasPicks: boolean;
 }
 
 // ---- helpers ----
@@ -48,15 +49,70 @@ function resolveSlot(
   // w-r{round}m{match} format
   const wMatch = slot.match(/^w-r(\d+)m(\d+)$/);
   if (wMatch) {
-    const r = parseInt(wMatch[1], 10);
-    const m = parseInt(wMatch[2], 10);
-    // find the referenced match
-    const matchId = `r${r}m${m}`; // we need to map by (round, match_number) to id
-    // resultsMap keys are template_match_ids — we need a different lookup
-    // We'll handle this in the component with a full matches array
     return "TBD";
   }
   return slot;
+}
+
+// ---- Lock modal ----
+
+type LockModalVariant = "empty" | "partial";
+
+function LockConfirmModal({
+  variant,
+  participantCount,
+  onConfirm,
+  onCancel,
+}: {
+  variant: LockModalVariant;
+  participantCount: number;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  if (variant === "empty") {
+    return (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+        <div className="bg-raised border border-wrong/60 rounded-xl p-6 max-w-sm mx-4 w-full">
+          <h2 className="font-semibold text-wrong text-lg mb-2">
+            This league has no participants yet.
+          </h2>
+          <p className="text-secondary text-sm mb-5">
+            Locking now means nobody can join or submit picks. Are you sure?
+          </p>
+          <div className="flex gap-3 justify-end">
+            <Button variant="secondary" onClick={onCancel}>
+              Cancel
+            </Button>
+            <button
+              onClick={onConfirm}
+              className="rounded-lg px-4 py-2 text-sm font-semibold bg-wrong text-canvas hover:opacity-80 transition-opacity"
+            >
+              Lock anyway
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+      <div className="bg-raised border border-border rounded-xl p-6 max-w-sm mx-4 w-full">
+        <h2 className="font-semibold text-primary text-lg mb-2">Lock picks now?</h2>
+        <p className="text-secondary text-sm mb-5">
+          This league has {participantCount} participant{participantCount !== 1 ? "s" : ""}. Lock picks now?
+        </p>
+        <div className="flex gap-3 justify-end">
+          <Button variant="secondary" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={onConfirm}>
+            Lock
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ---- Section: Results Entry ----
@@ -67,12 +123,14 @@ function ResultsSection({
   teamRegistry,
   resultsMap,
   onResultChange,
+  hasPicks,
 }: {
   league: League;
   matches: TemplateMatch[];
   teamRegistry: TeamEntry[];
   resultsMap: Map<string, string>;
   onResultChange: (templateMatchId: string, winnerTeamId: string) => void;
+  hasPicks: boolean;
 }) {
   // Build a lookup: (round, match_number) → match id, so w-r1m1 can resolve
   const matchByRoundNum = new Map<string, TemplateMatch>();
@@ -136,66 +194,76 @@ function ResultsSection({
         </span>
         <span className="ml-auto text-border group-open:rotate-90 transition-transform">▶</span>
       </summary>
-      <div className="space-y-6 pt-2">
-        {rounds.map((round) => {
-          const roundMatches = byRound.get(round)!;
-          return (
-            <div key={round}>
-              <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
-                Round {round}
-              </p>
-              <div className="space-y-2">
-                {roundMatches.map((match) => {
-                  const homeTeam = resolveSlotFull(match.home_slot, match.round);
-                  const awayTeam = resolveSlotFull(match.away_slot, match.round);
-                  const homeId = getTeamId(match.home_slot, match.round, teamRegistry, matchByRoundNum, resultsMap);
-                  const awayId = getTeamId(match.away_slot, match.round, teamRegistry, matchByRoundNum, resultsMap);
-                  const winner = resultsMap.get(match.id);
+      {!hasPicks ? (
+        <div className="pt-2 pb-4 px-1 space-y-1">
+          <p className="text-secondary text-sm font-medium">Waiting for participants...</p>
+          <p className="text-secondary text-xs">
+            Results entry unlocks once at least one person has submitted picks.
+            Share your join link to get started.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-6 pt-2">
+          {rounds.map((round) => {
+            const roundMatches = byRound.get(round)!;
+            return (
+              <div key={round}>
+                <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
+                  Round {round}
+                </p>
+                <div className="space-y-2">
+                  {roundMatches.map((match) => {
+                    const homeTeam = resolveSlotFull(match.home_slot, match.round);
+                    const awayTeam = resolveSlotFull(match.away_slot, match.round);
+                    const homeId = getTeamId(match.home_slot, match.round, teamRegistry, matchByRoundNum, resultsMap);
+                    const awayId = getTeamId(match.away_slot, match.round, teamRegistry, matchByRoundNum, resultsMap);
+                    const winner = resultsMap.get(match.id);
 
-                  return (
-                    <Card key={match.id} className="flex items-center gap-3 py-2 px-3">
-                      <span className="text-xs text-secondary w-20 shrink-0">
-                        Match {match.match_number}
-                      </span>
-                      <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => homeId && handlePick(match.id, homeId)}
-                          disabled={!homeId || homeTeam === "TBD"}
-                          className={cn(
-                            "rounded-lg px-3 py-2 text-sm transition-colors",
-                            winner === homeId
-                              ? "bg-accent text-canvas font-semibold"
-                              : "border border-border bg-surface text-primary hover:border-accent/60",
-                            (!homeId || homeTeam === "TBD") && "opacity-40 cursor-not-allowed"
-                          )}
-                        >
-                          {homeTeam}
-                        </button>
-                        <button
-                          onClick={() => awayId && handlePick(match.id, awayId)}
-                          disabled={!awayId || awayTeam === "TBD"}
-                          className={cn(
-                            "rounded-lg px-3 py-2 text-sm transition-colors",
-                            winner === awayId
-                              ? "bg-accent text-canvas font-semibold"
-                              : "border border-border bg-surface text-primary hover:border-accent/60",
-                            (!awayId || awayTeam === "TBD") && "opacity-40 cursor-not-allowed"
-                          )}
-                        >
-                          {awayTeam}
-                        </button>
-                      </div>
-                    </Card>
-                  );
-                })}
+                    return (
+                      <Card key={match.id} className="flex items-center gap-3 py-2 px-3">
+                        <span className="text-xs text-secondary w-20 shrink-0">
+                          Match {match.match_number}
+                        </span>
+                        <div className="flex gap-2 flex-wrap">
+                          <button
+                            onClick={() => homeId && handlePick(match.id, homeId)}
+                            disabled={!homeId || homeTeam === "TBD"}
+                            className={cn(
+                              "rounded-lg px-3 py-2 text-sm transition-colors",
+                              winner === homeId
+                                ? "bg-accent text-canvas font-semibold"
+                                : "border border-border bg-surface text-primary hover:border-accent/60",
+                              (!homeId || homeTeam === "TBD") && "opacity-40 cursor-not-allowed"
+                            )}
+                          >
+                            {homeTeam}
+                          </button>
+                          <button
+                            onClick={() => awayId && handlePick(match.id, awayId)}
+                            disabled={!awayId || awayTeam === "TBD"}
+                            className={cn(
+                              "rounded-lg px-3 py-2 text-sm transition-colors",
+                              winner === awayId
+                                ? "bg-accent text-canvas font-semibold"
+                                : "border border-border bg-surface text-primary hover:border-accent/60",
+                              (!awayId || awayTeam === "TBD") && "opacity-40 cursor-not-allowed"
+                            )}
+                          >
+                            {awayTeam}
+                          </button>
+                        </div>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          );
-        })}
-        {matches.length === 0 && (
-          <p className="text-secondary text-sm">No matches found for this league&apos;s template.</p>
-        )}
-      </div>
+            );
+          })}
+          {matches.length === 0 && (
+            <p className="text-secondary text-sm">No matches found for this league&apos;s template.</p>
+          )}
+        </div>
+      )}
     </details>
   );
 }
@@ -233,20 +301,32 @@ function LockSection({
   league,
   locked,
   lockedAt,
+  participantCount,
   onLock,
   onUnlock,
 }: {
   league: League;
   locked: boolean;
   lockedAt: string | null;
+  participantCount: number;
   onLock: (lockedAt: string) => void;
   onUnlock: () => void;
 }) {
   const [loading, setLoading] = useState(false);
+  const [modal, setModal] = useState<LockModalVariant | null>(null);
 
   const status = league.status === "complete" ? "COMPLETE" : locked ? "LOCKED" : "ACTIVE";
 
-  async function handleLock() {
+  function handleLockClick() {
+    if (participantCount === 0) {
+      setModal("empty");
+    } else {
+      setModal("partial");
+    }
+  }
+
+  async function confirmLock() {
+    setModal(null);
     setLoading(true);
     const res = await fetch("/api/admin/lock", {
       method: "POST",
@@ -270,51 +350,61 @@ function LockSection({
   }
 
   return (
-    <details open className="group">
-      <summary className="cursor-pointer list-none flex items-center gap-2 py-3 px-1 select-none">
-        <span className="text-sm font-semibold text-secondary uppercase tracking-wide">
-          Pick lock
-        </span>
-        <span className="ml-auto text-border group-open:rotate-90 transition-transform">▶</span>
-      </summary>
-      <Card className="mt-2 flex items-center gap-4 flex-wrap">
-        <span
-          className={cn(
-            "text-xs font-bold px-2 py-1 rounded-full",
-            status === "ACTIVE" && "bg-correct/20 text-correct",
-            status === "LOCKED" && "bg-accent/20 text-accent",
-            status === "COMPLETE" && "bg-border/40 text-secondary"
+    <>
+      {modal && (
+        <LockConfirmModal
+          variant={modal}
+          participantCount={participantCount}
+          onConfirm={confirmLock}
+          onCancel={() => setModal(null)}
+        />
+      )}
+      <details open className="group">
+        <summary className="cursor-pointer list-none flex items-center gap-2 py-3 px-1 select-none">
+          <span className="text-sm font-semibold text-secondary uppercase tracking-wide">
+            Pick lock
+          </span>
+          <span className="ml-auto text-border group-open:rotate-90 transition-transform">▶</span>
+        </summary>
+        <Card className="mt-2 flex items-center gap-4 flex-wrap">
+          <span
+            className={cn(
+              "text-xs font-bold px-2 py-1 rounded-full",
+              status === "ACTIVE" && "bg-correct/20 text-correct",
+              status === "LOCKED" && "bg-accent/20 text-accent",
+              status === "COMPLETE" && "bg-border/40 text-secondary"
+            )}
+          >
+            {status}
+          </span>
+          {!locked && status !== "COMPLETE" && (
+            <Button onClick={handleLockClick} disabled={loading}>
+              Lock picks now
+            </Button>
           )}
-        >
-          {status}
-        </span>
-        {!locked && status !== "COMPLETE" && (
-          <Button onClick={handleLock} disabled={loading}>
-            Lock picks now
-          </Button>
-        )}
-        {locked && (
-          <div className="flex items-center gap-4 flex-wrap">
-            <span className="text-sm text-secondary">
-              Locked at {lockedAt ? new Date(lockedAt).toLocaleString() : "—"}
-            </span>
-            <button
-              onClick={handleUnlock}
-              disabled={loading}
-              className="text-xs text-secondary underline hover:text-primary transition-colors disabled:opacity-40"
-            >
-              Unlock (emergency)
-            </button>
-          </div>
-        )}
-      </Card>
-    </details>
+          {locked && (
+            <div className="flex items-center gap-4 flex-wrap">
+              <span className="text-sm text-secondary">
+                Locked at {lockedAt ? new Date(lockedAt).toLocaleString() : "—"}
+              </span>
+              <button
+                onClick={handleUnlock}
+                disabled={loading}
+                className="text-xs text-secondary underline hover:text-primary transition-colors disabled:opacity-40"
+              >
+                Unlock (emergency)
+              </button>
+            </div>
+          )}
+        </Card>
+      </details>
+    </>
   );
 }
 
 // ---- Section: Participants ----
 
-function ParticipantRow({
+function ParticipantRowItem({
   participant,
   leagueId,
   onRename,
@@ -470,7 +560,7 @@ function ParticipantsSection({
       </summary>
       <div className="space-y-2 pt-2">
         {participants.map((p) => (
-          <ParticipantRow
+          <ParticipantRowItem
             key={p.id}
             participant={p}
             leagueId={league.id}
@@ -480,6 +570,106 @@ function ParticipantsSection({
         ))}
         {participants.length === 0 && (
           <p className="text-secondary text-sm">No participants yet.</p>
+        )}
+      </div>
+    </details>
+  );
+}
+
+// ---- Section: Edit competitors ----
+
+function CompetitorRow({
+  team,
+  leagueId,
+  onRename,
+}: {
+  team: TeamEntry;
+  leagueId: string;
+  onRename: (teamId: string, newName: string) => void;
+}) {
+  const isBye = team.id.startsWith("bye-");
+  const [renaming, setRenaming] = useState(false);
+  const [nameInput, setNameInput] = useState(team.name);
+
+  async function submitRename() {
+    const trimmed = nameInput.trim();
+    if (!trimmed || trimmed === team.name) {
+      setRenaming(false);
+      setNameInput(team.name);
+      return;
+    }
+    await fetch("/api/admin/competitor", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ leagueId, teamId: team.id, newName: trimmed }),
+    });
+    onRename(team.id, trimmed);
+    setRenaming(false);
+  }
+
+  return (
+    <div className="flex items-center gap-3 border border-border rounded-lg px-3 py-2">
+      <span className="text-xs text-secondary font-mono w-16 shrink-0">{team.id}</span>
+      {isBye ? (
+        <span className="text-sm text-secondary flex-1 italic">{team.name} (bye)</span>
+      ) : renaming ? (
+        <input
+          autoFocus
+          value={nameInput}
+          onChange={(e) => setNameInput(e.target.value)}
+          onBlur={submitRename}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") submitRename();
+            if (e.key === "Escape") {
+              setRenaming(false);
+              setNameInput(team.name);
+            }
+          }}
+          className="bg-canvas border border-accent rounded px-2 py-0.5 text-sm text-primary focus:outline-none flex-1"
+        />
+      ) : (
+        <span className="text-sm text-primary flex-1">{team.name}</span>
+      )}
+      {!isBye && !renaming && (
+        <button
+          onClick={() => setRenaming(true)}
+          className="text-xs text-secondary hover:text-primary transition-colors px-1 shrink-0"
+        >
+          Rename
+        </button>
+      )}
+    </div>
+  );
+}
+
+function CompetitorsSection({
+  league,
+  teamRegistry,
+  onRename,
+}: {
+  league: League;
+  teamRegistry: TeamEntry[];
+  onRename: (teamId: string, newName: string) => void;
+}) {
+  return (
+    <details className="group">
+      <summary className="cursor-pointer list-none flex items-center gap-2 py-3 px-1 select-none">
+        <span className="text-sm font-semibold text-secondary uppercase tracking-wide">
+          Edit competitors ({teamRegistry.length})
+        </span>
+        <span className="ml-auto text-border group-open:rotate-90 transition-transform">▶</span>
+      </summary>
+      <div className="space-y-2 pt-2">
+        {teamRegistry.map((team) => (
+          <CompetitorRow
+            key={team.id}
+            team={team}
+            leagueId={league.id}
+            onRename={onRename}
+          />
+        ))}
+        {teamRegistry.length === 0 && (
+          <p className="text-secondary text-sm">No competitors found.</p>
         )}
       </div>
     </details>
@@ -566,8 +756,9 @@ export function AdminConsole({
   league,
   participants: initialParticipants,
   matches,
-  teamRegistry,
+  teamRegistry: initialTeamRegistry,
   initialResults,
+  hasPicks,
 }: Props) {
   const [resultsMap, setResultsMap] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -580,6 +771,7 @@ export function AdminConsole({
   const [lockedAt, setLockedAt] = useState<string | null>(league.locked_at);
   const [participants, setParticipants] = useState(initialParticipants);
   const [announcement, setAnnouncement] = useState<string | null>(league.announcement_text);
+  const [teamRegistry, setTeamRegistry] = useState(initialTeamRegistry);
 
   function handleResultChange(templateMatchId: string, winnerTeamId: string) {
     setResultsMap((prev) => {
@@ -609,6 +801,12 @@ export function AdminConsole({
     setParticipants((prev) => prev.filter((p) => p.id !== id));
   }
 
+  function handleCompetitorRename(teamId: string, newName: string) {
+    setTeamRegistry((prev) =>
+      prev.map((t) => (t.id === teamId ? { ...t, name: newName } : t))
+    );
+  }
+
   return (
     <div className="min-h-screen bg-canvas text-primary">
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-1">
@@ -622,11 +820,13 @@ export function AdminConsole({
             teamRegistry={teamRegistry}
             resultsMap={resultsMap}
             onResultChange={handleResultChange}
+            hasPicks={hasPicks}
           />
           <LockSection
             league={league}
             locked={locked}
             lockedAt={lockedAt}
+            participantCount={participants.length}
             onLock={handleLock}
             onUnlock={handleUnlock}
           />
@@ -635,6 +835,11 @@ export function AdminConsole({
             participants={participants}
             onRename={handleRename}
             onRemove={handleRemove}
+          />
+          <CompetitorsSection
+            league={league}
+            teamRegistry={teamRegistry}
+            onRename={handleCompetitorRename}
           />
           <BroadcastSection
             league={league}

@@ -40,6 +40,11 @@ export default async function AdminPage({
       ? await getEffectiveResults(league_id, league.template_id)
       : [];
 
+  const { count: pickCount } = await getAdminClient()
+    .from("picks")
+    .select("*", { count: "exact", head: true })
+    .eq("league_id", league_id);
+
   return (
     <AdminConsole
       league={league}
@@ -47,6 +52,7 @@ export default async function AdminPage({
       matches={matches}
       teamRegistry={teamRegistry}
       initialResults={results}
+      hasPicks={(pickCount ?? 0) > 0}
     />
   );
 }
