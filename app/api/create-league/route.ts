@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { ScoringConfig, TeamEntry } from "@/lib/types";
+import { isBracketConfig } from "@/lib/types";
 
 // ─── Bracket topology helpers ─────────────────────────────────────────────────
 
@@ -213,7 +214,7 @@ export async function POST(req: NextRequest) {
       slots_per_round: Array.from({ length: Math.log2(slots) }, (_, i) =>
         slots / Math.pow(2, i + 1)
       ),
-      has_third_place: scoringConfig.has_third_place ?? false,
+      has_third_place: isBracketConfig(scoringConfig) ? (scoringConfig.has_third_place ?? false) : false,
     };
 
     // 4. Insert child template
@@ -296,7 +297,7 @@ export async function POST(req: NextRequest) {
     slots_per_round: Array.from({ length: Math.log2(slots) }, (_, i) =>
       slots / Math.pow(2, i + 1)
     ),
-    has_third_place: scoringConfig.has_third_place ?? false,
+    has_third_place: isBracketConfig(scoringConfig) ? (scoringConfig.has_third_place ?? false) : false,
   };
 
   const { data: template, error: templateErr } = await db

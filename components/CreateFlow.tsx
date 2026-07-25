@@ -4,8 +4,8 @@ import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/ui";
-import { SCORING_PRESETS, perfectScore } from "@/lib/scoring";
-import type { ScoringConfig, ScoringPreset, TeamEntry } from "@/lib/types";
+import { SCORING_PRESETS, PICKEM_PRESETS, perfectScore, pickemPerfectScore } from "@/lib/scoring";
+import type { ScoringConfig, BracketScoringConfig, PickemScoringConfig, ScoringPreset, TeamEntry, PickemCategory, PickemTopology } from "@/lib/types";
 import type { PublicTemplate } from "@/lib/league-data";
 
 // ─── Bracket size inference ───────────────────────────────────────────────────
@@ -100,12 +100,12 @@ function StepTemplate({
       id: "oscars",
       label: oscars?.name ?? "Oscars 2025 (97th Academy Awards)",
       description: "23 categories, one winner each. Pick'em style.",
-      badge: "Pick'em launches this week",
-      selectable: false,
+      badge: oscars ? "Ready" : null,
+      selectable: !!oscars,
     },
   ];
 
-  const canContinue = templateKind !== null && templateKind !== "oscars";
+  const canContinue = templateKind !== null;
 
   return (
     <div>
@@ -280,7 +280,47 @@ function StepSweet16Preview({
   );
 }
 
-// ─── Step 2c: Rap Albums — Curated pool picker ────────────────────────────────
+// ─── Step 2c: Oscars — Preview categories ────────────────────────────────────
+function StepOscarsPreview({
+  onNext,
+  categories,
+}: {
+  onNext: () => void;
+  categories: PickemCategory[];
+}) {
+  const preview = categories.slice(0, 4);
+  const rest = categories.length - preview.length;
+
+  return (
+    <div>
+      <h2 className="font-display text-2xl font-bold text-primary mb-1">
+        Categories loaded
+      </h2>
+      <p className="text-secondary text-sm mb-6">
+        This template comes with {categories.length} Oscar categories.
+      </p>
+
+      <Card className="mb-6">
+        <ul className="space-y-2">
+          {preview.map((c) => (
+            <li key={c.id} className="text-sm text-primary">
+              {c.name}
+            </li>
+          ))}
+          {rest > 0 && (
+            <li className="text-sm text-muted">…and {rest} more</li>
+          )}
+        </ul>
+      </Card>
+
+      <Button className="w-full py-3" onClick={onNext}>
+        Continue &rarr;
+      </Button>
+    </div>
+  );
+}
+
+// ─── Step 2d: Rap Albums — Curated pool picker ────────────────────────────────
 function StepRapAlbumPicker({
   onNext,
   allAlbums,
@@ -409,6 +449,90 @@ function StepRapAlbumPicker({
   );
 }
 
+// ─── Step 3 (pickem): Scoring presets ────────────────────────────────────────
+
+const PICKEM_PRESET_META: {
+  id: "pickem_flat" | "pickem_weighted";
+  label: string;
+  desc: string;
+  recommended?: boolean;
+}[] = [
+  { id: "pickem_flat", label: "Flat", desc: "1 pt per correct category pick" },
+  {
+    id: "pickem_weighted",
+    label: "Weighted",
+    desc: "3pt for major categories, 1pt for others",
+    recommended: true,
+  },
+];
+
+function StepPickemScoring({
+  onNext,
+  preset,
+  setPreset,
+  categories,
+}: {
+  onNext: () => void;
+  preset: "pickem_flat" | "pickem_weighted";
+  setPreset: (p: "pickem_flat" | "pickem_weighted") => void;
+  categories: PickemCategory[];
+}) {
+  const config = PICKEM_PRESETS[preset];
+  const perfect = pickemPerfectScore(config, categories);
+
+  return (
+    <div>
+      <h2 className="font-display text-2xl font-bold text-primary mb-1">
+        Scoring
+      </h2>
+      <p className="text-secondary text-sm mb-6">
+        How many points per correct category pick?
+      </p>
+
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        {PICKEM_PRESET_META.map((p) => (
+          <button
+            key={p.id}
+            onClick={() => setPreset(p.id)}
+            className={cn(
+              "rounded-xl border p-3 text-left transition-all focus:outline-none",
+              preset === p.id
+                ? "border-accent bg-accent/10"
+                : "border-border bg-surface hover:border-secondary"
+            )}
+          >
+            <div className="flex items-start justify-between gap-1">
+              <p className="font-semibold text-sm text-primary">{p.label}</p>
+              {p.recommended && (
+                <span className="text-xs text-accent shrink-0">Rec.</span>
+              )}
+            </div>
+            <p className="text-xs text-secondary mt-0.5">{p.desc}</p>
+          </button>
+        ))}
+      </div>
+
+      <div className="rounded-lg bg-surface border border-border px-4 py-3 mb-8">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-secondary text-sm">Perfect score</span>
+          <span className="font-display text-xl font-bold text-accent">
+            {perfect} pts
+          </span>
+        </div>
+        <p className="text-xs text-muted">
+          {preset === "pickem_weighted"
+            ? `6 major × 3 pt + ${categories.length - 6} others × 1 pt`
+            : `${categories.length} categories × 1 pt`}
+        </p>
+      </div>
+
+      <Button className="w-full py-3" onClick={onNext}>
+        Continue &rarr;
+      </Button>
+    </div>
+  );
+}
+
 // ─── Step 3: Name + lock time ─────────────────────────────────────────────────
 function StepNameLock({
   onNext,
@@ -502,8 +626,8 @@ function StepScoring({
   teamCount,
 }: {
   onNext: () => void;
-  scoringConfig: ScoringConfig;
-  setScoringConfig: (c: ScoringConfig) => void;
+  scoringConfig: BracketScoringConfig;
+  setScoringConfig: (c: BracketScoringConfig) => void;
   preset: ScoringPreset;
   setPreset: (p: ScoringPreset) => void;
   teamCount: number;
@@ -635,25 +759,33 @@ function StepConfirm({
   templateKind,
   scoringConfig,
   preset,
+  pickemPreset,
   lockedAt,
   onSubmit,
   submitting,
+  oscarsCategories,
 }: {
   leagueName: string;
   teamCount: number;
   templateKind: TemplateKind;
   scoringConfig: ScoringConfig;
   preset: ScoringPreset;
+  pickemPreset: "pickem_flat" | "pickem_weighted";
   lockedAt: string;
   onSubmit: () => void;
   submitting: boolean;
+  oscarsCategories: PickemCategory[];
 }) {
-  const slotSize = inferBracketSize(teamCount);
-  const rounds = bracketRounds(slotSize);
-  const perfect = perfectScore(scoringConfig, rounds);
+  const isPickem = templateKind === "oscars";
+  const slotSize = isPickem ? 0 : inferBracketSize(teamCount);
+  const rounds = isPickem ? ([] as [number, number][]) : bracketRounds(slotSize);
+  const perfect = isPickem
+    ? pickemPerfectScore(scoringConfig as PickemScoringConfig, oscarsCategories)
+    : perfectScore(scoringConfig as BracketScoringConfig, rounds);
 
-  const presetLabel =
-    PRESET_META.find((p) => p.id === preset)?.label ?? "Custom";
+  const presetLabel = isPickem
+    ? PICKEM_PRESET_META.find((p) => p.id === pickemPreset)?.label ?? "Weighted"
+    : PRESET_META.find((p) => p.id === preset)?.label ?? "Custom";
 
   const lockDisplay = lockedAt
     ? new Date(lockedAt).toLocaleString(undefined, {
@@ -669,6 +801,8 @@ function StepConfirm({
       ? "16 teams (Sweet 16)"
       : templateKind === "rap-albums"
       ? `${teamCount} albums / ${slotSize}-slot`
+      : templateKind === "oscars"
+      ? `${oscarsCategories.length} categories / pick'em`
       : `${teamCount} teams`;
 
   return (
@@ -832,6 +966,11 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
     SCORING_PRESETS.late_rounds_matter
   );
 
+  // pickem preset (separate from bracket preset to avoid union type conflict)
+  const [pickemPreset, setPickemPreset] = useState<"pickem_flat" | "pickem_weighted">(
+    "pickem_weighted"
+  );
+
   // result state
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{
@@ -846,9 +985,12 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
   // Derived helpers
   const sweet16Template = templates.find((t) => t.name === "March Madness Sweet 16 (2025)");
   const rapAlbumsTemplate = templates.find((t) => t.name === "Greatest Rap Albums");
+  const oscarsTemplate = templates.find((t) => t.name === "Oscars 2025 (97th Academy Awards)");
 
   const sweet16Teams: TeamEntry[] = (sweet16Template?.team_registry ?? []) as TeamEntry[];
   const allAlbums: TeamEntry[] = (rapAlbumsTemplate?.team_registry ?? []) as TeamEntry[];
+  const oscarsCategories: PickemCategory[] =
+    ((oscarsTemplate?.topology as PickemTopology | null)?.categories ?? []) as PickemCategory[];
 
   // How many "teams" are in this bracket for scoring preview
   const effectiveTeamCount =
@@ -863,14 +1005,22 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
     // Reset per-template state when switching
     setNames([]);
     setSelectedAlbumIds([]);
-    // Default scoring: rap-albums → flat; sweet16 → late_rounds_matter; custom → late_rounds_matter
+    // Default scoring per template kind
     if (kind === "rap-albums") {
       setPreset("flat");
       setScoringConfig(SCORING_PRESETS.flat);
+    } else if (kind === "oscars") {
+      setPickemPreset("pickem_weighted");
+      setScoringConfig(PICKEM_PRESETS.pickem_weighted as PickemScoringConfig);
     } else {
       setPreset("late_rounds_matter");
       setScoringConfig(SCORING_PRESETS.late_rounds_matter);
     }
+  };
+
+  const handlePickemPresetChange = (id: "pickem_flat" | "pickem_weighted") => {
+    setPickemPreset(id);
+    setScoringConfig(PICKEM_PRESETS[id] as PickemScoringConfig);
   };
 
   const handleCreate = async () => {
@@ -900,6 +1050,14 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
           templateKind: "curated-pool",
           parentTemplateId: rapAlbumsTemplate!.id,
           selectedTeamIds: selectedAlbumIds,
+          leagueName,
+          lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
+          scoringConfig,
+        };
+      } else if (templateKind === "oscars") {
+        body = {
+          templateKind: "seeded",
+          templateId: oscarsTemplate!.id,
           leagueName,
           lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
           scoringConfig,
@@ -959,6 +1117,10 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
         <StepSweet16Preview onNext={next} teams={sweet16Teams} />
       )}
 
+      {step === 1 && templateKind === "oscars" && (
+        <StepOscarsPreview onNext={next} categories={oscarsCategories} />
+      )}
+
       {step === 1 && templateKind === "rap-albums" && (
         <StepRapAlbumPicker
           onNext={next}
@@ -980,11 +1142,20 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
         />
       )}
 
-      {step === 3 && (
+      {step === 3 && templateKind === "oscars" && (
+        <StepPickemScoring
+          onNext={next}
+          preset={pickemPreset}
+          setPreset={handlePickemPresetChange}
+          categories={oscarsCategories}
+        />
+      )}
+
+      {step === 3 && templateKind !== "oscars" && (
         <StepScoring
           onNext={next}
-          scoringConfig={scoringConfig}
-          setScoringConfig={setScoringConfig}
+          scoringConfig={scoringConfig as BracketScoringConfig}
+          setScoringConfig={(c) => setScoringConfig(c)}
           preset={preset}
           setPreset={setPreset}
           teamCount={effectiveTeamCount}
@@ -998,9 +1169,11 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
           templateKind={templateKind}
           scoringConfig={scoringConfig}
           preset={preset}
+          pickemPreset={pickemPreset}
           lockedAt={lockedAt}
           onSubmit={handleCreate}
           submitting={submitting}
+          oscarsCategories={oscarsCategories}
         />
       )}
 

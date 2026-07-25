@@ -9,6 +9,8 @@ import {
   getTemplateMatches,
 } from "@/lib/league-data";
 import BracketLive from "@/components/BracketLive";
+import PickEmBracket from "@/components/PickEmBracket";
+import type { PickemTopology } from "@/lib/types";
 
 export default async function BracketPage({
   params,
@@ -42,6 +44,22 @@ export default async function BracketPage({
   const teamMap: Record<string, string> = Object.fromEntries(
     teamRegistry.map((t) => [t.id, t.name])
   );
+
+  // Pick'em format
+  if (league.template_type === "pickem") {
+    const categories =
+      (league.template_topology as PickemTopology)?.categories ?? [];
+    return (
+      <PickEmBracket
+        participant={participant}
+        initialPicks={picks}
+        teamMap={teamMap}
+        league={league}
+        categories={categories}
+        templateMatches={matches}
+      />
+    );
+  }
 
   return (
     <BracketLive

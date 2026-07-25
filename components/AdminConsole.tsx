@@ -4,7 +4,7 @@ import { useState } from "react";
 import { cn } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
-import type { League, TemplateMatch, TeamEntry } from "@/lib/types";
+import type { League, TemplateMatch, TeamEntry, PickemCategory } from "@/lib/types";
 
 interface ParticipantRow {
   id: string;
@@ -27,6 +27,8 @@ interface Props {
   teamRegistry: TeamEntry[];
   initialResults: ResultRow[];
   hasPicks: boolean;
+  templateType?: string | null;
+  categories?: PickemCategory[];
 }
 
 // ---- helpers ----
@@ -115,6 +117,93 @@ function LockConfirmModal({
   );
 }
 
+// ---- Pickem Results Section ----
+
+function PickemResultsSection({
+  league,
+  matches,
+  teamRegistry,
+  resultsMap,
+  onResultChange,
+  categories,
+  hasPicks,
+}: {
+  league: League;
+  matches: TemplateMatch[];
+  teamRegistry: TeamEntry[];
+  resultsMap: Map<string, string>;
+  onResultChange: (templateMatchId: string, winnerTeamId: string) => void;
+  categories: PickemCategory[];
+  hasPicks: boolean;
+}) {
+  async function handlePick(templateMatchId: string, teamId: string) {
+    onResultChange(templateMatchId, teamId);
+    await fetch("/api/admin/result", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        leagueId: league.id,
+        templateMatchId,
+        winnerTeamId: teamId,
+      }),
+    });
+  }
+
+  if (!hasPicks) {
+    return (
+      <div className="pt-2 pb-4 px-1 space-y-1">
+        <p className="text-secondary text-sm font-medium">Waiting for participants...</p>
+        <p className="text-secondary text-xs">
+          Results entry unlocks once at least one person has submitted picks.
+          Share your join link to get started.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pt-2">
+      {categories.map((cat) => {
+        const match = matches.find((m) => m.home_slot === `category:${cat.id}`);
+        if (!match) return null;
+        const winner = resultsMap.get(match.id);
+
+        return (
+          <div key={cat.id}>
+            <p className="text-xs font-semibold text-secondary uppercase tracking-wide mb-2">
+              {cat.name}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {cat.nominees.map((nomineeId) => {
+                const team = teamRegistry.find((t) => t.id === nomineeId);
+                const name = team?.name ?? nomineeId;
+                const isWinner = winner === nomineeId;
+                return (
+                  <button
+                    key={nomineeId}
+                    onClick={() => handlePick(match.id, nomineeId)}
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-sm transition-colors",
+                      isWinner
+                        ? "bg-accent text-canvas font-semibold"
+                        : "border border-border bg-surface text-primary hover:border-accent/60"
+                    )}
+                  >
+                    {name}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+      {categories.length === 0 && (
+        <p className="text-secondary text-sm">No categories found for this template.</p>
+      )}
+    </div>
+  );
+}
+
 // ---- Section: Results Entry ----
 
 function ResultsSection({
@@ -124,6 +213,8 @@ function ResultsSection({
   resultsMap,
   onResultChange,
   hasPicks,
+  templateType,
+  categories,
 }: {
   league: League;
   matches: TemplateMatch[];
@@ -131,6 +222,8 @@ function ResultsSection({
   resultsMap: Map<string, string>;
   onResultChange: (templateMatchId: string, winnerTeamId: string) => void;
   hasPicks: boolean;
+  templateType?: string | null;
+  categories?: PickemCategory[];
 }) {
   // Build a lookup: (round, match_number) → match id, so w-r1m1 can resolve
   const matchByRoundNum = new Map<string, TemplateMatch>();
@@ -184,6 +277,29 @@ function ResultsSection({
         winnerTeamId: teamId,
       }),
     });
+  }
+
+  // Pickem format: delegate to PickemResultsSection
+  if (templateType === "pickem") {
+    return (
+      <details open className="group">
+        <summary className="cursor-pointer list-none flex items-center gap-2 py-3 px-1 select-none">
+          <span className="text-sm font-semibold text-secondary uppercase tracking-wide">
+            Enter results
+          </span>
+          <span className="ml-auto text-border group-open:rotate-90 transition-transform">▶</span>
+        </summary>
+        <PickemResultsSection
+          league={league}
+          matches={matches}
+          teamRegistry={teamRegistry}
+          resultsMap={resultsMap}
+          onResultChange={onResultChange}
+          categories={categories ?? []}
+          hasPicks={hasPicks}
+        />
+      </details>
+    );
   }
 
   return (
@@ -759,6 +875,8 @@ export function AdminConsole({
   teamRegistry: initialTeamRegistry,
   initialResults,
   hasPicks,
+  templateType,
+  categories,
 }: Props) {
   const [resultsMap, setResultsMap] = useState<Map<string, string>>(() => {
     const m = new Map<string, string>();
@@ -821,6 +939,8 @@ export function AdminConsole({
             resultsMap={resultsMap}
             onResultChange={handleResultChange}
             hasPicks={hasPicks}
+            templateType={templateType}
+            categories={categories}
           />
           <LockSection
             league={league}

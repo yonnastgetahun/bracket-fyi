@@ -10,8 +10,10 @@ import {
 } from "@/lib/league-data";
 import LeaderboardLive from "@/components/LeaderboardLive";
 import PickEntry from "@/components/PickEntry";
+import PickEmEntry from "@/components/PickEmEntry";
 import LockedState from "@/components/LockedState";
 import JoinPrompt from "@/components/JoinPrompt";
+import type { PickemTopology } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -31,6 +33,8 @@ export default async function LeaguePage({
 
   const league = await getLeagueWithTemplate(leagueId);
   if (!league) notFound();
+
+  const isPickem = league.template_type === "pickem";
 
   const isLocked =
     !!league.locked_at && new Date(league.locked_at) <= new Date();
@@ -82,6 +86,20 @@ export default async function LeaguePage({
         ? getTeamRegistry(league.template_id)
         : Promise.resolve([]),
     ]);
+
+    // Pick'em format
+    if (isPickem) {
+      const categories =
+        (league.template_topology as PickemTopology)?.categories ?? [];
+      return (
+        <PickEmEntry
+          league={league}
+          categories={categories}
+          teamRegistry={teamRegistry}
+          templateMatches={matches}
+        />
+      );
+    }
 
     return (
       <PickEntry league={league} matches={matches} teamRegistry={teamRegistry} />

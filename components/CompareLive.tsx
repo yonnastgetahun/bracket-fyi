@@ -95,6 +95,16 @@ export default function CompareLive({
 
   useLiveRefresh(refetch);
 
+  // Pickem leagues don't use bracket-style matches
+  const isPickem = Object.keys(seedMap).length === 0 && matches.some(m => m.home_slot.startsWith("category:"));
+  if (isPickem) {
+    return (
+      <div className="px-4 py-8 text-center text-secondary text-sm">
+        This view is optimized for bracket format — full pick'em support coming soon.
+      </div>
+    );
+  }
+
   // Build a results map from picks: template_match_id -> winner_team_id
   // We can infer the winner from any correct pick
   const resultsMap = new Map<string, string | null>();

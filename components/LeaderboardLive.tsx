@@ -6,6 +6,7 @@ import { getBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/ui";
 import { useLiveRefresh } from "./useLiveRefresh";
 import type { LeaderboardRow, ChampionStatusRow, PickResultRow, League, ScoringConfig } from "@/lib/types";
+import { isPickemConfig, isBracketConfig } from "@/lib/types";
 
 // ---------- Sparkline ----------
 function Sparkline({ picks, roundKeys }: { picks: PickResultRow[]; roundKeys: string[] }) {
@@ -137,6 +138,60 @@ function LeaderboardRow({
 
 // ---------- Scoring explainer ----------
 function ScoringExplainer({ config }: { config: ScoringConfig }) {
+  if (isPickemConfig(config)) {
+    const tiebreakers = config.tiebreakers ?? [];
+    return (
+      <details className="rounded-xl border border-border bg-surface">
+        <summary className="cursor-pointer px-3 py-2.5 text-sm font-semibold text-primary">
+          How scoring works
+        </summary>
+        <div className="border-t border-border px-3 py-3 space-y-2 text-sm text-secondary">
+          {config.scheme === "pickem_weighted" ? (
+            <div>
+              <p className="font-semibold text-primary mb-1">Points per category</p>
+              <ul className="space-y-0.5">
+                <li>
+                  Major categories:{" "}
+                  <span className="text-primary">
+                    {config.major_points ?? 3} pts each
+                  </span>
+                </li>
+                <li>
+                  Other categories:{" "}
+                  <span className="text-primary">
+                    {config.other_points ?? 1} pt each
+                  </span>
+                </li>
+              </ul>
+            </div>
+          ) : (
+            <div>
+              <p className="font-semibold text-primary mb-1">Points per category</p>
+              <p>
+                <span className="text-primary">{config.other_points ?? 1} pt</span> per correct pick
+              </p>
+            </div>
+          )}
+          {tiebreakers.length > 0 && (
+            <div>
+              <p className="font-semibold text-primary mb-1">Tiebreakers (in order)</p>
+              <ol className="list-decimal list-inside space-y-0.5">
+                {tiebreakers.map((tb) => (
+                  <li key={tb}>{tb.replace(/_/g, " ")}</li>
+                ))}
+              </ol>
+            </div>
+          )}
+          <div>
+            <p className="font-semibold text-primary mb-1">max</p>
+            <p>Your ceiling: current points plus every remaining pick that can still hit.</p>
+          </div>
+        </div>
+      </details>
+    );
+  }
+
+  // Bracket scoring explainer
   const rounds = Object.entries(config.round_points).sort(([a], [b]) => Number(a) - Number(b));
   return (
     <details className="rounded-xl border border-border bg-surface">
@@ -216,9 +271,11 @@ export default function LeaderboardLive({
 
   useLiveRefresh(refetch);
 
-  const roundKeys = Object.keys(league.scoring_config.round_points).sort(
-    (a, b) => Number(a) - Number(b)
-  );
+  const roundKeys = isBracketConfig(league.scoring_config)
+    ? Object.keys(league.scoring_config.round_points).sort(
+        (a, b) => Number(a) - Number(b)
+      )
+    : [];
 
   function teamName(id: string | null): string {
     if (!id) return "";
