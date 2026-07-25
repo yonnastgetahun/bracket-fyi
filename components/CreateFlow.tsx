@@ -297,6 +297,17 @@ function StepScoring({
 
   const perfect = perfectScore(scoringConfig, rounds);
 
+  // Build a human-readable breakdown: "R1: 1pt×4=4 · R2: 2pt×2=4 · Champion: +2"
+  const breakdown = [
+    ...rounds.map(([r, count]) => {
+      const pts = scoringConfig.round_points[r.toString()] ?? 0;
+      return `Round ${r}: ${pts}pt × ${count} = ${pts * count}`;
+    }),
+    ...(scoringConfig.champion_bonus > 0
+      ? [`Champion: +${scoringConfig.champion_bonus}`]
+      : []),
+  ].join(" · ");
+
   return (
     <div>
       <h2 className="font-display text-2xl font-bold text-primary mb-1">
@@ -312,7 +323,7 @@ function StepScoring({
             className={cn(
               "rounded-xl border p-3 text-left transition-all focus:outline-none",
               preset === p.id
-                ? "border-accent bg-surface"
+                ? "border-accent bg-accent/10"
                 : "border-border bg-surface hover:border-secondary"
             )}
           >
@@ -360,9 +371,12 @@ function StepScoring({
         </Card>
       )}
 
-      <div className="rounded-lg bg-surface border border-border px-4 py-3 mb-8 flex items-center justify-between">
-        <span className="text-secondary text-sm">Perfect score</span>
-        <span className="font-display text-xl font-bold text-accent">{perfect} pts</span>
+      <div className="rounded-lg bg-surface border border-border px-4 py-3 mb-8">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-secondary text-sm">Perfect score</span>
+          <span className="font-display text-xl font-bold text-accent">{perfect} pts</span>
+        </div>
+        <p className="text-xs text-muted">{breakdown}</p>
       </div>
 
       <Button className="w-full py-3" onClick={onNext}>

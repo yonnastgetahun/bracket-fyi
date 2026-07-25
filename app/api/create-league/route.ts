@@ -42,9 +42,9 @@ function buildMatchRows(
       let awaySlot: string;
 
       if (round === 1) {
-        // seed positions: seed-1, seed-2, seed-3, seed-4, …
-        const seedA = (m - 1) * 2 + 1;
-        const seedB = (m - 1) * 2 + 2;
+        // seed positions: 0-indexed (seed-0, seed-1, seed-2, …)
+        const seedA = (m - 1) * 2;
+        const seedB = (m - 1) * 2 + 1;
         homeSlot = `seed-${seedA}`;
         awaySlot = `seed-${seedB}`;
       } else {
@@ -114,12 +114,16 @@ export async function POST(req: NextRequest) {
   const db = getAdminClient();
   const slots = inferSlotCount(competitorNames.length);
 
-  // Build team_registry
+  // Build team_registry with seed-N ids (0-indexed) + bye padding if needed
   const teamRegistry: TeamEntry[] = competitorNames.map((name, i) => ({
-    id: `custom-${i}`,
+    id: `seed-${i}`,
     name: name.trim(),
     aliases: [],
   }));
+  // Pad with BYE entries so team_registry covers all slots
+  for (let i = competitorNames.length; i < slots; i++) {
+    teamRegistry.push({ id: `bye-${i - competitorNames.length}`, name: "BYE", aliases: [] });
+  }
 
   // Build topology
   const topology = {
