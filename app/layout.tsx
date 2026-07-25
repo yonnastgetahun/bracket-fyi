@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const geistBody = localFont({
   src: "./fonts/GeistVF.woff",
@@ -16,7 +17,16 @@ const geistDisplay = localFont({
 
 export const metadata: Metadata = {
   title: "Bracket.fyi",
-  description: "Bracket competition platform",
+  description: "Run your bracket. Share one link. Nobody makes an account.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Brackets",
+  },
+  icons: {
+    apple: "/icon-192.png",
+  },
 };
 
 export default function RootLayout({
@@ -32,6 +42,7 @@ export default function RootLayout({
       <body
         className={`${geistBody.variable} ${geistDisplay.variable} bg-canvas text-primary antialiased`}
       >
+        <ServiceWorkerRegistration />
         {children}
       </body>
     </html>
