@@ -108,3 +108,24 @@ export async function getParticipantByMagicToken(
     .maybeSingle();
   return data as Participant | null;
 }
+
+export interface PublicTemplate {
+  id: string;
+  name: string;
+  type: string;
+  team_registry: TeamEntry[];
+  scoring_defaults: import("./types").ScoringConfig | null;
+  topology: import("./types").BracketTopology | null;
+}
+
+export async function getPublicTemplates(): Promise<PublicTemplate[]> {
+  const { data } = await getAdminClient()
+    .from("templates")
+    .select("id, name, type, team_registry, scoring_defaults, topology")
+    .in("name", [
+      "Greatest Rap Albums",
+      "March Madness Sweet 16 (2025)",
+      "Oscars 2025 (97th Academy Awards)",
+    ]);
+  return (data ?? []) as PublicTemplate[];
+}

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import { cn } from "@/lib/ui";
 import { SCORING_PRESETS, perfectScore } from "@/lib/scoring";
-import type { ScoringConfig, ScoringPreset } from "@/lib/types";
+import type { ScoringConfig, ScoringPreset, TeamEntry } from "@/lib/types";
+import type { PublicTemplate } from "@/lib/league-data";
 
 // ─── Bracket size inference ───────────────────────────────────────────────────
 function inferBracketSize(count: number): number {
@@ -29,6 +30,9 @@ function bracketRounds(slots: number): [number, number][] {
   return rounds;
 }
 
+// ─── Template kind ────────────────────────────────────────────────────────────
+type TemplateKind = "custom" | "sweet16" | "rap-albums" | "oscars";
+
 // ─── Step indicator ───────────────────────────────────────────────────────────
 function StepDots({ current, total }: { current: number; total: number }) {
   return (
@@ -47,15 +51,61 @@ function StepDots({ current, total }: { current: number; total: number }) {
 }
 
 // ─── Step 1: Choose template ──────────────────────────────────────────────────
-function StepTemplate({ onNext }: { onNext: () => void }) {
-  const [selected, setSelected] = useState<string | null>(null);
+function StepTemplate({
+  onNext,
+  templates,
+  templateKind,
+  setTemplateKind,
+}: {
+  onNext: () => void;
+  templates: PublicTemplate[];
+  templateKind: TemplateKind | null;
+  setTemplateKind: (k: TemplateKind) => void;
+}) {
+  const sweet16 = templates.find((t) => t.name === "March Madness Sweet 16 (2025)");
+  const rapAlbums = templates.find((t) => t.name === "Greatest Rap Albums");
+  const oscars = templates.find((t) => t.name === "Oscars 2025 (97th Academy Awards)");
 
-  const templates = [
-    { id: "custom", label: "Custom bracket", available: true, badge: null },
-    { id: "nfl", label: "NFL Playoffs", available: false, badge: "Coming Jan 2027" },
-    { id: "ncaa", label: "NCAA March Madness", available: false, badge: "Coming Mar 2027" },
-    { id: "nba", label: "NBA Playoffs", available: false, badge: "Coming 2027" },
+  const cards: {
+    id: TemplateKind;
+    label: string;
+    description: string;
+    badge: string | null;
+    selectable: boolean;
+  }[] = [
+    {
+      id: "custom",
+      label: "Custom bracket",
+      description: "Build your own from scratch. Any names, any group.",
+      badge: null,
+      selectable: true,
+    },
+    {
+      id: "sweet16",
+      label: sweet16?.name ?? "March Madness Sweet 16 (2025)",
+      description:
+        "The 2025 Men's NCAA Sweet 16. 15 matches. Enter results as your group plays along.",
+      badge: sweet16 ? "Ready" : null,
+      selectable: !!sweet16,
+    },
+    {
+      id: "rap-albums",
+      label: rapAlbums?.name ?? "Greatest Rap Albums",
+      description:
+        "Pick 4 or 8 albums from a curated pool of 100. Let the group decide the GOAT.",
+      badge: rapAlbums ? "Ready" : null,
+      selectable: !!rapAlbums,
+    },
+    {
+      id: "oscars",
+      label: oscars?.name ?? "Oscars 2025 (97th Academy Awards)",
+      description: "23 categories, one winner each. Pick'em style.",
+      badge: "Pick'em launches this week",
+      selectable: false,
+    },
   ];
+
+  const canContinue = templateKind !== null && templateKind !== "oscars";
 
   return (
     <div>
@@ -65,31 +115,46 @@ function StepTemplate({ onNext }: { onNext: () => void }) {
       <p className="text-secondary text-sm mb-6">Pick what you&apos;re bracketing.</p>
 
       <div className="grid grid-cols-2 gap-3 mb-8">
-        {templates.map((t) => (
+        {cards.map((c) => (
           <button
-            key={t.id}
-            disabled={!t.available}
+            key={c.id}
+            disabled={!c.selectable}
             onClick={() => {
-              if (t.available) setSelected(t.id);
+              if (c.selectable) setTemplateKind(c.id);
             }}
             className={cn(
               "rounded-xl border p-4 text-left transition-all focus:outline-none",
-              t.available
-                ? selected === t.id
+              c.selectable
+                ? templateKind === c.id
                   ? "border-accent bg-surface"
                   : "border-border bg-surface hover:border-secondary"
                 : "border-border bg-surface opacity-40 cursor-not-allowed"
             )}
           >
-            <p className={cn("font-semibold text-sm", t.available ? "text-primary" : "text-secondary")}>
-              {t.label}
+            <p
+              className={cn(
+                "font-semibold text-sm",
+                c.selectable ? "text-primary" : "text-secondary"
+              )}
+            >
+              {c.label}
             </p>
-            {t.badge && (
-              <span className="mt-1.5 inline-block text-xs text-muted font-body">
-                {t.badge}
+            {c.description && (
+              <p className="mt-1.5 text-xs text-muted font-body leading-relaxed">
+                {c.description}
+              </p>
+            )}
+            {c.badge && (
+              <span
+                className={cn(
+                  "mt-2 inline-block text-xs font-body",
+                  c.selectable ? "text-accent" : "text-muted"
+                )}
+              >
+                {c.badge}
               </span>
             )}
-            {t.available && selected === t.id && (
+            {c.selectable && templateKind === c.id && !c.badge && (
               <span className="mt-1.5 inline-block text-xs text-accent font-body">
                 Selected
               </span>
@@ -100,7 +165,7 @@ function StepTemplate({ onNext }: { onNext: () => void }) {
 
       <Button
         className="w-full py-3"
-        disabled={selected !== "custom"}
+        disabled={!canContinue}
         onClick={onNext}
       >
         Continue &rarr;
@@ -109,7 +174,7 @@ function StepTemplate({ onNext }: { onNext: () => void }) {
   );
 }
 
-// ─── Step 2: Add competitors ──────────────────────────────────────────────────
+// ─── Step 2a: Custom — Add competitors ───────────────────────────────────────
 function StepCompetitors({
   onNext,
   names,
@@ -159,13 +224,185 @@ function StepCompetitors({
             {" → "}
             <span className="text-primary font-semibold">{slotSize}-slot bracket</span>
             {byes > 0 && (
-              <span className="text-muted"> ({byes} bye{byes > 1 ? "s" : ""} added)</span>
+              <span className="text-muted">
+                {" "}
+                ({byes} bye{byes > 1 ? "s" : ""} added)
+              </span>
             )}
           </span>
         )}
       </div>
 
       <Button className="w-full py-3" disabled={!valid} onClick={handleContinue}>
+        Continue &rarr;
+      </Button>
+    </div>
+  );
+}
+
+// ─── Step 2b: Sweet 16 — Preview ─────────────────────────────────────────────
+function StepSweet16Preview({
+  onNext,
+  teams,
+}: {
+  onNext: () => void;
+  teams: TeamEntry[];
+}) {
+  const preview = teams.slice(0, 4);
+  const rest = teams.length - preview.length;
+
+  return (
+    <div>
+      <h2 className="font-display text-2xl font-bold text-primary mb-1">
+        Teams loaded
+      </h2>
+      <p className="text-secondary text-sm mb-6">
+        This template comes with {teams.length} teams already loaded.
+      </p>
+
+      <Card className="mb-6">
+        <ul className="space-y-2">
+          {preview.map((t) => (
+            <li key={t.id} className="text-sm text-primary">
+              {t.name}
+            </li>
+          ))}
+          {rest > 0 && (
+            <li className="text-sm text-muted">…and {rest} more</li>
+          )}
+        </ul>
+      </Card>
+
+      <Button className="w-full py-3" onClick={onNext}>
+        Continue &rarr;
+      </Button>
+    </div>
+  );
+}
+
+// ─── Step 2c: Rap Albums — Curated pool picker ────────────────────────────────
+function StepRapAlbumPicker({
+  onNext,
+  allAlbums,
+  selectedIds,
+  setSelectedIds,
+  bracketSize,
+  setBracketSize,
+}: {
+  onNext: () => void;
+  allAlbums: TeamEntry[];
+  selectedIds: string[];
+  setSelectedIds: (ids: string[]) => void;
+  bracketSize: 4 | 8;
+  setBracketSize: (n: 4 | 8) => void;
+}) {
+  const [search, setSearch] = useState("");
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    if (!q) return allAlbums;
+    return allAlbums.filter((a) => {
+      const haystack = `${a.name} ${a.aliases.join(" ")}`.toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [allAlbums, search]);
+
+  const toggleAlbum = (id: string) => {
+    if (selectedIds.includes(id)) {
+      setSelectedIds(selectedIds.filter((x) => x !== id));
+    } else if (selectedIds.length < bracketSize) {
+      setSelectedIds([...selectedIds, id]);
+    }
+  };
+
+  const handleSizeChange = (n: 4 | 8) => {
+    setBracketSize(n);
+    setSelectedIds([]);
+  };
+
+  const canContinue = selectedIds.length === bracketSize;
+
+  return (
+    <div>
+      <h2 className="font-display text-2xl font-bold text-primary mb-1">
+        Build your bracket
+      </h2>
+      <p className="text-secondary text-sm mb-4">
+        Pick exactly {bracketSize} albums from the pool of {allAlbums.length}.
+      </p>
+
+      {/* Size toggle */}
+      <div className="flex gap-2 mb-4">
+        {([4, 8] as const).map((n) => (
+          <button
+            key={n}
+            onClick={() => handleSizeChange(n)}
+            className={cn(
+              "flex-1 rounded-lg border py-2 text-sm font-semibold transition-all focus:outline-none",
+              bracketSize === n
+                ? "border-accent bg-accent/10 text-accent"
+                : "border-border bg-surface text-secondary hover:border-secondary"
+            )}
+          >
+            {n} albums
+          </button>
+        ))}
+      </div>
+
+      {/* Selected count */}
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-xs text-secondary">
+          {selectedIds.length} / {bracketSize} selected
+        </span>
+        {selectedIds.length > 0 && (
+          <button
+            className="text-xs text-muted hover:text-secondary"
+            onClick={() => setSelectedIds([])}
+          >
+            Clear all
+          </button>
+        )}
+      </div>
+
+      {/* Search */}
+      <input
+        type="text"
+        placeholder="Search albums..."
+        className="w-full rounded-lg border border-border bg-surface text-primary text-sm p-2.5 font-body focus:outline-none focus:ring-1 focus:ring-accent mb-3"
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+      />
+
+      {/* Album list */}
+      <div className="rounded-lg border border-border bg-surface overflow-y-auto max-h-64 mb-6">
+        {filtered.length === 0 && (
+          <p className="text-sm text-muted p-4 text-center">No albums match.</p>
+        )}
+        {filtered.map((album) => {
+          const isSelected = selectedIds.includes(album.id);
+          const isFull = selectedIds.length >= bracketSize && !isSelected;
+          return (
+            <button
+              key={album.id}
+              disabled={isFull}
+              onClick={() => toggleAlbum(album.id)}
+              className={cn(
+                "w-full flex items-center justify-between px-4 py-2.5 text-left text-sm border-b border-border last:border-b-0 transition-colors focus:outline-none",
+                isSelected
+                  ? "bg-accent/10 text-accent"
+                  : isFull
+                  ? "text-muted cursor-not-allowed"
+                  : "text-primary hover:bg-surface"
+              )}
+            >
+              <span>{album.name}</span>
+              {isSelected && <span className="text-accent text-xs">✓</span>}
+            </button>
+          );
+        })}
+      </div>
+
+      <Button className="w-full py-3" disabled={!canContinue} onClick={onNext}>
         Continue &rarr;
       </Button>
     </div>
@@ -218,7 +455,9 @@ function StepNameLock({
           value={lockedAt}
           onChange={(e) => setLockedAt(e.target.value)}
         />
-        <p className="text-xs text-muted mt-1">You can set or change this later from the admin console.</p>
+        <p className="text-xs text-muted mt-1">
+          You can set or change this later from the admin console.
+        </p>
       </div>
 
       <Button className="w-full py-3" disabled={!valid} onClick={onNext}>
@@ -260,16 +499,16 @@ function StepScoring({
   setScoringConfig,
   preset,
   setPreset,
-  names,
+  teamCount,
 }: {
   onNext: () => void;
   scoringConfig: ScoringConfig;
   setScoringConfig: (c: ScoringConfig) => void;
   preset: ScoringPreset;
   setPreset: (p: ScoringPreset) => void;
-  names: string[];
+  teamCount: number;
 }) {
-  const slotSize = inferBracketSize(names.length);
+  const slotSize = inferBracketSize(teamCount);
   const rounds = bracketRounds(slotSize);
   const numRounds = rounds.length;
 
@@ -297,7 +536,6 @@ function StepScoring({
 
   const perfect = perfectScore(scoringConfig, rounds);
 
-  // Build a human-readable breakdown: "R1: 1pt×4=4 · R2: 2pt×2=4 · Champion: +2"
   const breakdown = [
     ...rounds.map(([r, count]) => {
       const pts = scoringConfig.round_points[r.toString()] ?? 0;
@@ -393,7 +631,8 @@ function StepScoring({
 // ─── Step 5: Confirm ──────────────────────────────────────────────────────────
 function StepConfirm({
   leagueName,
-  names,
+  teamCount,
+  templateKind,
   scoringConfig,
   preset,
   lockedAt,
@@ -401,14 +640,15 @@ function StepConfirm({
   submitting,
 }: {
   leagueName: string;
-  names: string[];
+  teamCount: number;
+  templateKind: TemplateKind;
   scoringConfig: ScoringConfig;
   preset: ScoringPreset;
   lockedAt: string;
   onSubmit: () => void;
   submitting: boolean;
 }) {
-  const slotSize = inferBracketSize(names.length);
+  const slotSize = inferBracketSize(teamCount);
   const rounds = bracketRounds(slotSize);
   const perfect = perfectScore(scoringConfig, rounds);
 
@@ -422,6 +662,15 @@ function StepConfirm({
       })
     : "Not set (configure later)";
 
+  const bracketLabel =
+    templateKind === "custom"
+      ? `${teamCount} teams / ${slotSize}-slot`
+      : templateKind === "sweet16"
+      ? "16 teams (Sweet 16)"
+      : templateKind === "rap-albums"
+      ? `${teamCount} albums / ${slotSize}-slot`
+      : `${teamCount} teams`;
+
   return (
     <div>
       <h2 className="font-display text-2xl font-bold text-primary mb-1">
@@ -431,7 +680,7 @@ function StepConfirm({
 
       <Card className="mb-8 space-y-3">
         <Row label="League name" value={leagueName} />
-        <Row label="Bracket size" value={`${names.length} teams / ${slotSize}-slot`} />
+        <Row label="Bracket" value={bracketLabel} />
         <Row label="Scoring" value={`${presetLabel} (${perfect} pts perfect)`} />
         <Row label="Picks lock" value={lockDisplay} />
       </Card>
@@ -556,13 +805,26 @@ function SuccessScreen({
 }
 
 // ─── Main flow ────────────────────────────────────────────────────────────────
+// Step indices per flow:
+//   custom:     0=template, 1=competitors, 2=name, 3=scoring, 4=confirm
+//   sweet16:    0=template, 1=preview,     2=name, 3=scoring, 4=confirm
+//   rap-albums: 0=template, 1=pool-picker, 2=name, 3=scoring, 4=confirm
 const TOTAL_STEPS = 5;
 
-export default function CreateFlow() {
+export default function CreateFlow({ templates }: { templates: PublicTemplate[] }) {
   const [step, setStep] = useState(0);
 
-  // form state
+  // template selection
+  const [templateKind, setTemplateKind] = useState<TemplateKind | null>(null);
+
+  // custom flow
   const [names, setNames] = useState<string[]>([]);
+
+  // rap albums flow
+  const [selectedAlbumIds, setSelectedAlbumIds] = useState<string[]>([]);
+  const [bracketSize, setBracketSize] = useState<4 | 8>(8);
+
+  // shared
   const [leagueName, setLeagueName] = useState("");
   const [lockedAt, setLockedAt] = useState("");
   const [preset, setPreset] = useState<ScoringPreset>("late_rounds_matter");
@@ -581,19 +843,76 @@ export default function CreateFlow() {
 
   const next = useCallback(() => setStep((s) => s + 1), []);
 
+  // Derived helpers
+  const sweet16Template = templates.find((t) => t.name === "March Madness Sweet 16 (2025)");
+  const rapAlbumsTemplate = templates.find((t) => t.name === "Greatest Rap Albums");
+
+  const sweet16Teams: TeamEntry[] = (sweet16Template?.team_registry ?? []) as TeamEntry[];
+  const allAlbums: TeamEntry[] = (rapAlbumsTemplate?.team_registry ?? []) as TeamEntry[];
+
+  // How many "teams" are in this bracket for scoring preview
+  const effectiveTeamCount =
+    templateKind === "sweet16"
+      ? sweet16Teams.length || 16
+      : templateKind === "rap-albums"
+      ? bracketSize
+      : names.length;
+
+  const handleTemplateSelect = (kind: TemplateKind) => {
+    setTemplateKind(kind);
+    // Reset per-template state when switching
+    setNames([]);
+    setSelectedAlbumIds([]);
+    // Default scoring: rap-albums → flat; sweet16 → late_rounds_matter; custom → late_rounds_matter
+    if (kind === "rap-albums") {
+      setPreset("flat");
+      setScoringConfig(SCORING_PRESETS.flat);
+    } else {
+      setPreset("late_rounds_matter");
+      setScoringConfig(SCORING_PRESETS.late_rounds_matter);
+    }
+  };
+
   const handleCreate = async () => {
     setSubmitting(true);
     setError(null);
     try {
-      const res = await fetch("/api/create-league", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      let body: Record<string, unknown>;
+
+      if (templateKind === "custom") {
+        body = {
+          templateKind: "custom",
           leagueName,
           competitorNames: names,
           lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
           scoringConfig,
-        }),
+        };
+      } else if (templateKind === "sweet16") {
+        body = {
+          templateKind: "seeded",
+          templateId: sweet16Template!.id,
+          leagueName,
+          lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
+          scoringConfig,
+        };
+      } else if (templateKind === "rap-albums") {
+        body = {
+          templateKind: "curated-pool",
+          parentTemplateId: rapAlbumsTemplate!.id,
+          selectedTeamIds: selectedAlbumIds,
+          leagueName,
+          lockedAt: lockedAt ? new Date(lockedAt).toISOString() : null,
+          scoringConfig,
+        };
+      } else {
+        setError("Unknown template kind.");
+        return;
+      }
+
+      const res = await fetch("/api/create-league", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -623,10 +942,32 @@ export default function CreateFlow() {
     <div>
       <StepDots current={step} total={TOTAL_STEPS} />
 
-      {step === 0 && <StepTemplate onNext={next} />}
+      {step === 0 && (
+        <StepTemplate
+          onNext={next}
+          templates={templates}
+          templateKind={templateKind}
+          setTemplateKind={handleTemplateSelect}
+        />
+      )}
 
-      {step === 1 && (
+      {step === 1 && templateKind === "custom" && (
         <StepCompetitors onNext={next} names={names} setNames={setNames} />
+      )}
+
+      {step === 1 && templateKind === "sweet16" && (
+        <StepSweet16Preview onNext={next} teams={sweet16Teams} />
+      )}
+
+      {step === 1 && templateKind === "rap-albums" && (
+        <StepRapAlbumPicker
+          onNext={next}
+          allAlbums={allAlbums}
+          selectedIds={selectedAlbumIds}
+          setSelectedIds={setSelectedAlbumIds}
+          bracketSize={bracketSize}
+          setBracketSize={setBracketSize}
+        />
       )}
 
       {step === 2 && (
@@ -646,14 +987,15 @@ export default function CreateFlow() {
           setScoringConfig={setScoringConfig}
           preset={preset}
           setPreset={setPreset}
-          names={names}
+          teamCount={effectiveTeamCount}
         />
       )}
 
-      {step === 4 && (
+      {step === 4 && templateKind && (
         <StepConfirm
           leagueName={leagueName}
-          names={names}
+          teamCount={effectiveTeamCount}
+          templateKind={templateKind}
           scoringConfig={scoringConfig}
           preset={preset}
           lockedAt={lockedAt}
