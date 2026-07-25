@@ -377,6 +377,10 @@ function StepScoring({
           <span className="font-display text-xl font-bold text-accent">{perfect} pts</span>
         </div>
         <p className="text-xs text-muted">{breakdown}</p>
+        <p className="mt-2 text-xs text-muted">
+          Once picks lock, your rules are frozen. Any change after that is
+          timestamped and shown to your league.
+        </p>
       </div>
 
       <Button className="w-full py-3" onClick={onNext}>
@@ -500,6 +504,11 @@ function SuccessScreen({
         <h2 className="font-display text-2xl font-bold text-primary">League created!</h2>
       </div>
       <p className="text-secondary text-sm mb-8">{leagueName}</p>
+
+      <p className="text-xs text-secondary mb-4">
+        Your organizer link is your admin key. Keep it private. The join
+        link is safe to share to any group chat.
+      </p>
 
       <div className="space-y-4 mb-8">
         <Card>
