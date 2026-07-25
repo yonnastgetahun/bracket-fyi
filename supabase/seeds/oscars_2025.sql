@@ -283,50 +283,50 @@ begin
   -- Pre-populate results from the March 2, 2025 ceremony.
   -- winner_team_id corresponds to team_registry ids above.
   insert into template_results (template_id, template_match_id, winner_team_id, entered_by)
-  select tid, id, 'movie-anora',               'organizer' from template_matches where template_id = tid and match_number = 1
+  select tid, id, 'movie-anora',               'organizer'::result_source from template_matches where template_id = tid and match_number = 1
   union all
-  select tid, id, 'person-sean-baker',         'organizer' from template_matches where template_id = tid and match_number = 2
+  select tid, id, 'person-sean-baker',         'organizer'::result_source from template_matches where template_id = tid and match_number = 2
   union all
-  select tid, id, 'person-adrien-brody',       'organizer' from template_matches where template_id = tid and match_number = 3
+  select tid, id, 'person-adrien-brody',       'organizer'::result_source from template_matches where template_id = tid and match_number = 3
   union all
-  select tid, id, 'person-mikey-madison',      'organizer' from template_matches where template_id = tid and match_number = 4
+  select tid, id, 'person-mikey-madison',      'organizer'::result_source from template_matches where template_id = tid and match_number = 4
   union all
-  select tid, id, 'person-kieran-culkin',      'organizer' from template_matches where template_id = tid and match_number = 5
+  select tid, id, 'person-kieran-culkin',      'organizer'::result_source from template_matches where template_id = tid and match_number = 5
   union all
-  select tid, id, 'person-zoe-saldana',        'organizer' from template_matches where template_id = tid and match_number = 6
+  select tid, id, 'person-zoe-saldana',        'organizer'::result_source from template_matches where template_id = tid and match_number = 6
   union all
-  select tid, id, 'movie-anora',               'organizer' from template_matches where template_id = tid and match_number = 7
+  select tid, id, 'movie-anora',               'organizer'::result_source from template_matches where template_id = tid and match_number = 7
   union all
-  select tid, id, 'movie-conclave',            'organizer' from template_matches where template_id = tid and match_number = 8
+  select tid, id, 'movie-conclave',            'organizer'::result_source from template_matches where template_id = tid and match_number = 8
   union all
-  select tid, id, 'movie-flow',                'organizer' from template_matches where template_id = tid and match_number = 9
+  select tid, id, 'movie-flow',                'organizer'::result_source from template_matches where template_id = tid and match_number = 9
   union all
-  select tid, id, 'movie-ive-seen-it-all',     'organizer' from template_matches where template_id = tid and match_number = 10
+  select tid, id, 'movie-ive-seen-it-all',     'organizer'::result_source from template_matches where template_id = tid and match_number = 10
   union all
-  select tid, id, 'movie-no-other-land',       'organizer' from template_matches where template_id = tid and match_number = 11
+  select tid, id, 'movie-no-other-land',       'organizer'::result_source from template_matches where template_id = tid and match_number = 11
   union all
-  select tid, id, 'movie-only-girl',           'organizer' from template_matches where template_id = tid and match_number = 12
+  select tid, id, 'movie-only-girl',           'organizer'::result_source from template_matches where template_id = tid and match_number = 12
   union all
-  select tid, id, 'movie-im-not-robot',        'organizer' from template_matches where template_id = tid and match_number = 13
+  select tid, id, 'movie-im-not-robot',        'organizer'::result_source from template_matches where template_id = tid and match_number = 13
   union all
-  select tid, id, 'movie-in-the-shadow',       'organizer' from template_matches where template_id = tid and match_number = 14
+  select tid, id, 'movie-in-the-shadow',       'organizer'::result_source from template_matches where template_id = tid and match_number = 14
   union all
-  select tid, id, 'movie-brutalist',           'organizer' from template_matches where template_id = tid and match_number = 15
+  select tid, id, 'movie-brutalist',           'organizer'::result_source from template_matches where template_id = tid and match_number = 15
   union all
-  select tid, id, 'movie-anora',               'organizer' from template_matches where template_id = tid and match_number = 16
+  select tid, id, 'movie-anora',               'organizer'::result_source from template_matches where template_id = tid and match_number = 16
   union all
-  select tid, id, 'movie-wicked',              'organizer' from template_matches where template_id = tid and match_number = 17
+  select tid, id, 'movie-wicked',              'organizer'::result_source from template_matches where template_id = tid and match_number = 17
   union all
-  select tid, id, 'movie-wicked',              'organizer' from template_matches where template_id = tid and match_number = 18
+  select tid, id, 'movie-wicked',              'organizer'::result_source from template_matches where template_id = tid and match_number = 18
   union all
-  select tid, id, 'movie-substance',           'organizer' from template_matches where template_id = tid and match_number = 19
+  select tid, id, 'movie-substance',           'organizer'::result_source from template_matches where template_id = tid and match_number = 19
   union all
-  select tid, id, 'movie-dune2',               'organizer' from template_matches where template_id = tid and match_number = 20
+  select tid, id, 'movie-dune2',               'organizer'::result_source from template_matches where template_id = tid and match_number = 20
   union all
-  select tid, id, 'movie-dune2',               'organizer' from template_matches where template_id = tid and match_number = 21
+  select tid, id, 'movie-dune2',               'organizer'::result_source from template_matches where template_id = tid and match_number = 21
   union all
-  select tid, id, 'person-daniel-blumberg',    'organizer' from template_matches where template_id = tid and match_number = 22
+  select tid, id, 'person-daniel-blumberg',    'organizer'::result_source from template_matches where template_id = tid and match_number = 22
   union all
-  select tid, id, 'song-el-mal',               'organizer' from template_matches where template_id = tid and match_number = 23;
+  select tid, id, 'song-el-mal',               'organizer'::result_source from template_matches where template_id = tid and match_number = 23;
 
 end $$;
