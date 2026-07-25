@@ -1,6 +1,7 @@
 import { getAdminClient } from "@/lib/supabase/admin";
 import type {
   League,
+  LeagueWithTemplate,
   LeaderboardRow,
   PickResultRow,
   ChampionStatusRow,
@@ -9,13 +10,26 @@ import type {
   Participant,
 } from "@/lib/types";
 
-export async function getLeagueWithTemplate(leagueId: string): Promise<League | null> {
+export async function getLeagueWithTemplate(
+  leagueId: string
+): Promise<LeagueWithTemplate | null> {
   const { data } = await getAdminClient()
     .from("leagues")
-    .select("*")
+    .select("*, templates!template_id(type, topology)")
     .eq("id", leagueId)
     .single();
-  return data as League | null;
+  if (!data) return null;
+  const template = (data as Record<string, unknown>).templates as
+    | { type: string; topology: unknown }
+    | null;
+  const { templates: _t, ...leagueFields } = data as Record<string, unknown>;
+  void _t;
+  return {
+    ...(leagueFields as unknown as League),
+    template_type: (template?.type as LeagueWithTemplate["template_type"]) ?? null,
+    template_topology:
+      (template?.topology as LeagueWithTemplate["template_topology"]) ?? null,
+  };
 }
 
 export async function getLeaderboard(leagueId: string): Promise<LeaderboardRow[]> {
@@ -107,4 +121,25 @@ export async function getParticipantByMagicToken(
     .eq("magic_token", magicToken)
     .maybeSingle();
   return data as Participant | null;
+}
+
+export interface PublicTemplate {
+  id: string;
+  name: string;
+  type: string;
+  team_registry: TeamEntry[];
+  scoring_defaults: import("./types").ScoringConfig | null;
+  topology: import("./types").BracketTopology | import("./types").PickemTopology | null;
+}
+
+export async function getPublicTemplates(): Promise<PublicTemplate[]> {
+  const { data } = await getAdminClient()
+    .from("templates")
+    .select("id, name, type, team_registry, scoring_defaults, topology")
+    .in("name", [
+      "Greatest Rap Albums",
+      "March Madness Sweet 16 (2025)",
+      "Oscars 2025 (97th Academy Awards)",
+    ]);
+  return (data ?? []) as PublicTemplate[];
 }

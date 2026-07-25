@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { ScoringConfig, TeamEntry } from "@/lib/types";
+import { isBracketConfig } from "@/lib/types";
 
 // ─── Bracket topology helpers ─────────────────────────────────────────────────
 
@@ -13,7 +14,7 @@ function inferSlotCount(count: number): number {
 }
 
 // Build template_matches rows for a single-elimination bracket of `slots` size.
-// Round 1: seed-1 vs seed-2, seed-3 vs seed-4, …
+// Round 1: seed-0 vs seed-1, seed-2 vs seed-3, …
 // Later rounds: w-r{r}m{n} refs
 function buildMatchRows(
   templateId: string,
@@ -42,13 +43,11 @@ function buildMatchRows(
       let awaySlot: string;
 
       if (round === 1) {
-        // seed positions: 0-indexed (seed-0, seed-1, seed-2, …)
         const seedA = (m - 1) * 2;
         const seedB = (m - 1) * 2 + 1;
         homeSlot = `seed-${seedA}`;
         awaySlot = `seed-${seedB}`;
       } else {
-        // winners from previous round
         const prevRound = round - 1;
         const winnerA = (m - 1) * 2 + 1;
         const winnerB = (m - 1) * 2 + 2;
@@ -65,7 +64,7 @@ function buildMatchRows(
       });
     }
 
-    if (matchesInRound === 1) break; // done at the final
+    if (matchesInRound === 1) break;
     matchesInRound = matchesInRound / 2;
     round++;
   }
@@ -73,14 +72,39 @@ function buildMatchRows(
   return rows;
 }
 
-// ─── Request body type ────────────────────────────────────────────────────────
+// ─── Request body variants ────────────────────────────────────────────────────
 
-interface CreateLeagueBody {
-  leagueName: string;
-  competitorNames: string[];
-  lockedAt: string | null;
-  scoringConfig: ScoringConfig;
-}
+type CreateLeagueBody =
+  | {
+      templateKind: "custom";
+      leagueName: string;
+      competitorNames: string[];
+      lockedAt: string | null;
+      scoringConfig: ScoringConfig;
+    }
+  | {
+      templateKind: "seeded";
+      templateId: string;
+      leagueName: string;
+      lockedAt: string | null;
+      scoringConfig: ScoringConfig;
+    }
+  | {
+      templateKind: "curated-pool";
+      parentTemplateId: string;
+      selectedTeamIds: string[];
+      leagueName: string;
+      lockedAt: string | null;
+      scoringConfig: ScoringConfig;
+    }
+  | {
+      // legacy: no templateKind — treat as custom
+      templateKind?: undefined;
+      leagueName: string;
+      competitorNames: string[];
+      lockedAt: string | null;
+      scoringConfig: ScoringConfig;
+    };
 
 // ─── POST /api/create-league ──────────────────────────────────────────────────
 
@@ -92,49 +116,190 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const { leagueName, competitorNames, lockedAt, scoringConfig } = body;
+  // Normalize: missing templateKind → custom
+  const kind = body.templateKind ?? "custom";
 
-  // Validation
-  if (!leagueName || typeof leagueName !== "string" || leagueName.trim().length === 0) {
+  if (!body.leagueName || typeof body.leagueName !== "string" || body.leagueName.trim().length === 0) {
     return NextResponse.json({ error: "leagueName is required" }, { status: 400 });
   }
-  if (leagueName.trim().length > 60) {
+  if (body.leagueName.trim().length > 60) {
     return NextResponse.json({ error: "leagueName must be 60 chars or less" }, { status: 400 });
   }
+  if (!body.scoringConfig || typeof body.scoringConfig !== "object") {
+    return NextResponse.json({ error: "scoringConfig is required" }, { status: 400 });
+  }
+
+  const db = getAdminClient();
+  const { leagueName, lockedAt, scoringConfig } = body;
+
+  // ── Seeded template (Sweet 16 and similar) ────────────────────────────────
+  if (kind === "seeded") {
+    const b = body as Extract<CreateLeagueBody, { templateKind: "seeded" }>;
+    if (!b.templateId) {
+      return NextResponse.json({ error: "templateId is required for seeded flow" }, { status: 400 });
+    }
+
+    const { data: league, error: leagueErr } = await db
+      .from("leagues")
+      .insert({
+        name: leagueName.trim(),
+        template_id: b.templateId,
+        scoring_config: scoringConfig,
+        locked_at: lockedAt ?? null,
+      })
+      .select("id, organizer_token, join_token")
+      .single();
+
+    if (leagueErr || !league) {
+      console.error("league insert error (seeded)", leagueErr);
+      return NextResponse.json({ error: "Failed to create league" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      leagueId: league.id,
+      organizerToken: league.organizer_token,
+      joinToken: league.join_token,
+    });
+  }
+
+  // ── Curated pool (Rap Albums) ─────────────────────────────────────────────
+  if (kind === "curated-pool") {
+    const b = body as Extract<CreateLeagueBody, { templateKind: "curated-pool" }>;
+    if (!b.parentTemplateId) {
+      return NextResponse.json({ error: "parentTemplateId is required" }, { status: 400 });
+    }
+    if (!Array.isArray(b.selectedTeamIds) || (b.selectedTeamIds.length !== 4 && b.selectedTeamIds.length !== 8)) {
+      return NextResponse.json(
+        { error: "selectedTeamIds must contain exactly 4 or 8 entries" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Fetch parent template registry
+    const { data: parentTemplate, error: parentErr } = await db
+      .from("templates")
+      .select("team_registry")
+      .eq("id", b.parentTemplateId)
+      .single();
+
+    if (parentErr || !parentTemplate) {
+      return NextResponse.json({ error: "Parent template not found" }, { status: 404 });
+    }
+
+    const parentRegistry = parentTemplate.team_registry as TeamEntry[];
+
+    // 2. Filter to selected IDs, preserving order of selectedTeamIds
+    const filteredTeams = b.selectedTeamIds
+      .map((id) => parentRegistry.find((t) => t.id === id))
+      .filter((t): t is TeamEntry => !!t);
+
+    if (filteredTeams.length !== b.selectedTeamIds.length) {
+      return NextResponse.json(
+        { error: "Some selectedTeamIds were not found in the parent template" },
+        { status: 400 }
+      );
+    }
+
+    const slots = inferSlotCount(filteredTeams.length);
+
+    // 3. Re-map to seed-0, seed-1, etc., preserving original id in aliases
+    const childRegistry: TeamEntry[] = filteredTeams.map((t, i) => ({
+      id: `seed-${i}`,
+      name: t.name,
+      aliases: [...(t.aliases ?? []), t.id], // provenance: original id in aliases
+    }));
+
+    const topology = {
+      rounds: Math.log2(slots),
+      slots_per_round: Array.from({ length: Math.log2(slots) }, (_, i) =>
+        slots / Math.pow(2, i + 1)
+      ),
+      has_third_place: isBracketConfig(scoringConfig) ? (scoringConfig.has_third_place ?? false) : false,
+    };
+
+    // 4. Insert child template
+    const { data: childTemplate, error: childErr } = await db
+      .from("templates")
+      .insert({
+        name: leagueName.trim(),
+        type: "bracket",
+        topology,
+        team_registry: childRegistry,
+        scoring_defaults: scoringConfig,
+      })
+      .select("id")
+      .single();
+
+    if (childErr || !childTemplate) {
+      console.error("child template insert error", childErr);
+      return NextResponse.json({ error: "Failed to create child template" }, { status: 500 });
+    }
+
+    // 5. Insert template_matches for child
+    const matchRows = buildMatchRows(childTemplate.id, slots);
+    const { error: matchErr } = await db.from("template_matches").insert(matchRows);
+
+    if (matchErr) {
+      console.error("template_matches insert error (curated-pool)", matchErr);
+      await db.from("templates").delete().eq("id", childTemplate.id);
+      return NextResponse.json({ error: "Failed to create bracket matches" }, { status: 500 });
+    }
+
+    // 6. Insert league
+    const { data: league, error: leagueErr } = await db
+      .from("leagues")
+      .insert({
+        name: leagueName.trim(),
+        template_id: childTemplate.id,
+        scoring_config: scoringConfig,
+        locked_at: lockedAt ?? null,
+      })
+      .select("id, organizer_token, join_token")
+      .single();
+
+    if (leagueErr || !league) {
+      console.error("league insert error (curated-pool)", leagueErr);
+      await db.from("templates").delete().eq("id", childTemplate.id);
+      return NextResponse.json({ error: "Failed to create league" }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      leagueId: league.id,
+      organizerToken: league.organizer_token,
+      joinToken: league.join_token,
+    });
+  }
+
+  // ── Custom (default / legacy) ─────────────────────────────────────────────
+  const b = body as Extract<CreateLeagueBody, { templateKind?: "custom" }>;
+  const competitorNames = b.competitorNames;
+
   if (!Array.isArray(competitorNames) || competitorNames.length < 3) {
     return NextResponse.json(
       { error: "competitorNames must have at least 3 entries" },
       { status: 400 }
     );
   }
-  if (!scoringConfig || typeof scoringConfig !== "object") {
-    return NextResponse.json({ error: "scoringConfig is required" }, { status: 400 });
-  }
 
-  const db = getAdminClient();
   const slots = inferSlotCount(competitorNames.length);
 
-  // Build team_registry with seed-N ids (0-indexed) + bye padding if needed
   const teamRegistry: TeamEntry[] = competitorNames.map((name, i) => ({
     id: `seed-${i}`,
     name: name.trim(),
     aliases: [],
   }));
-  // Pad with BYE entries so team_registry covers all slots
   for (let i = competitorNames.length; i < slots; i++) {
     teamRegistry.push({ id: `bye-${i - competitorNames.length}`, name: "BYE", aliases: [] });
   }
 
-  // Build topology
   const topology = {
     rounds: Math.log2(slots),
     slots_per_round: Array.from({ length: Math.log2(slots) }, (_, i) =>
       slots / Math.pow(2, i + 1)
     ),
-    has_third_place: scoringConfig.has_third_place ?? false,
+    has_third_place: isBracketConfig(scoringConfig) ? (scoringConfig.has_third_place ?? false) : false,
   };
 
-  // 1. Insert template
   const { data: template, error: templateErr } = await db
     .from("templates")
     .insert({
@@ -149,27 +314,18 @@ export async function POST(req: NextRequest) {
 
   if (templateErr || !template) {
     console.error("template insert error", templateErr);
-    return NextResponse.json(
-      { error: "Failed to create template" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create template" }, { status: 500 });
   }
 
-  // 2. Insert template_matches
   const matchRows = buildMatchRows(template.id, slots);
   const { error: matchErr } = await db.from("template_matches").insert(matchRows);
 
   if (matchErr) {
     console.error("template_matches insert error", matchErr);
-    // Clean up template
     await db.from("templates").delete().eq("id", template.id);
-    return NextResponse.json(
-      { error: "Failed to create bracket matches" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create bracket matches" }, { status: 500 });
   }
 
-  // 3. Insert league
   const { data: league, error: leagueErr } = await db
     .from("leagues")
     .insert({
@@ -183,12 +339,8 @@ export async function POST(req: NextRequest) {
 
   if (leagueErr || !league) {
     console.error("league insert error", leagueErr);
-    // Clean up template (cascades to matches)
     await db.from("templates").delete().eq("id", template.id);
-    return NextResponse.json(
-      { error: "Failed to create league" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Failed to create league" }, { status: 500 });
   }
 
   return NextResponse.json({

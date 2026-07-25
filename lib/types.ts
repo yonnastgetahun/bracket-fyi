@@ -2,12 +2,40 @@
 // Bracket.fyi — Core types (multi-tenant, template-agnostic)
 // ============================================================
 
-// scoring_config stored on leagues.scoring_config (jsonb)
-export interface ScoringConfig {
+// ============================================================
+// Scoring config — bracket vs pickem union
+// ============================================================
+
+// Bracket scoring: round-based points
+export interface BracketScoringConfig {
   round_points: Record<string, number>; // {"1": 1, "2": 1, "3": 2, "4": 2}
   champion_bonus: number;
   has_third_place: boolean;
   tiebreakers: TiebreakerKey[];
+}
+
+// Pickem scoring: category-based points
+export interface PickemScoringConfig {
+  scheme: "pickem_flat" | "pickem_weighted";
+  major_categories?: string[]; // for weighted mode
+  major_points?: number;
+  other_points?: number;
+  tiebreakers?: TiebreakerKey[];
+}
+
+// ScoringConfig: bracket-centric shape that also accommodates pickem via optional fields.
+// League.scoring_config is stored in the DB as either bracket or pickem JSON.
+// Bracket components (PickEntry, BracketLive, LeaderboardLive) safely access
+// bracket fields because they're only passed bracket leagues.
+// Pickem-specific components cast via isPickemConfig().
+export type ScoringConfig = BracketScoringConfig & Partial<PickemScoringConfig> | PickemScoringConfig & Partial<BracketScoringConfig>;
+
+// Type guards
+export function isPickemConfig(c: ScoringConfig): c is PickemScoringConfig {
+  return "scheme" in c;
+}
+export function isBracketConfig(c: ScoringConfig): c is BracketScoringConfig {
+  return "round_points" in c;
 }
 
 export type TiebreakerKey =
@@ -39,16 +67,12 @@ export interface TeamEntry {
   seed?: number | null;
 }
 
-export interface Template {
+// Pickem category (one per Oscar category, one per pick)
+export interface PickemCategory {
   id: string;
   name: string;
-  type: TemplateType;
-  topology: BracketTopology | null;
-  team_registry: TeamEntry[];
-  schedule: TemplateSchedule | null;
-  scoring_defaults: ScoringConfig;
-  results_provider: string | null;
-  created_at: string;
+  nominees: string[]; // team_registry IDs
+  winner?: string; // team_registry ID if resolved
 }
 
 export interface BracketTopology {
@@ -57,9 +81,26 @@ export interface BracketTopology {
   has_third_place: boolean;
 }
 
+export interface PickemTopology {
+  type: "pickem";
+  categories: PickemCategory[];
+}
+
 export interface TemplateSchedule {
-  lock_time: string | null;   // ISO timestamp
+  lock_time: string | null; // ISO timestamp
   match_times: Record<string, string>; // template_match_id → ISO timestamp
+}
+
+export interface Template {
+  id: string;
+  name: string;
+  type: TemplateType;
+  topology: BracketTopology | PickemTopology | null;
+  team_registry: TeamEntry[];
+  schedule: TemplateSchedule | null;
+  scoring_defaults: ScoringConfig;
+  results_provider: string | null;
+  created_at: string;
 }
 
 // ============================================================
@@ -76,6 +117,12 @@ export interface League {
   locked_at: string | null;
   status: LeagueStatus;
   created_at: string;
+}
+
+// League with joined template info (returned by getLeagueWithTemplate)
+export interface LeagueWithTemplate extends League {
+  template_type: TemplateType | null;
+  template_topology: BracketTopology | PickemTopology | null;
 }
 
 // ============================================================
@@ -109,7 +156,7 @@ export interface PickResultRow {
   pick_id: string;
   league_id: string;
   participant_id: string;
-  slot_id: string;          // template_match_id or 'champion'
+  slot_id: string; // template_match_id or 'champion'
   picked_team_id: string;
   locked: boolean;
   round: number;

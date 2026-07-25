@@ -129,6 +129,16 @@ export default function MatchesLive({
   const [matches] = useState(initialMatches);
   const [results, setResults] = useState(initialResults);
 
+  // Pickem leagues don't use bracket-style matches
+  const isPickem = Object.keys(seedMap).length === 0 && matches.some(m => m.home_slot.startsWith("category:"));
+  if (isPickem) {
+    return (
+      <div className="px-4 py-8 text-center text-secondary text-sm">
+        This view is optimized for bracket format — full pick'em support coming soon.
+      </div>
+    );
+  }
+
   const refetch = useCallback(async () => {
     const supabase = getBrowserClient();
     const { data } = await supabase

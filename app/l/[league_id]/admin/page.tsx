@@ -7,6 +7,7 @@ import {
   getEffectiveResults,
 } from "@/lib/league-data";
 import { AdminConsole } from "@/components/AdminConsole";
+import type { PickemTopology } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +46,12 @@ export default async function AdminPage({
     .select("*", { count: "exact", head: true })
     .eq("league_id", league_id);
 
+  const templateType = league.template_type ?? null;
+  const categories =
+    league.template_type === "pickem"
+      ? ((league.template_topology as PickemTopology)?.categories ?? [])
+      : [];
+
   return (
     <AdminConsole
       league={league}
@@ -53,6 +60,8 @@ export default async function AdminPage({
       teamRegistry={teamRegistry}
       initialResults={results}
       hasPicks={(pickCount ?? 0) > 0}
+      templateType={templateType}
+      categories={categories}
     />
   );
 }
