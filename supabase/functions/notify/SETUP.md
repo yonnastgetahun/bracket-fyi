@@ -45,9 +45,9 @@ const { subtle } = webcrypto
 
 async function generateVapidJwk() {
   const keyPair = await subtle.generateKey(
-    { name: 'ECDH', namedCurve: 'P-256' },
+    { name: 'ECDSA', namedCurve: 'P-256' },
     true,
-    ['deriveKey']
+    ['sign', 'verify']
   )
   const publicJwk = await subtle.exportKey('jwk', keyPair.publicKey)
   const privateJwk = await subtle.exportKey('jwk', keyPair.privateKey)
