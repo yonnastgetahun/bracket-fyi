@@ -2,9 +2,21 @@
   "framework": "nextjs",
   "redirects": [
     {
+      "source": "/",
+      "has": [{ "type": "host", "value": "bracket-fyi.vercel.app" }],
+      "destination": "https://bracket.fyi/",
+      "permanent": true
+    },
+    {
       "source": "/:path*",
       "has": [{ "type": "host", "value": "bracket-fyi.vercel.app" }],
       "destination": "https://bracket.fyi/:path*",
+      "permanent": true
+    },
+    {
+      "source": "/",
+      "has": [{ "type": "host", "value": "www.bracket.fyi" }],
+      "destination": "https://bracket.fyi/",
       "permanent": true
     },
     {
