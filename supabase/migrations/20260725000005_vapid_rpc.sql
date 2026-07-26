@@ -29,6 +29,10 @@ begin
 end;
 $$;
 
--- Revoke from public, grant to service_role only
+-- Lock down execution to service_role only. Explicit revokes for anon and
+-- authenticated because SECURITY DEFINER functions leak the return value to
+-- any caller — anon/authenticated must not be able to invoke this.
 revoke all on function get_vapid_keys() from public;
+revoke all on function get_vapid_keys() from anon;
+revoke all on function get_vapid_keys() from authenticated;
 grant execute on function get_vapid_keys() to service_role;
