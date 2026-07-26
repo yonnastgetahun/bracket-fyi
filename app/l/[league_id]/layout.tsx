@@ -3,6 +3,7 @@ import { cookies } from 'next/headers'
 import { getAdminClient } from '@/lib/supabase/admin'
 import LeagueHeader from '@/components/LeagueHeader'
 import TabBar from '@/components/TabBar'
+import InstallPrompt from '@/components/InstallPrompt'
 
 interface LeagueLayoutProps {
   children: React.ReactNode
@@ -32,12 +33,17 @@ export default async function LeagueLayout({
 
   return (
     <div className="min-h-screen bg-canvas">
-      <LeagueHeader leagueName={league.name} />
+      <LeagueHeader
+        leagueName={league.name}
+        leagueId={leagueId}
+        magicToken={magicToken}
+      />
       {/* pt-12 = header height (48px), pb-14 = tab bar height (56px) */}
       <main className="pt-12 pb-14 min-h-screen">
         {children}
       </main>
       <TabBar leagueId={leagueId} magicToken={magicToken} />
+      <InstallPrompt leagueId={leagueId} />
     </div>
   )
 }

@@ -1,10 +1,17 @@
 import Link from 'next/link'
+import PushBell from './PushBell'
 
 interface LeagueHeaderProps {
   leagueName: string
+  leagueId: string
+  magicToken: string | null
 }
 
-export default function LeagueHeader({ leagueName }: LeagueHeaderProps) {
+export default function LeagueHeader({
+  leagueName,
+  leagueId,
+  magicToken,
+}: LeagueHeaderProps) {
   const truncated =
     leagueName.length > 20 ? leagueName.slice(0, 20) + '…' : leagueName
 
@@ -25,13 +32,7 @@ export default function LeagueHeader({ leagueName }: LeagueHeaderProps) {
         {truncated}
       </span>
 
-      <button
-        className="text-secondary hover:text-primary transition-colors p-1"
-        aria-label="Notifications"
-        disabled
-      >
-        🔔
-      </button>
+      <PushBell leagueId={leagueId} magicToken={magicToken} />
     </header>
   )
 }
