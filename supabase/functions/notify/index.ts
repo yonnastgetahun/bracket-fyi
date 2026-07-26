@@ -26,9 +26,13 @@ Deno.serve(async (req: Request) => {
     return new Response("Method not allowed", { status: 405 })
   }
 
-  // Auth: require service-role key in Authorization header
+  // Auth: shared secret between this function and the Next.js broadcast route.
+  // Set via `supabase secrets set BROADCAST_TRIGGER_SECRET=...` and mirrored in
+  // Vercel env. Avoids format mismatch between the auto-injected legacy JWT
+  // and the opaque sb_secret_* key format used by the app.
+  const expected = Deno.env.get("BROADCAST_TRIGGER_SECRET")
   const auth = req.headers.get("Authorization")
-  if (auth !== `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`) {
+  if (!expected || auth !== `Bearer ${expected}`) {
     return new Response("Unauthorized", { status: 401 })
   }
 

@@ -34,11 +34,17 @@ export async function POST(request: NextRequest) {
   // The DB write already succeeded; push failure does not affect the response.
   if (message && league) {
     const notifyUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/notify`
+    // The notify function checks Authorization against BROADCAST_TRIGGER_SECRET
+    // (a shared secret we set in both Vercel and Supabase Edge Function env).
+    // We avoid SUPABASE_SERVICE_ROLE_KEY here because:
+    //   1. Supabase auto-injects it as a legacy JWT inside Edge Functions,
+    //   2. But locally we hold the new opaque sb_secret_* format,
+    // so the two would never match. A separate shared secret sidesteps both.
     try {
       fetch(notifyUrl, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`,
+          Authorization: `Bearer ${process.env.BROADCAST_TRIGGER_SECRET ?? ""}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
