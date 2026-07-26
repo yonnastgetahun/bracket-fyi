@@ -4,7 +4,12 @@ import { useCallback, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { cn } from "@/lib/ui";
-import type { PickResultRow, TemplateMatch, Participant } from "@/lib/types";
+import type {
+  PickResultRow,
+  TemplateMatch,
+  Participant,
+  PickemCategory,
+} from "@/lib/types";
 
 interface Props {
   leagueId: string;
@@ -13,6 +18,7 @@ interface Props {
   matches: TemplateMatch[];
   teamMap: Record<string, string>;
   seedMap: Record<number, string>;
+  pickemCategories?: PickemCategory[] | null;
 }
 
 type PickState = "correct" | "wrong" | "pending" | "dead";
@@ -80,6 +86,7 @@ export default function CompareLive({
   matches,
   teamMap,
   seedMap,
+  pickemCategories,
 }: Props) {
   const [participants] = useState(initialParticipants);
   const [picks, setPicks] = useState(initialPicks);
@@ -95,12 +102,115 @@ export default function CompareLive({
 
   useLiveRefresh(refetch);
 
-  // Pickem leagues don't use bracket-style matches
-  const isPickem = Object.keys(seedMap).length === 0 && matches.some(m => m.home_slot.startsWith("category:"));
-  if (isPickem) {
+  // ----- Pickem branch -----
+  if (pickemCategories && pickemCategories.length > 0) {
+    // Map category id → template_match id (for looking up per-participant picks)
+    const categoryToMatchId = new Map<string, string>();
+    for (const m of matches) {
+      const catMatch = m.home_slot.match(/^category:(.+)$/);
+      if (catMatch) categoryToMatchId.set(catMatch[1], m.id);
+    }
+    // Build pick lookup: participant_id -> slot_id -> PickResultRow
+    const pickLookup = new Map<string, Map<string, PickResultRow>>();
+    for (const pick of picks) {
+      let bySlot = pickLookup.get(pick.participant_id);
+      if (!bySlot) {
+        bySlot = new Map();
+        pickLookup.set(pick.participant_id, bySlot);
+      }
+      bySlot.set(pick.slot_id, pick);
+    }
+
+    if (participants.length === 0) {
+      return (
+        <div className="px-3 py-4 text-sm text-secondary">
+          No participants yet.
+        </div>
+      );
+    }
+
     return (
-      <div className="px-4 py-8 text-center text-secondary text-sm">
-        This view is optimized for bracket format — full pick'em support coming soon.
+      <div className="py-4">
+        <h1 className="px-3 font-display text-base tracking-wide text-primary mb-3">
+          COMPARE
+        </h1>
+        <div className="overflow-x-auto">
+          <table className="min-w-max border-collapse text-xs">
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-10 bg-canvas px-3 py-2 text-left text-muted font-normal border-b border-border min-w-[140px]">
+                  Category
+                </th>
+                {participants.map((p) => (
+                  <th
+                    key={p.id}
+                    className="px-2 py-2 text-center font-semibold text-primary border-b border-border whitespace-nowrap min-w-[70px]"
+                  >
+                    {p.emoji ? `${p.emoji} ` : ""}
+                    {p.display_name}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {pickemCategories.map((cat) => {
+                const matchId = categoryToMatchId.get(cat.id);
+                const winnerId = cat.winner ?? null;
+                const winnerName = winnerId
+                  ? (teamMap[winnerId] ?? winnerId)
+                  : null;
+                const shortName =
+                  cat.name.length > 24 ? cat.name.slice(0, 22) + "…" : cat.name;
+                return (
+                  <tr
+                    key={cat.id}
+                    className="border-b border-border/50 hover:bg-surface/40"
+                  >
+                    <td className="sticky left-0 z-10 bg-canvas px-3 py-2 text-muted whitespace-nowrap">
+                      <span className="font-semibold text-primary">
+                        {shortName}
+                      </span>
+                      {winnerName && (
+                        <span className="ml-2 text-correct">✓ {winnerName}</span>
+                      )}
+                    </td>
+                    {participants.map((p) => {
+                      const pick = matchId
+                        ? pickLookup.get(p.id)?.get(matchId)
+                        : undefined;
+                      if (!pick) {
+                        return (
+                          <td
+                            key={p.id}
+                            className="px-2 py-2 text-center text-muted"
+                          >
+                            —
+                          </td>
+                        );
+                      }
+                      const state = getPickState(pick);
+                      const pickedName =
+                        teamMap[pick.picked_team_id] ?? pick.picked_team_id;
+                      return (
+                        <td
+                          key={p.id}
+                          className={cn(
+                            "px-2 py-2 text-center font-mono",
+                            STATE_COLOR[state]
+                          )}
+                          title={pickedName}
+                        >
+                          {STATE_ICON[state]}
+                          {abbr(pickedName)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }

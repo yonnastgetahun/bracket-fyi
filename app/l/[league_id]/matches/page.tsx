@@ -38,6 +38,15 @@ export default async function MatchesPage({
       .map((t) => [t.seed as number, t.id])
   );
 
+  // Pickem topology carries categories (id, name, nominees[]) for pickem leagues.
+  // Bracket leagues pass null and MatchesLive falls back to bracket rendering.
+  const pickemCategories =
+    league.template_type === "pickem" &&
+    league.template_topology &&
+    "categories" in league.template_topology
+      ? league.template_topology.categories
+      : null;
+
   return (
     <MatchesLive
       leagueId={league_id}
@@ -46,6 +55,7 @@ export default async function MatchesPage({
       teamMap={teamMap}
       seedMap={seedMap}
       initialResults={effectiveResults}
+      pickemCategories={pickemCategories}
     />
   );
 }

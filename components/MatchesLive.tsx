@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { cn } from "@/lib/ui";
-import type { TemplateMatch } from "@/lib/types";
+import type { TemplateMatch, PickemCategory } from "@/lib/types";
 
 interface EffectiveResult {
   template_match_id: string;
@@ -18,6 +18,7 @@ interface Props {
   teamMap: Record<string, string>;
   seedMap: Record<number, string>;
   initialResults: EffectiveResult[];
+  pickemCategories?: PickemCategory[] | null;
 }
 
 /**
@@ -125,19 +126,10 @@ export default function MatchesLive({
   teamMap,
   seedMap,
   initialResults,
+  pickemCategories,
 }: Props) {
   const [matches] = useState(initialMatches);
   const [results, setResults] = useState(initialResults);
-
-  // Pickem leagues don't use bracket-style matches
-  const isPickem = Object.keys(seedMap).length === 0 && matches.some(m => m.home_slot.startsWith("category:"));
-  if (isPickem) {
-    return (
-      <div className="px-4 py-8 text-center text-secondary text-sm">
-        This view is optimized for bracket format — full pick'em support coming soon.
-      </div>
-    );
-  }
 
   const refetch = useCallback(async () => {
     const supabase = getBrowserClient();
@@ -150,6 +142,60 @@ export default function MatchesLive({
   }, [leagueId, templateId]);
 
   useLiveRefresh(refetch);
+
+  // Pickem branch: one card per category, listing nominees + winner state.
+  if (pickemCategories && pickemCategories.length > 0) {
+    // Map category id → template_match id so we can look up the result winner.
+    const categoryToMatchId = new Map<string, string>();
+    for (const m of matches) {
+      const catMatch = m.home_slot.match(/^category:(.+)$/);
+      if (catMatch) categoryToMatchId.set(catMatch[1], m.id);
+    }
+    return (
+      <div className="space-y-3 px-3 py-4">
+        <h1 className="px-1 font-display text-base tracking-wide text-primary">
+          CATEGORIES
+        </h1>
+        {pickemCategories.map((cat) => {
+          const matchId = categoryToMatchId.get(cat.id);
+          const result = matchId
+            ? results.find((r) => r.template_match_id === matchId)
+            : null;
+          const winnerId = result?.winner_team_id ?? cat.winner ?? null;
+          const winnerName = winnerId
+            ? (teamMap[winnerId] ?? winnerId)
+            : null;
+          return (
+            <div
+              key={cat.id}
+              className="rounded-xl border border-border bg-surface px-3 py-3 space-y-1.5"
+            >
+              <div className="text-[11px] font-semibold uppercase tracking-widest text-muted">
+                {cat.name}
+              </div>
+              {winnerName ? (
+                <div className="text-base font-display text-correct">
+                  🏆 {winnerName}
+                </div>
+              ) : (
+                <div className="text-sm text-secondary">⏳ Pending</div>
+              )}
+              <div className="text-xs text-muted leading-relaxed">
+                {cat.nominees
+                  .map((nomineeId) => {
+                    const name = teamMap[nomineeId] ?? nomineeId;
+                    return nomineeId === winnerId
+                      ? `✓ ${name}`
+                      : name;
+                  })
+                  .join(" · ")}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
 
   // Group by round
   const roundsMap = new Map<number, TemplateMatch[]>();

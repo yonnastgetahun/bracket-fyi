@@ -37,6 +37,13 @@ export default async function ComparePage({
       .map((t) => [t.seed as number, t.id])
   );
 
+  const pickemCategories =
+    league.template_type === "pickem" &&
+    league.template_topology &&
+    "categories" in league.template_topology
+      ? league.template_topology.categories
+      : null;
+
   return (
     <CompareLive
       leagueId={league_id}
@@ -45,6 +52,7 @@ export default async function ComparePage({
       matches={matches}
       teamMap={teamMap}
       seedMap={seedMap}
+      pickemCategories={pickemCategories}
     />
   );
 }
