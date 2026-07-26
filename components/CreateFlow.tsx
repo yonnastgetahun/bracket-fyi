@@ -7,6 +7,7 @@ import { cn } from "@/lib/ui";
 import { SCORING_PRESETS, PICKEM_PRESETS, perfectScore, pickemPerfectScore } from "@/lib/scoring";
 import type { ScoringConfig, BracketScoringConfig, PickemScoringConfig, ScoringPreset, TeamEntry, PickemCategory, PickemTopology } from "@/lib/types";
 import type { PublicTemplate } from "@/lib/league-data";
+import type { LeaguePrefill } from "@/app/create/page";
 
 // ─── Bracket size inference ───────────────────────────────────────────────────
 function inferBracketSize(count: number): number {
@@ -945,30 +946,75 @@ function SuccessScreen({
 //   rap-albums: 0=template, 1=pool-picker, 2=name, 3=scoring, 4=confirm
 const TOTAL_STEPS = 5;
 
-export default function CreateFlow({ templates }: { templates: PublicTemplate[] }) {
-  const [step, setStep] = useState(0);
+export default function CreateFlow({ templates, prefill }: { templates: PublicTemplate[]; prefill?: LeaguePrefill | null }) {
+  // Determine initial step and templateKind when prefill is present
+  const initialTemplateKind = ((): TemplateKind | null => {
+    if (!prefill) return null;
+    if (prefill.isRapAlbums) return "rap-albums";
+    if (prefill.isCustomTemplate) return "custom";
+    if (prefill.templateType === "pickem") return "oscars";
+    // Seeded bracket: detect by template name pattern
+    const sweet16 = templates.find((t) => t.name === "March Madness Sweet 16 (2025)");
+    const oscars = templates.find((t) => t.name === "Oscars 2025 (97th Academy Awards)");
+    if (prefill.templateId === sweet16?.id) return "sweet16";
+    if (prefill.templateId === oscars?.id) return "oscars";
+    return "custom";
+  })();
+
+  // When prefill is active, start at step 1 (skip template selection)
+  const initialStep = prefill ? 1 : 0;
+
+  const [step, setStep] = useState(initialStep);
 
   // template selection
-  const [templateKind, setTemplateKind] = useState<TemplateKind | null>(null);
+  const [templateKind, setTemplateKind] = useState<TemplateKind | null>(initialTemplateKind);
 
-  // custom flow
-  const [names, setNames] = useState<string[]>([]);
+  // custom flow — prefill competitor names if available
+  const [names, setNames] = useState<string[]>(
+    prefill?.isCustomTemplate ? prefill.competitors.map((c) => c.name) : []
+  );
 
   // rap albums flow
   const [selectedAlbumIds, setSelectedAlbumIds] = useState<string[]>([]);
   const [bracketSize, setBracketSize] = useState<4 | 8>(8);
 
-  // shared
-  const [leagueName, setLeagueName] = useState("");
+  // shared — prefill league name with "(rematch)" suffix
+  const [leagueName, setLeagueName] = useState(
+    prefill ? `${prefill.originalName} (rematch)` : ""
+  );
   const [lockedAt, setLockedAt] = useState("");
-  const [preset, setPreset] = useState<ScoringPreset>("late_rounds_matter");
+
+  // Determine initial preset from prefill scoring config
+  const initialPreset = ((): ScoringPreset => {
+    if (!prefill || prefill.templateType === "pickem") return "late_rounds_matter";
+    const cfg = prefill.scoringConfig as BracketScoringConfig;
+    if (!cfg.round_points) return "late_rounds_matter";
+    // Match against known presets
+    for (const [id, preset] of Object.entries(SCORING_PRESETS)) {
+      const rp = (preset as BracketScoringConfig).round_points;
+      if (JSON.stringify(rp) === JSON.stringify(cfg.round_points) &&
+          (preset as BracketScoringConfig).champion_bonus === cfg.champion_bonus) {
+        return id as ScoringPreset;
+      }
+    }
+    return "custom";
+  })();
+
+  const [preset, setPreset] = useState<ScoringPreset>(initialPreset);
   const [scoringConfig, setScoringConfig] = useState<ScoringConfig>(
-    SCORING_PRESETS.late_rounds_matter
+    prefill?.scoringConfig ?? SCORING_PRESETS.late_rounds_matter
   );
 
   // pickem preset (separate from bracket preset to avoid union type conflict)
+  const initialPickemPreset = ((): "pickem_flat" | "pickem_weighted" => {
+    if (prefill?.templateType === "pickem") {
+      const cfg = prefill.scoringConfig as PickemScoringConfig;
+      return cfg.scheme ?? "pickem_weighted";
+    }
+    return "pickem_weighted";
+  })();
   const [pickemPreset, setPickemPreset] = useState<"pickem_flat" | "pickem_weighted">(
-    "pickem_weighted"
+    initialPickemPreset
   );
 
   // result state
@@ -1098,6 +1144,13 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
 
   return (
     <div>
+      {/* Rematch banner */}
+      {prefill && (
+        <div className="mb-4 rounded-lg border border-accent/30 bg-accent/10 px-3 py-2 text-xs text-accent">
+          Rematch from: <span className="font-semibold">{prefill.originalName}</span>
+        </div>
+      )}
+
       <StepDots current={step} total={TOTAL_STEPS} />
 
       {step === 0 && (
@@ -1122,14 +1175,21 @@ export default function CreateFlow({ templates }: { templates: PublicTemplate[] 
       )}
 
       {step === 1 && templateKind === "rap-albums" && (
-        <StepRapAlbumPicker
-          onNext={next}
-          allAlbums={allAlbums}
-          selectedIds={selectedAlbumIds}
-          setSelectedIds={setSelectedAlbumIds}
-          bracketSize={bracketSize}
-          setBracketSize={setBracketSize}
-        />
+        <>
+          {prefill?.isRapAlbums && (
+            <div className="mb-4 rounded-lg border border-border bg-surface px-3 py-2 text-xs text-secondary">
+              Rebuilding from a Rap Albums bracket — please re-select your albums.
+            </div>
+          )}
+          <StepRapAlbumPicker
+            onNext={next}
+            allAlbums={allAlbums}
+            selectedIds={selectedAlbumIds}
+            setSelectedIds={setSelectedAlbumIds}
+            bracketSize={bracketSize}
+            setBracketSize={setBracketSize}
+          />
+        </>
       )}
 
       {step === 2 && (

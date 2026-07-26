@@ -1,12 +1,14 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { getBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/ui";
 import { useLiveRefresh } from "./useLiveRefresh";
 import type { LeaderboardRow, ChampionStatusRow, PickResultRow, League, ScoringConfig } from "@/lib/types";
 import { isPickemConfig, isBracketConfig } from "@/lib/types";
+import WinnerTakeover from "./WinnerTakeover";
+import { Button } from "@/components/ui/Button";
 
 // ---------- Sparkline ----------
 function Sparkline({ picks, roundKeys }: { picks: PickResultRow[]; roundKeys: string[] }) {
@@ -256,6 +258,23 @@ export default function LeaderboardLive({
   const [rows, setRows] = useState(initialRows);
   const [champions, setChampions] = useState(initialChampions);
   const [picks, setPicks] = useState(initialPicks);
+  const [showTakeover, setShowTakeover] = useState(false);
+
+  useEffect(() => {
+    const dismissed = localStorage.getItem(`bfyi_coronation_dismissed:${league.id}`);
+    const previewMode = new URLSearchParams(window.location.search).get("takeover") === "1";
+    const isComplete = league.status === "complete" || previewMode;
+    if (isComplete && !dismissed) setShowTakeover(true);
+  }, [league.id, league.status]);
+
+  const handleDismissTakeover = useCallback(() => {
+    try {
+      localStorage.setItem(`bfyi_coronation_dismissed:${league.id}`, "true");
+    } catch {
+      // private mode
+    }
+    setShowTakeover(false);
+  }, [league.id]);
 
   const refetch = useCallback(async () => {
     const supabase = getBrowserClient();
@@ -282,8 +301,21 @@ export default function LeaderboardLive({
     return teamRegistry[id] ?? id;
   }
 
+  const winners = rows.filter((r) => r.rank === 1);
+  const winnerPoints = winners[0]?.total_points ?? 0;
+
   return (
     <div className="space-y-3 px-3 py-4">
+      {/* Winner takeover overlay */}
+      {showTakeover && winners.length > 0 && (
+        <WinnerTakeover
+          leagueName={league.name}
+          winners={winners.map((w) => ({ display_name: w.display_name, emoji: w.emoji }))}
+          totalPoints={winnerPoints}
+          onDismiss={handleDismissTakeover}
+        />
+      )}
+
       {/* Announcement banner */}
       {league.announcement_text && (
         <div className="bg-accent-dim text-accent border border-accent rounded-lg px-3 py-2 text-sm">
@@ -335,6 +367,23 @@ export default function LeaderboardLive({
 
       {/* Scoring explainer */}
       <ScoringExplainer config={league.scoring_config} />
+
+      {/* Run it back CTA */}
+      {league.status === "complete" && (
+        <div className="rounded-xl border border-border bg-surface p-4 space-y-3">
+          <div>
+            <p className="font-semibold text-primary text-sm">Ready for a rematch?</p>
+            <p className="text-xs text-secondary mt-1">
+              Same template, same rules, fresh bracket. Nobody has to sign up again.
+            </p>
+          </div>
+          <a href={`/create?from=${leagueId}`}>
+            <Button className="w-full py-2.5 text-sm">
+              Run it back &rarr;
+            </Button>
+          </a>
+        </div>
+      )}
     </div>
   );
 }
