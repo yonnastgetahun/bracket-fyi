@@ -33,10 +33,15 @@ The discovery plans require explicit approval before application or schema imple
 - BrowserStack is the default recorded cross-browser candidate. Local sanitized recording is the fallback for authenticated sessions or cases where cloud-session metadata is unsafe.
 - Oscars provider work and calendar labeling use 2027 as the live target.
 
+## Approved provider governance
+
+- **Provider budget ceiling:** `$0` expected spend with a `$50/month` contingency ceiling for UCL/NFL beta. Every actual purchase still requires explicit approval.
+- **Terms-acceptance owner:** Yonnas. An engineer may summarize provider terms but must not accept them implicitly. The owner is accountable for attribution, caching, storage, redistribution, renewal, and cancellation obligations.
+
+These decisions were approved on 2026-10-03.
+
 ## Open decisions and later gates
 
-- **Provider budget ceiling:** maximum recurring/one-off data-provider spend that can be proposed without revisiting the roadmap. Recommendation for UCL/NFL beta is a `$0` expected spend with a `$50/month` contingency ceiling; every actual purchase still requires explicit approval.
-- **Terms-acceptance owner:** the person authorized to accept provider API/license terms and own attribution, caching, storage, redistribution, renewal, and cancellation obligations. Recommendation: Yonnas as owner; an engineer may summarize terms but must not accept them implicitly.
 - G2 still requires the exact provider account/tier, current terms, credential owner, allowed environment, quota, and event coverage.
 - G3 still requires the beta group, support window, evidence retention, this Mac's push browser, and a physical iPhone/iPad if iOS PWA delivery is in acceptance scope.
 - A non-pausing Supabase beta/live runtime and its cost require explicit confirmation before scheduling.

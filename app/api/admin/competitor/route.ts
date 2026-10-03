@@ -1,16 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { authorizeOrganizer } from "@/lib/auth/organizer";
+import { readJsonObject } from "@/lib/http/json";
 
 export async function PATCH(request: NextRequest) {
-  const body = await request.json();
-  const { leagueId, teamId, newName } = body as {
-    leagueId: string;
-    teamId: string;
-    newName: string;
-  };
+  const parsed = await readJsonObject<{
+    leagueId?: unknown;
+    teamId?: unknown;
+    newName?: unknown;
+  }>(request);
+  if (!parsed.ok) return parsed.response;
 
-  if (!leagueId || !teamId || !newName) {
+  const { leagueId, teamId, newName } = parsed.body;
+
+  if (
+    typeof leagueId !== "string" ||
+    typeof teamId !== "string" ||
+    typeof newName !== "string" ||
+    !leagueId ||
+    !teamId ||
+    !newName
+  ) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
+  }
+  if (teamId.length > 128) {
+    return NextResponse.json({ error: "Invalid teamId" }, { status: 400 });
   }
 
   const trimmed = newName.trim().slice(0, 60);
@@ -18,7 +31,10 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Name cannot be empty" }, { status: 400 });
   }
 
-  const supabase = getAdminClient();
+  const authorization = await authorizeOrganizer(request, leagueId);
+  if (!authorization.ok) return authorization.response;
+
+  const { supabase } = authorization;
 
   // Get the league's template_id
   const { data: league, error: leagueErr } = await supabase

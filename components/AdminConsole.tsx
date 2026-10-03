@@ -552,7 +552,11 @@ function ParticipantRowItem({
     await fetch("/api/admin/participant", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participantId: participant.id, displayName: trimmed }),
+      body: JSON.stringify({
+        leagueId,
+        participantId: participant.id,
+        displayName: trimmed,
+      }),
     });
     onRename(participant.id, trimmed);
     setRenaming(false);
@@ -562,7 +566,7 @@ function ParticipantRowItem({
     await fetch("/api/admin/participant", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ participantId: participant.id }),
+      body: JSON.stringify({ leagueId, participantId: participant.id }),
     });
     onRemove(participant.id);
   }

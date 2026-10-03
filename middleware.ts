@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  organizerApiCookieName,
+  organizerApiCookieOptions,
+} from "@/lib/auth/organizer-cookie";
 
 // Cookie names — one per token type, path-scoped to /l/[league_id]
 const COOKIE_PARTICIPANT = "bfyi_participant";
@@ -173,6 +177,11 @@ async function handleOrganizerToken(
       `${leagueId}:${organizerToken}`,
       cookieOpts(leagueId)
     );
+    response.cookies.set(
+      organizerApiCookieName(leagueId),
+      organizerToken,
+      organizerApiCookieOptions()
+    );
     return response;
   }
 
@@ -180,9 +189,15 @@ async function handleOrganizerToken(
   const cookieValue = request.cookies.get(COOKIE_ORGANIZER)?.value;
   if (cookieValue?.startsWith(`${leagueId}:`)) {
     const token = cookieValue.split(":").slice(1).join(":");
-    return NextResponse.next({
+    const response = NextResponse.next({
       request: { headers: withHeader(request, "x-organizer-token", token) },
     });
+    response.cookies.set(
+      organizerApiCookieName(leagueId),
+      token,
+      organizerApiCookieOptions()
+    );
+    return response;
   }
 
   // No organizer credentials — 403

@@ -1,18 +1,33 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getAdminClient } from "@/lib/supabase/admin"
+import { authorizeOrganizer } from "@/lib/auth/organizer"
+import { readJsonObject } from "@/lib/http/json"
 
 export async function POST(request: NextRequest) {
-  const body = await request.json()
-  const { leagueId, message } = body as {
-    leagueId: string
-    message: string | null
-  }
+  const parsed = await readJsonObject<{
+    leagueId?: unknown
+    message?: unknown
+  }>(request)
+  if (!parsed.ok) return parsed.response
 
-  if (!leagueId) {
+  const { leagueId, message } = parsed.body
+
+  if (typeof leagueId !== "string" || !leagueId) {
     return NextResponse.json({ error: "Missing leagueId" }, { status: 400 })
   }
+  if (message !== null && typeof message !== "string") {
+    return NextResponse.json({ error: "Invalid message" }, { status: 400 })
+  }
+  if (typeof message === "string" && message.length > 500) {
+    return NextResponse.json(
+      { error: "Message must be 500 characters or less" },
+      { status: 400 }
+    )
+  }
 
-  const supabase = getAdminClient()
+  const authorization = await authorizeOrganizer(request, leagueId)
+  if (!authorization.ok) return authorization.response
+
+  const { supabase } = authorization
 
   // Fetch league name for notification title (used in push fanout below)
   const { data: league } = await supabase
