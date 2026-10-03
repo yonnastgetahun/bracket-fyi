@@ -1,7 +1,7 @@
 # Tournament and Event Ingestion Rollout Plan
 
 **Date:** 2026-10-02
-**Status:** Proposed — G0 approval required before implementation
+**Status:** Approved at G0 on 2026-10-03 — no external rollout gate is approved
 
 ## Rollout objective
 

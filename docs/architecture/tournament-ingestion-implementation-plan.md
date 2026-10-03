@@ -1,7 +1,7 @@
 # Tournament and Event Ingestion Implementation Plan
 
 **Date:** 2026-10-02
-**Status:** Proposed — G0 approval required before implementation
+**Status:** Approved at G0 on 2026-10-03 — each implementation slice requires its stated scope and evidence
 **Planning basis:** Current repository at `cd9ce15`; no application changes are authorized by this document
 
 ## Delivery approach

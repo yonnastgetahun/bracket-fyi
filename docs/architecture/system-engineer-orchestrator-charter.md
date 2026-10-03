@@ -2,7 +2,7 @@
 
 **Project:** Bracket.fyi
 **Charter date:** 2026-10-02
-**Status:** Proposed — awaiting owner approval
+**Status:** Active — G0 approved 2026-10-03
 **Scope:** Shared tournament and event ingestion, lifecycle, QA, rollout, and acceptance
 
 ## Mandate

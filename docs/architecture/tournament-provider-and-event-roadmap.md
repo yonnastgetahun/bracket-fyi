@@ -1,7 +1,7 @@
 # Tournament Provider and Event Roadmap
 
 **Research date:** 2026-10-02
-**Status:** Proposed — provider access, terms, spend, and event scope require approval
+**Status:** Sequence approved at G0 on 2026-10-03 — provider access, terms, spend, and event-specific launch remain gated
 **Research method:** Current primary-source documentation and official event calendars; prior terminal research and BoyzWC2026 were used as historical evidence. No live provider endpoint was called during this phase.
 
 ## Recommendation summary
