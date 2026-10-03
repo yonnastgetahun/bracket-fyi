@@ -197,7 +197,7 @@ export default function PickEntry({ league, matches, teamRegistry }: Props) {
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center space-y-2">
             <div className="text-4xl">✓</div>
-            <h1 className="font-display text-2xl text-primary">You're in!</h1>
+            <h1 className="font-display text-2xl text-primary">You&apos;re in!</h1>
             <p className="text-secondary text-sm">
               {emoji ? `${emoji} ` : ""}
               {displayName}

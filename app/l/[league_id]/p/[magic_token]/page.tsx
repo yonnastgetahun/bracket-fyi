@@ -12,11 +12,12 @@ import BracketLive from "@/components/BracketLive";
 import PickEmBracket from "@/components/PickEmBracket";
 import type { PickemTopology } from "@/lib/types";
 
-export default async function BracketPage({
-  params,
-}: {
-  params: { league_id: string; magic_token: string };
-}) {
+export default async function BracketPage(
+  props: {
+    params: Promise<{ league_id: string; magic_token: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id, magic_token } = params;
 
   const { data: participant } = await getAdminClient()

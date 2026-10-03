@@ -9,11 +9,12 @@ import {
 } from "@/lib/league-data";
 import MatchesLive from "@/components/MatchesLive";
 
-export default async function MatchesPage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function MatchesPage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id } = params;
 
   const league = await getLeagueWithTemplate(league_id);

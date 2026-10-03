@@ -17,13 +17,14 @@ import type { PickemTopology } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeaguePage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function LeaguePage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const leagueId = params.league_id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const participantCookie = cookieStore.get("bfyi_participant")?.value;
   const leagueCookie = cookieStore.get("bfyi_league")?.value;

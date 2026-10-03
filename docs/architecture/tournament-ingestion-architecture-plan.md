@@ -13,7 +13,7 @@ Football-data.org is the first production adapter because its match lifecycle an
 
 ### Shipped modules
 
-- Next.js 14 App Router on Vercel.
+- Repository target: Next.js 16 App Router with React 19. The upgrade is locally verified but remains undeployed until an explicit rollout gate; the live Vercel deployment may still be on the prior Next.js 14 build.
 - Supabase Postgres, RLS, Realtime, and one Web Push Edge Function.
 - `templates` define `bracket` or `pickem` shape, registry, schedule JSON, scoring defaults, and a free-text `results_provider`.
 - `template_matches` represent every scoreable slot, including Oscars categories.
@@ -51,13 +51,13 @@ The reusable lessons are valid. The old implementation is single-tournament, map
 | Overrides | Override has winner and timestamp only | No reason, actor, release, expiration, or history |
 | Lifecycle | No completion reconciler exists; GitHub issue #3 is open | `locked` leagues never become `complete` automatically |
 | Effective results | The `effective_results` view joins overrides without generating a row per league; filtering `league_id = ...` excludes base rows where no override exists | Consumers can miss shared results; scoring views work around the view independently |
-| Security | `/api/admin/*` mutation routes use the service-role client but do not authenticate the organizer token; middleware protects `/l/*`, not `/api/*` | A caller who knows IDs can attempt privileged mutations |
+| Security | Slice 0 added organizer authorization and ownership validation to `/api/admin/*`; verification is local/mocked and deployment remains gated | Production keeps the prior mutation boundary until the approved release is deployed and smoke-tested |
 | Notifications | Result notifications are not wired; broadcast uses fire-and-forget HTTP with no outbox or delivery ledger | Process termination can lose sends; duplicates are not durably prevented |
-| Tests | No unit, integration, contract, or browser test runner is configured | Regression risk is high for schema and lifecycle changes |
+| Tests | Vitest now covers the organizer mutation boundary, but no disposable-database integration lane or browser suite is configured | Schema, RLS, migration, and end-to-end regressions remain insufficiently covered |
 | Operations | No provider health, freshness, quarantine, rate-budget, or scheduler dashboard exists | Failures can silently produce stale leaderboards |
 | Plan compatibility | Supabase Free may pause inactive projects; [Vercel Hobby cron](https://vercel.com/docs/cron-jobs/usage-and-pricing) runs at most daily | Live event polling needs an explicitly verified runtime/plan |
 
-The unauthenticated admin mutations are a release-blocking security finding and must be the first approved implementation slice, even though they predate ingestion.
+The unauthenticated admin mutation finding was addressed and locally verified in Slice 0. Deployment and production acceptance remain separate gates.
 
 ## Target architecture
 

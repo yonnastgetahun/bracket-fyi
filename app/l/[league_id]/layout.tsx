@@ -7,13 +7,16 @@ import InstallPrompt from '@/components/InstallPrompt'
 
 interface LeagueLayoutProps {
   children: React.ReactNode
-  params: { league_id: string }
+  params: Promise<{ league_id: string }>
 }
 
-export default async function LeagueLayout({
-  children,
-  params,
-}: LeagueLayoutProps) {
+export default async function LeagueLayout(props: LeagueLayoutProps) {
+  const params = await props.params;
+
+  const {
+    children
+  } = props;
+
   const leagueId = params.league_id
 
   const { data: league } = await getAdminClient()
@@ -24,7 +27,7 @@ export default async function LeagueLayout({
 
   if (!league) notFound()
 
-  const cookieStore = cookies()
+  const cookieStore = await cookies()
   const participantCookie = cookieStore.get('bfyi_participant')
   const magicToken =
     participantCookie?.value?.startsWith(`${leagueId}:`)

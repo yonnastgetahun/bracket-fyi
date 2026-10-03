@@ -12,10 +12,8 @@ const PUBLIC_TEMPLATE_NAMES = [
   "Oscars 2025 (97th Academy Awards)",
 ];
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const db = getAdminClient();
 
   const { data, error } = await db

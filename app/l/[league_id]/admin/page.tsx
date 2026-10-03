@@ -11,11 +11,12 @@ import type { PickemTopology } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminPage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function AdminPage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id } = params;
   const supabase = getAdminClient();
 

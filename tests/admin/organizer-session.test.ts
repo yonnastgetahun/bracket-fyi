@@ -9,7 +9,7 @@ const { createClient, single } = vi.hoisted(() => ({
 
 vi.mock("@supabase/supabase-js", () => ({ createClient }));
 
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 const LEAGUE_ID = "11111111-1111-4111-8111-111111111111";
 const ORGANIZER_TOKEN = "22222222-2222-4222-8222-222222222222";
@@ -33,7 +33,7 @@ describe("organizer session", () => {
       `http://localhost/l/${LEAGUE_ID}/admin?token=${ORGANIZER_TOKEN}`
     );
 
-    const response = await middleware(request);
+    const response = await proxy(request);
 
     expect(response.status).toBe(307);
     expect(response.headers.get("location")).toBe(

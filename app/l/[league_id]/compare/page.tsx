@@ -10,11 +10,12 @@ import {
 } from "@/lib/league-data";
 import CompareLive from "@/components/CompareLive";
 
-export default async function ComparePage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function ComparePage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id } = params;
 
   const league = await getLeagueWithTemplate(league_id);

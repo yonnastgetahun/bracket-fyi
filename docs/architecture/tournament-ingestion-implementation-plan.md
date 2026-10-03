@@ -72,6 +72,14 @@ File names below are proposed boundaries, not preapproved implementation.
 
 Add unit, database integration, route-contract, and browser-test lanes. Pin Node/runtime assumptions. Capture the baseline build and current supported user journeys. Do not change product behavior in this slice.
 
+### Slice 0C: framework security upgrade
+
+**Status:** Implemented and verified locally on 2026-10-03; not deployed.
+
+Upgrade the repository from Next.js 14/React 18 to Next.js 16/React 19, migrate asynchronous request APIs and `middleware` to `proxy`, establish the supported ESLint CLI, and remove production dependency advisories without changing schemas, provider behavior, or production state.
+
+Evidence: [`implementation/slice-0c-nextjs-16-security-upgrade-evidence.md`](implementation/slice-0c-nextjs-16-security-upgrade-evidence.md).
+
 ## M1 — Additive canonical data model
 
 ### Slice 1A: domain and provider metadata

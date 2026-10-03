@@ -60,6 +60,10 @@ Subsequent red/green cases covered:
 4. **Shared competitor registry:** The existing competitor rename operation writes the template registry. An authenticated organizer can therefore affect other leagues if they share that template. A durable fix needs explicit catalog/template ownership in the G1 schema; do not rely on naming heuristics.
 5. **Deployment:** Production still runs the previous routes until an explicit deployment gate is approved and live smoke tests are defined.
 
+## Follow-up status
+
+The framework-security and lint-tooling findings above were addressed locally in Slice 0C on 2026-10-03. See [`slice-0c-nextjs-16-security-upgrade-evidence.md`](slice-0c-nextjs-16-security-upgrade-evidence.md). Deployment, database integration evidence, and production acceptance remain outstanding.
+
 ## Rollback
 
 Before deployment, rollback is a normal git revert. After deployment, reverting removes the API cookie and route authorization requirement; because that would restore the original vulnerability, prefer a corrective forward patch unless the routes are simultaneously disabled.

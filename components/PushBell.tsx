@@ -29,8 +29,21 @@ export default function PushBell({ leagueId, magicToken }: PushBellProps) {
   const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 
   useEffect(() => {
-    if (!vapidKey || !magicToken) return setState("unsupported")
-    if (!("serviceWorker" in navigator)) return setState("unsupported")
+    let active = true
+    const deferState = (nextState: PushState) => {
+      window.setTimeout(() => {
+        if (active) setState(nextState)
+      }, 0)
+    }
+
+    if (!vapidKey || !magicToken) {
+      deferState("unsupported")
+      return () => { active = false }
+    }
+    if (!("serviceWorker" in navigator)) {
+      deferState("unsupported")
+      return () => { active = false }
+    }
 
     navigator.serviceWorker.register("/sw.js").catch(() => {})
 
@@ -38,17 +51,26 @@ export default function PushBell({ leagueId, magicToken }: PushBellProps) {
     const standalone =
       window.matchMedia("(display-mode: standalone)").matches ||
       (navigator as unknown as { standalone?: boolean }).standalone === true
-    if (isIOS && !standalone) return setState("needs-install")
+    if (isIOS && !standalone) {
+      deferState("needs-install")
+      return () => { active = false }
+    }
 
     if (!("PushManager" in window) || !("Notification" in window)) {
-      return setState("unsupported")
+      deferState("unsupported")
+      return () => { active = false }
     }
-    if (Notification.permission === "denied") return setState("denied")
+    if (Notification.permission === "denied") {
+      deferState("denied")
+      return () => { active = false }
+    }
 
     navigator.serviceWorker.ready.then(async (reg) => {
       const sub = await reg.pushManager.getSubscription()
-      setState(sub ? "on" : "off")
+      if (active) setState(sub ? "on" : "off")
     })
+
+    return () => { active = false }
   }, [vapidKey, magicToken])
 
   async function enable() {

@@ -1,13 +1,15 @@
+import Link from "next/link";
+
 export default function AboutPage() {
   return (
     <main className="bg-canvas min-h-screen">
       <div className="max-w-2xl mx-auto px-6 py-16">
-        <a
+        <Link
           href="/"
           className="text-sm text-secondary hover:text-primary transition-colors"
         >
           &larr; Back to bracket.fyi
-        </a>
+        </Link>
 
         <h1 className="font-display text-4xl font-bold text-primary mt-10 mb-4">
           Why Bracket.fyi
@@ -97,12 +99,12 @@ export default function AboutPage() {
         </section>
 
         <div className="mt-16 border-t border-border pt-8">
-          <a
+          <Link
             href="/create"
             className="inline-block rounded-lg px-4 py-3 font-semibold bg-accent text-canvas transition-opacity hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-accent focus:ring-offset-2 focus:ring-offset-canvas"
           >
             Create a bracket &rarr;
-          </a>
+          </Link>
           <p className="text-muted text-xs mt-6 italic">
             A real group of friends building the tool we wanted for our own brackets.
           </p>

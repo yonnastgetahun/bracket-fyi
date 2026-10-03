@@ -264,7 +264,10 @@ export default function LeaderboardLive({
     const dismissed = localStorage.getItem(`bfyi_coronation_dismissed:${league.id}`);
     const previewMode = new URLSearchParams(window.location.search).get("takeover") === "1";
     const isComplete = league.status === "complete" || previewMode;
-    if (isComplete && !dismissed) setShowTakeover(true);
+    if (!isComplete || dismissed) return;
+
+    const timer = window.setTimeout(() => setShowTakeover(true), 0);
+    return () => window.clearTimeout(timer);
   }, [league.id, league.status]);
 
   const handleDismissTakeover = useCallback(() => {
