@@ -84,6 +84,10 @@ Evidence: [`implementation/slice-0c-nextjs-16-security-upgrade-evidence.md`](imp
 
 ### Slice 1A: domain and provider metadata
 
+**Status:** Implemented and verified locally on 2026-10-06; not deployed. The minimum nullable template/contest compatibility links from Slice 1C were included so their cross-edition invariants could be tested with the canonical domain. No backfill or override metadata was included.
+
+Evidence: [`implementation/slice-1a-canonical-event-domain-evidence.md`](implementation/slice-1a-canonical-event-domain-evidence.md).
+
 **Allowed objects:** New migrations creating `data_providers`, `competitions`, `event_editions`, `organizations`, `competitors`, `competitor_aliases`, `event_entries`, `stages`, `rounds`, `contests`, `contest_entries`, `brackets`, and `bracket_edges`; generated database types; database tests; ADRs.
 
 Key constraints:
@@ -98,6 +102,8 @@ Key constraints:
 
 ### Slice 1B: ingestion, results, audit, and outbox tables
 
+**Status:** Not started.
+
 **Allowed objects:** `provider_bindings`, `provider_entity_refs`, `ingestion_runs`, `provider_observations`, `ingestion_quarantine`, `contest_results`, `result_audit_events`, `notification_outbox`, `notification_attempts`, and `league_completion_holds`.
 
 Required database behavior:
@@ -110,6 +116,8 @@ Required database behavior:
 - Audit actor fields support provider, organizer fingerprint, operator, and system reconciler.
 
 ### Slice 1C: compatibility links and backfill rehearsal
+
+**Status:** Partially started. Slice 1A delivered the nullable compatibility columns and same-edition integrity triggers. Override metadata, compatibility read/projection contracts, backfill tooling, and rehearsal remain outstanding.
 
 **Allowed changes:** Nullable `event_edition_id` on `templates`; nullable `contest_id` and `counts_toward_completion` on `template_matches`; additive override metadata; compatibility functions/views; seed/backfill scripts and tests.
 

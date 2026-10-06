@@ -3,6 +3,8 @@
 **Date:** 2026-10-02
 **Status:** Approved at G0 on 2026-10-03 — implementation remains slice-gated
 
+**Implementation update (2026-10-06):** Slice 1A's additive canonical event domain is implemented and verified only in a disposable local database. It has not been deployed or backfilled. See [`implementation/slice-1a-canonical-event-domain-evidence.md`](implementation/slice-1a-canonical-event-domain-evidence.md).
+
 ## Executive decision
 
 Build a durable ingestion module between external providers and Bracket.fyi's scoring tables. Adapters fetch and normalize provider observations; an orchestrator validates, deduplicates, maps identities, projects canonical results, reconciles league lifecycle, and writes durable notification intents. Provider adapters never write scoring tables directly.
@@ -45,15 +47,15 @@ The reusable lessons are valid. The old implementation is single-tournament, map
 | Area | Evidence-backed gap | Consequence |
 |---|---|---|
 | Ingestion | No provider adapter, scheduler, run log, or provider mapping exists in this repository | All live results are manual |
-| Domain | `template_matches` assumes one flat scoreable row; no series, tie, child game, ceremony, or stage model | MLB and UCL aggregate ties cannot be represented faithfully |
-| Identity | Competitors and aliases live in template JSON | No durable cross-event canonical IDs or provider mappings |
+| Domain | The additive series, tie, child game, ceremony, stage, and bracket model now exists locally but is undeployed and unpopulated | Hosted environments still rely on flat `template_matches` until migration and backfill approval |
+| Identity | Canonical competitors, aliases, and event entries now exist locally; provider mappings remain unimplemented | Durable provider-to-canonical resolution is still unavailable |
 | Provenance | `template_results` stores only winner, score JSON, source enum, and timestamp | Corrections, raw evidence, provider revision, and stale state are unauditable |
 | Overrides | Override has winner and timestamp only | No reason, actor, release, expiration, or history |
 | Lifecycle | No completion reconciler exists; GitHub issue #3 is open | `locked` leagues never become `complete` automatically |
 | Effective results | The `effective_results` view joins overrides without generating a row per league; filtering `league_id = ...` excludes base rows where no override exists | Consumers can miss shared results; scoring views work around the view independently |
 | Security | Slice 0 added organizer authorization and ownership validation to `/api/admin/*`; verification is local/mocked and deployment remains gated | Production keeps the prior mutation boundary until the approved release is deployed and smoke-tested |
 | Notifications | Result notifications are not wired; broadcast uses fire-and-forget HTTP with no outbox or delivery ledger | Process termination can lose sends; duplicates are not durably prevented |
-| Tests | Vitest now covers the organizer mutation boundary, but no disposable-database integration lane or browser suite is configured | Schema, RLS, migration, and end-to-end regressions remain insufficiently covered |
+| Tests | Slice 1A adds a disposable-database pgTAP lane for the canonical domain; no provider pipeline or browser suite is configured | Provider, browser, and end-to-end regressions remain insufficiently covered |
 | Operations | No provider health, freshness, quarantine, rate-budget, or scheduler dashboard exists | Failures can silently produce stale leaderboards |
 | Plan compatibility | Supabase Free may pause inactive projects; [Vercel Hobby cron](https://vercel.com/docs/cron-jobs/usage-and-pricing) runs at most daily | Live event polling needs an explicitly verified runtime/plan |
 
