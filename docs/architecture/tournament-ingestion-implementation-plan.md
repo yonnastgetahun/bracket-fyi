@@ -102,7 +102,9 @@ Key constraints:
 
 ### Slice 1B: ingestion, results, audit, and outbox tables
 
-**Status:** Not started.
+**Status:** Implemented and verified locally on 2026-10-08; not deployed. This slice establishes persistence and invariants only; adapters, projection transactions, scheduling, delivery workers, and compatibility projection remain later milestones.
+
+Evidence: [`implementation/slice-1b-ingestion-evidence-and-delivery-evidence.md`](implementation/slice-1b-ingestion-evidence-and-delivery-evidence.md).
 
 **Allowed objects:** `provider_bindings`, `provider_entity_refs`, `ingestion_runs`, `provider_observations`, `ingestion_quarantine`, `contest_results`, `result_audit_events`, `notification_outbox`, `notification_attempts`, and `league_completion_holds`.
 
