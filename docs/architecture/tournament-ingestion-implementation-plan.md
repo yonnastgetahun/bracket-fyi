@@ -119,7 +119,9 @@ Required database behavior:
 
 ### Slice 1C: compatibility links and backfill rehearsal
 
-**Status:** Partially started. Slice 1A delivered the nullable compatibility columns and same-edition integrity triggers. Override metadata, compatibility read/projection contracts, backfill tooling, and rehearsal remain outstanding.
+**Status:** Implemented and verified locally on 2026-10-08; not deployed. Slice 1A supplied the nullable compatibility links. Slice 1C adds override lifecycle/provenance metadata, a league-parameterized effective-result resolver, aligned legacy result/scoring views, and bounded idempotent backfill tooling with a disposable-database rehearsal.
+
+Evidence: [`implementation/slice-1c-result-compatibility-and-backfill-evidence.md`](implementation/slice-1c-result-compatibility-and-backfill-evidence.md).
 
 **Allowed changes:** Nullable `event_edition_id` on `templates`; nullable `contest_id` and `counts_toward_completion` on `template_matches`; additive override metadata; compatibility functions/views; seed/backfill scripts and tests.
 
