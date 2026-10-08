@@ -133,6 +133,10 @@ Rehearse against a disposable local database. Current template IDs, picks, share
 
 ### Slice 2A: contracts and validation
 
+**Status:** Ready for bounded implementation; not started. The model-independent execution packet locks the public contracts, validation dependency, test matrix, file allowlist, evidence ceiling, and stop conditions.
+
+Execution packet: [`implementation/slice-2a-provider-contracts-execution-packet.md`](implementation/slice-2a-provider-contracts-execution-packet.md).
+
 **Proposed files:**
 
 - `lib/ingestion/contracts.ts`;
