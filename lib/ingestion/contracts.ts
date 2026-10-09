@@ -77,6 +77,7 @@ export const providerEntityKinds = [
 
 export const providerEntityKindSchema = z.enum(providerEntityKinds);
 export type ProviderEntityKind = z.infer<typeof providerEntityKindSchema>;
+export type MappableProviderEntityKind = Exclude<ProviderEntityKind, "result">;
 
 const organizationKindSchema = z.enum([
   "governing_body",
