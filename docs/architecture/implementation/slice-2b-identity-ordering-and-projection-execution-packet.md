@@ -2,14 +2,14 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Planning packet drafted; awaiting architecture approval; implementation not started
+**Status:** Approved for local implementation; implementation in progress
 
 **Starting commit:** `944e72df9075d0ce414768a21d256fd9aa12f132` (`test: close slice 2a acceptance coverage gaps`)
 
-**Authorization:** Documentation and design work only. This packet does not authorize application code,
-database migrations, schema changes, provider calls, credentials, deployment, hosted data changes,
-notifications, or production action. Each implementation sub-slice requires explicit approval after
-the decision register is resolved.
+**Authorization:** Local implementation is approved through the six bounded sub-slices below, including
+forward-only local migrations, disposable local Supabase resets, deterministic synthetic fixtures, and
+logical commits. Provider calls, credentials, hosted data, deployment, notification delivery, legacy
+projection, lifecycle completion/reopening, and production action remain out of scope.
 
 **Evidence ceiling for the planned work:** Pure TypeScript evidence and disposable-local database
 integration with deterministic synthetic sports and ceremony fixtures. Recorded-provider and live-provider
@@ -30,14 +30,15 @@ path.
 Cross-cutting rules:
 
 - Reviewed provider mappings are authoritative and cannot be silently overwritten.
-- Exact, unambiguous normalized aliases may create an automatic proposal only under the approved,
-  versioned normalization policy.
+- Exact, unambiguous normalized aliases may create an automatic proposal only under normalization policy
+  v1 and only for a mappable non-result kind.
 - Fuzzy matching is advisory and can never auto-accept a mapping.
 - Missing, ambiguous, rejected, or conflicting identity quarantines the observation; it never guesses.
 - Provider IDs, canonical UUIDs, and existing human league participants remain different namespaces.
 - Partial snapshots never delete or mark unseen canonical entities absent.
 - Canonical result history is append-only. A correction is a new version with audit provenance.
-- Projection and the result audit/outbox intent are one atomic database operation.
+- Observation evidence, mapping/quarantine transitions, structural projection, and result/audit/outbox
+  writes each have a database-atomic boundary.
 - No credential material or raw unsanitized provider payload may enter requests, evidence, logs, or client
   modules.
 
@@ -110,7 +111,7 @@ contests. Existing null links remain valid.
 | `provider_bindings` | Provider/edition FKs; unique `(provider_id, event_edition_id, binding_key)` and `(id, provider_id, event_edition_id)`; roles `primary`, `fallback`, `shadow`; modes `disabled`, `shadow`, `write`; health `disabled`, `healthy`, `degraded`, `stale`; credential reference only; object config/poll/cursor; stale minimum 60; nonnegative failures; positive config version; time order. Partial unique primary-per-edition index and due/provider indexes. Defaults disabled. |
 | `provider_entity_refs` | Unique `(binding_id, entity_kind, external_id)`; entity kinds exclude `result`; statuses `unresolved`, `automatic`, `reviewed`, `rejected`; automatic/reviewed require canonical UUID, unresolved/rejected forbid it; reviewed/rejected require reviewer and timestamp; confidence 0–1; object metadata. Canonical and unresolved indexes. `validate_provider_entity_ref()` checks the target according to entity kind; edition-scoped branches enforce the binding edition, while organizations only require an existing canonical organization and competitions require an edition whose competition matches. The existing `competitor` branch verifies an edition entry whose `competitor_id` is the target. |
 | `ingestion_runs` | Binding/provider/edition composite FK; global unique `claim_key`; lifecycle status and lease/finish checks; nonnegative counts; valid HTTP/rate-limit bounds; object cursors/metadata. Partial unique index permits one `claimed`/`running` row per binding; binding-time and status-time indexes. |
-| `provider_observations` | Immutable evidence with run/binding/provider/edition composite FK; external kind/id; optional provider revision; provider timestamp; sanitized JSON object/array; generated SHA-256 `payload_hash` from `sanitized_payload::text`; unique revision identity when revision exists and unique `(binding, kind, external_id, payload_hash)` otherwise. Run and external-time indexes. `provider_observations_immutable_trigger` calls `reject_immutable_evidence_change()` for update/delete. |
+| `provider_observations` | Immutable evidence with run/binding/provider/edition composite FK; external kind/id; optional provider revision; provider timestamp; sanitized JSON object/array; generated SHA-256 `payload_hash` from `sanitized_payload::text`; unique revision identity when revision exists and unique `(binding, kind, external_id, payload_hash)` otherwise. Run and external-time indexes. `provider_observations_immutable_trigger` calls `reject_immutable_evidence_change()` for update/delete. The generic `metadata` object is the only current place to carry contract/config/normalization/completeness/semantic-hash provenance; a future evidence RPC must validate that versioned snapshot envelope before insert. |
 | `ingestion_quarantine` | Unique `(observation_id, issue_code)`; issue codes include `mapping_missing`, `mapping_ambiguous`, `schema_invalid`, `partial_payload`, `illegal_regression`, `conflicting_terminal_result`, `stale_update`, `provider_error`, `unsupported_shape`, `other`; severity/status lifecycle and paired external identity; UUID candidate array; object details; explicit resolution fields and time order. Open/run indexes. |
 | `contest_results` | Same-edition contest FK; optional winner FK constrained to the target contest entry; optional provider observation FK; append-only versions unique `(contest_id, version)` and immutable globally unique `idempotency_key`; statuses/outcomes mirror Slice 2A; provider source requires observation; object score/result data; correction reason nonblank. Contest/version and observation indexes. `contest_result_version_trigger` calls `validate_contest_result_version()` to require contiguous versions and immediate supersession; immutable trigger prevents update/delete. |
 | `result_audit_events` | Edition FK; optional contest/league/result/observation/provider FKs with same-edition result relationships; append-only unique idempotency key; actor rules require provider ID for provider actors, league plus 64-char organizer fingerprint for organizer actors, and actor reference for operator/system actors; object previous/new/details. Contest/league/observation indexes; immutable trigger. |
@@ -195,9 +196,10 @@ audit/outbox persistence; service-role-only operational grants; compatibility re
 backfill rehearsal; deterministic JSONB observation hashes.
 
 **Missing:** identity normalization and resolution policy; mapping repository behavior; candidate and
-operator disposition workflow; observation-to-canonical structural projection; result ordering and
-correction policy; deterministic application idempotency-key construction; atomic projection/audit/outbox
-function; synthetic replay harness; canonical-to-template projection; lifecycle reconciliation; scheduler,
+operator disposition workflow; observation evidence persistence boundary and conflict association;
+observation-to-canonical structural projection; result ordering and correction policy; deterministic
+application idempotency-key construction; atomic mapping, structural, and result/audit/outbox functions;
+synthetic replay harness; canonical-to-template projection; lifecycle reconciliation; scheduler,
 rate-budget, retry, provider adapters, outbox worker, UI, and provider evidence.
 
 ## 3. Bounded implementation sequence
@@ -222,6 +224,10 @@ aliases, missing/ambiguous mappings, and advisory fuzzy candidates without touch
 **Public interfaces:**
 
 ```ts
+import type { MappableProviderEntityKind } from "@/lib/ingestion/contracts";
+
+export const IDENTITY_NORMALIZATION_VERSION = "identity-normalization-v1" as const;
+
 export type IdentityResolutionStatus =
   | "reviewed"
   | "automatic"
@@ -235,15 +241,16 @@ export type IdentityCandidate = Readonly<{
   explanation: string;
 }>;
 
+export type CanonicalRef =
+  | Readonly<{ status: "automatic" | "reviewed"; canonicalId: string }>
+  | Readonly<{ status: "rejected" | "unresolved" }>;
+
 export type IdentityResolutionInput = Readonly<{
   bindingId: string;
   eventEditionId: string;
-  entityKind: ProviderEntityKind;
+  entityKind: MappableProviderEntityKind;
   externalId: string;
-  canonicalRef?: Readonly<{
-    canonicalId: string;
-    status: "automatic" | "reviewed" | "rejected";
-  }>;
+  canonicalRef?: CanonicalRef;
   normalizedName?: string;
   aliasCandidates: readonly IdentityCandidate[];
   fuzzyCandidates: readonly IdentityCandidate[];
@@ -259,10 +266,26 @@ export type IdentityDecision = Readonly<{
 
 export function normalizeIdentityText(input: string, locale: string): string;
 export function resolveIdentity(input: IdentityResolutionInput): IdentityDecision;
+
+export type ResultIdentityResolutionInput = Readonly<{
+  contest: IdentityResolutionInput;
+  winnerEntry?: IdentityResolutionInput;
+}>;
+
+export type ResultIdentityDecision = Readonly<{
+  status: "resolved" | "quarantined";
+  contestId?: string;
+  winnerEntryId?: string;
+  reason: string;
+}>;
+
+export function resolveResultIdentities(input: ResultIdentityResolutionInput): ResultIdentityDecision;
 ```
 
-The exact normalization algorithm is an unresolved decision D2 below. The interface must expose its
-version in the evidence and persist it in mapping metadata once persistence is approved.
+Normalization policy v1 is approved: Unicode NFKC; validated BCP-47 locale; locale-aware lowercase;
+apostrophe and dash variant normalization; remaining punctuation separators converted to spaces; Unicode
+whitespace collapsed and trimmed; letters, numbers, and diacritics preserved. Known abbreviations are
+explicit aliases only. The version is persisted in automatic mapping metadata and observation snapshots.
 
 **Invariants:** reviewed wins; a conflicting reviewed mapping returns a blocking decision; exactly one
 exact candidate may become automatic; zero candidates returns `mapping_missing`; multiple exact or any
@@ -283,11 +306,12 @@ synthetic.
 
 **Rollback/repair:** revert the sub-slice commit. No data exists, so no migration or repair is needed.
 
-**Stop conditions:** normalization ownership or first-seen policy is not approved; a test requires a
-  provider-specific rule; fuzzy matching is proposed as automatic; a human participant can be selected;
-or the resolver needs a canonical UUID not supplied by a reviewed/persisted mapping.
+**Stop conditions:** a locale is not a validated BCP-47 tag; a test requires a provider-specific rule;
+fuzzy matching is proposed as automatic; a human participant can be selected; a result is resolved by a
+name rather than contest and winner-entry mappings; or the resolver needs a canonical UUID not supplied
+by a reviewed/persisted mapping.
 
-**Next gate:** architecture approval of D1/D2 and acceptance of the pure identity evidence.
+**Next gate:** accept the identity evidence and proceed to 2B.2 under the approved D1/D2 policy.
 
 ### 2B.2 — Ordering policy and deterministic idempotency keys
 
@@ -316,12 +340,29 @@ export type OrderingDecision =
   | "quarantine_terminal_conflict";
 
 export type OrderingInput = Readonly<{
-  current?: NormalizedResult;
-  incoming: NormalizedResult;
-  observedAt: string;
-  providerUpdatedAt?: string;
-  receivedAt: string;
+  current?: ResultOrderingState;
+  incoming: ResultOrderingState;
   explicitCorrection: boolean;
+}>;
+
+export type ResultOrderingState = Readonly<{
+  normalizedResult: NormalizedResult;
+  sourceObservationId: string;
+  providerUpdatedAt?: string;
+  providerEffectiveAt?: string;
+  observedAt: string;
+  receivedAt: string;
+  providerRevision?: string;
+  semanticKey: string;
+}>;
+
+export type ContestLifecycleStatus =
+  | "scheduled" | "pregame" | "live" | "suspended" | "postponed"
+  | "final" | "canceled" | "void";
+
+export type ContestLifecycleOrderingInput = Readonly<{
+  current?: Readonly<{ status: ContestLifecycleStatus; providerUpdatedAt?: string; observedAt: string }>;
+  incoming: Readonly<{ status: ContestLifecycleStatus; providerUpdatedAt?: string; observedAt: string }>;
 }>;
 
 export type OrderingOutcome = Readonly<{
@@ -331,11 +372,12 @@ export type OrderingOutcome = Readonly<{
 }>;
 
 export function compareResultOrdering(input: OrderingInput): OrderingOutcome;
+export function compareContestLifecycleOrdering(input: ContestLifecycleOrderingInput): OrderingOutcome;
 export function canonicalJson(value: JsonValue): string;
 
 export type ObservationKeyInput = Readonly<{
   bindingId: string;
-  entityKind: ProviderEntityKind;
+  entityKind: MappableProviderEntityKind | "result";
   externalId: string;
   providerRevision?: string;
   sanitizedPayload: JsonObject;
@@ -363,11 +405,12 @@ The key builder owns all key construction. Key components use length-prefixed en
 hexadecimal SHA-256, sorted object keys, preserved array order, and a version prefix. Opaque provider
 revisions are identity inputs, never lexical ordering values.
 
-**Invariants:** exact semantic replay is a no-op; older updates never regress accepted state; valid
-scheduled/pregame/live/final progression is monotonic; changed terminal results require the approved
-correction policy; equal timestamps with changed semantics quarantine by default; partial snapshots never
-delete unseen objects; a missing timestamp is explicitly lower-confidence and cannot silently replace a
-newer accepted terminal state.
+**Invariants:** exact semantic replay is a no-op; older updates never regress accepted state; contest
+lifecycle ordering is separate from result ordering; valid scheduled/pregame/live/final progression is
+monotonic for contests; result states never include `live`; changed terminal results quarantine unless D4
+correction conditions are all met; equal timestamps with changed semantics quarantine by default; partial
+snapshots never delete unseen objects; a missing timestamp cannot replace an accepted terminal state; opaque
+provider revisions are never lexically compared.
 
 **TDD sequence and focused matrix:** canonical JSON key-order stability; observation revision and
 revisionless payload keys; result semantic duplicate; duplicate audit/outbox keys; newer/older/equal
@@ -386,32 +429,37 @@ assert the decision and exact key string, not an implementation detail.
 revision lexical comparison; a correction policy is silently inferred; or the proposed key cannot map an
 exact replay back to its prior database row.
 
-**Next gate:** architecture approval of D3/D4/D5 and the exact key formulas.
+**Next gate:** accept the ordering/key evidence and proceed to 2B.3 under approved D3/D4/D5.
 
 ### 2B.3 — Identity mapping and quarantine persistence
 
-**Objective:** Persist reviewed/automatic/rejected mapping outcomes and deterministic quarantine records
-using the already-applied tables, without creating canonical entities or projecting results.
+**Objective:** Persist immutable observation evidence and its versioned normalized snapshot before mapping;
+then persist reviewed/automatic/rejected mapping outcomes and deterministic quarantine records without
+projecting results.
 
 **Allowlist:**
 
 - `lib/ingestion/identity/repository.ts`
 - `lib/ingestion/quarantine/repository.ts`
+- `lib/ingestion/evidence/repository.ts`
 - `tests/ingestion/identity/repository.test.ts`
 - `tests/ingestion/quarantine/repository.test.ts`
+- `tests/ingestion/evidence/repository.test.ts`
+- `supabase/migrations/20261009000000_slice_2b_observation_evidence.sql`
+- `supabase/rollbacks/20261009000000_slice_2b_observation_evidence_down.sql`
 - `supabase/tests/database/16_slice_2b_identity_persistence_test.sql`
 - `docs/architecture/implementation/slice-2b-3-identity-persistence-evidence.md`
 
-No new migration is recommended for this sub-slice. If implementation proves a missing invariant cannot
-be expressed by `provider_entity_refs` and `ingestion_quarantine`, stop and propose a new forward
-migration rather than altering `20261006000002_ingestion_evidence_and_delivery.sql`.
+The forward migration adds an evidence-preserving revision-conflict table and service-role-only RPCs for
+observation evidence, mapping transitions, and quarantine opening. It does not rewrite
+`20261006000002_ingestion_evidence_and_delivery.sql`.
 
 **Public interfaces:**
 
 ```ts
 export type RefLookup = Readonly<{
   bindingId: string;
-  entityKind: ProviderEntityKind;
+  entityKind: MappableProviderEntityKind;
   externalId: string;
 }>;
 
@@ -420,9 +468,9 @@ export type ProviderEntityRef = Readonly<{
   bindingId: string;
   providerId: string;
   eventEditionId: string;
-  entityKind: ProviderEntityKind;
+  entityKind: MappableProviderEntityKind;
   externalId: string;
-  canonicalId?: string;
+  canonicalRef: CanonicalRef;
   resolutionStatus: "unresolved" | "automatic" | "reviewed" | "rejected";
   confidence?: number;
   reviewedBy?: string;
@@ -510,14 +558,53 @@ export interface QuarantineRepository {
   open(input: QuarantineCommand): Promise<QuarantineOutcome>;
   getByObservationIssue(observationId: string, issueCode: QuarantineIssueCode): Promise<QuarantineRecord | null>;
 }
+
+export type NormalizedSnapshot = Readonly<{
+  contractVersion: string;
+  adapterKey: string;
+  adapterConfigVersion: number;
+  normalizationPolicyVersion: string;
+  completeness: "full" | "partial";
+  normalizedEntity: JsonObject;
+  semanticHash: string;
+}>;
+
+export type ObservationEvidenceCommand = Readonly<{
+  ingestionRunId: string;
+  bindingId: string;
+  externalObjectKind: MappableProviderEntityKind | "result";
+  externalObjectId: string;
+  providerRevision?: string;
+  providerUpdatedAt?: string;
+  receivedAt: string;
+  sanitizationVersion: number;
+  sanitizedPayload: JsonObject;
+  snapshot: NormalizedSnapshot;
+}>;
+
+export type ObservationEvidenceOutcome = Readonly<{
+  outcome: "inserted" | "exact_replay" | "revision_conflict";
+  observationId: string;
+  conflictId?: string;
+}>;
+
+export interface ObservationEvidenceRepository {
+  record(input: ObservationEvidenceCommand): Promise<ObservationEvidenceOutcome>;
+}
 ```
 
 All writes use service-role/server-only access. `provider_entity_refs` remains keyed by binding, entity
-kind, and external ID. A reviewed or rejected row requires reviewer provenance. Candidate UUIDs are sorted
-and validated against the binding edition before persistence. A quarantine replay returns the existing row
-for `(observation_id, issue_code)`; it does not create a second issue.
+kind, and external ID, and its public type is `MappableProviderEntityKind` so result mappings cannot be
+represented. A discriminated canonical reference is used throughout: `automatic`/`reviewed` require a
+canonical UUID while `rejected`/`unresolved` have none. Reviewed and rejected rows require reviewer
+provenance. Candidate UUIDs are sorted and validated against the binding edition before persistence. A
+quarantine replay returns the existing row for `(observation_id, issue_code)`; it does not create a second
+issue. Same-revision/different-payload evidence is preserved in the conflict table and associated with the
+first immutable observation; the first row is never mutated or silently discarded.
 
-**TDD/database matrix:** reviewed mapping success; automatic mapping success; conflicting reviewed mapping;
+**TDD/database matrix:** synthetic ingestion run required; inserted observation with validated snapshot;
+exact observation replay; same-revision/different-payload conflict preserved; revisionless semantic
+duplicate; reviewed mapping success; automatic mapping success; conflicting reviewed mapping;
 missing mapping quarantine; ambiguous candidate quarantine; fuzzy candidate quarantine; rejected mapping;
 same external ID under two bindings; same provider ID across editions; invalid canonical UUID injection;
 exact quarantine replay; resolved quarantine replay; RLS/grant denial for anon/authenticated; service-role
@@ -534,12 +621,13 @@ No provider or hosted evidence.
 disable mapping writes and quarantine disposition, preserve refs/quarantine, and use a reviewed forward
 repair. Never delete evidence to undo a bad mapping.
 
-**Stop conditions:** a mapping would overwrite a reviewed row; a canonical target is not proven same-edition;
-candidate UUIDs are accepted from untrusted input; a new table is needed without a reviewed migration; or
-RLS/grants expose mappings or quarantine to clients.
+**Stop conditions:** an evidence write does not require an existing run; a revision conflict is discarded
+or mutates the first observation; a mapping would overwrite a reviewed or rejected row; a canonical target
+is not proven same-edition; candidate UUIDs are accepted from untrusted input; or RLS/grants expose
+evidence, mappings, conflicts, or quarantine to clients.
 
-**Next gate:** security review of mapping/quarantine persistence and explicit approval of first-seen creation
-policy D1.
+**Next gate:** accept the evidence/mapping/quarantine evidence and proceed to structural projection under
+the approved D1 policy.
 
 ### 2B.4 — Canonical structural-entity projection
 
@@ -551,6 +639,8 @@ contests, brackets, and edges in dependency order, without result writes, legacy
 - `lib/ingestion/projection/structural-projector.ts`
 - `lib/ingestion/projection/structural-repository.ts`
 - `tests/ingestion/projection/structural-projector.test.ts`
+- `supabase/migrations/20261009000001_slice_2b_structural_projection.sql`
+- `supabase/rollbacks/20261009000001_slice_2b_structural_projection_down.sql`
 - `supabase/tests/database/17_slice_2b_structural_projection_test.sql`
 - `docs/architecture/implementation/slice-2b-4-structural-projection-evidence.md`
 
@@ -565,27 +655,26 @@ export type StructuralProjectionOutcome =
   | { kind: "unchanged"; canonicalId: string }
   | { kind: "quarantined"; quarantineId: string };
 
-export type ResolvedIdentityRef = Readonly<{
-  entityKind: ProviderEntityKind;
-  externalId: string;
-  canonicalId: string;
-}>;
-
 export type StructuralProjectionCommand = Readonly<{
-  observation: NormalizedObservation;
-  resolvedIdentities: readonly ResolvedIdentityRef[];
+  observationId: string;
 }>;
 
 export function projectStructuralObservation(
   command: StructuralProjectionCommand,
 ): Promise<StructuralProjectionOutcome>;
+
+export interface StructuralRepository {
+  projectObservation(input: StructuralProjectionCommand): Promise<StructuralProjectionOutcome>;
+}
 ```
 
-The repository must use the topological order in section 5. Existing canonical mappings are required for
-entities without an approved creation key. Natural database identities are respected: edition/stage/round/
-contest/bracket keys are scoped by edition or parent as their constraints require; event entries are
-edition+competitor; contest entries are contest+event entry/ordinal; bracket edges use their existing
-composite unique key.
+The SQL boundary is `project_structural_observation(p_observation_id uuid)`, which derives binding, provider,
+edition, entity kind, normalized snapshot, and observation provenance from the immutable observation. The
+repository must use the topological order in section 5. Existing canonical mappings are required for roots;
+edition-scoped structures may be created only from approved normalized keys and resolved parents. Natural
+database identities are respected: edition/stage/round/contest/bracket keys are scoped by edition or parent
+as their constraints require; event entries are edition+competitor; contest entries are contest+event entry/
+ordinal; bracket edges use their existing composite unique key.
 
 **Invariants:** organization precedes competition; competition precedes edition; edition and competitor
 precede entry; stage precedes round; stage/round/entries precede contest; contests precede bracket edges;
@@ -611,12 +700,12 @@ No canonical-to-template projection, provider, beta, or production evidence.
 rows exist, stop structural writes, preserve observations and rows, and repair with a forward migration or
 operator-reviewed mapping correction. No cascade deletion is a rollback strategy.
 
-**Stop conditions:** D1 is unresolved; any projection invents canonical keys from display names without
-approval; a partial snapshot deletes/withdraws unseen rows; structural writes bypass same-edition FKs; or
-the implementation starts touching `templates`, `template_matches`, or scoring views.
+**Stop conditions:** an observation can be projected without a validated snapshot; D1 key/parent policy is
+bypassed; structural provenance cannot identify the observation that produced current state; a partial
+snapshot deletes/withdraws unseen rows; structural writes bypass same-edition FKs; a longer cycle is not
+quarantined; or the implementation starts touching `templates`, `template_matches`, or scoring views.
 
-**Next gate:** architecture approval of structural breadth D7 and a local database review of the dependency
-and no-deletion invariants.
+**Next gate:** accept structural projection and provenance evidence and proceed to result projection.
 
 ### 2B.5 — Atomic result, audit, and outbox-intent projection
 
@@ -629,33 +718,19 @@ deliver notifications, reconcile lifecycle, or project to legacy scoring tables.
 - `lib/ingestion/projection/result-projector.ts`
 - `lib/ingestion/projection/result-repository.ts`
 - `tests/ingestion/projection/result-projector.test.ts`
-- `supabase/migrations/20261009000001_slice_2b_atomic_result_projection.sql`
-- `supabase/rollbacks/20261009000001_slice_2b_atomic_result_projection_down.sql`
+- `supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql`
+- `supabase/rollbacks/20261009000002_slice_2b_atomic_result_projection_down.sql`
 - `supabase/tests/database/18_slice_2b_atomic_result_projection_test.sql`
 - `docs/architecture/implementation/slice-2b-5-atomic-result-projection-evidence.md`
 
-**Recommended SQL boundary:** one new `SECURITY DEFINER` function in the new forward migration, with fixed
+**SQL boundary:** one new `SECURITY DEFINER` function in the new forward migration, with fixed
 `search_path = public, pg_temp`, revoked from `public`, `anon`, and `authenticated`, and executable only
 by `service_role`:
 
 ```sql
 create function project_provider_result(
   p_observation_id uuid,
-  p_binding_id uuid,
-  p_provider_id uuid,
-  p_event_edition_id uuid,
-  p_contest_id uuid,
-  p_result_status text,
-  p_outcome_type text,
-  p_winner_event_entry_id uuid,
-  p_score jsonb,
-  p_result_data jsonb,
-  p_provider_effective_at timestamptz,
-  p_correction_reason text,
-  p_result_idempotency_key text,
-  p_audit_event_type text,
-  p_outbox_intent_type text,
-  p_outbox_audience_kind text
+  p_result_idempotency_key text default null
 )
 returns table (
   outcome text,
@@ -663,7 +738,8 @@ returns table (
   result_version integer,
   audit_event_id uuid,
   outbox_id uuid,
-  quarantine_id uuid
+  quarantine_id uuid,
+  prior_outcome text
 )
 language plpgsql
 security definer;
@@ -674,21 +750,7 @@ The corresponding server command is a strict value object:
 ```ts
 export type ResultProjectionCommand = Readonly<{
   observationId: string;
-  bindingId: string;
-  providerId: string;
-  eventEditionId: string;
-  contestId: string;
-  resultStatus: NormalizedResult["resultStatus"];
-  outcomeType: NormalizedResult["outcomeType"];
-  winnerEventEntryId?: string;
-  score?: JsonObject;
-  resultData: JsonObject;
-  providerEffectiveAt?: string;
-  correctionReason?: string;
-  resultIdempotencyKey: string;
-  auditEventType: string;
-  outboxIntentType: string;
-  outboxAudienceKind: "operator";
+  resultIdempotencyKey?: string;
 }>;
 
 export type ResultProjectionOutcome = Readonly<{
@@ -698,16 +760,21 @@ export type ResultProjectionOutcome = Readonly<{
   auditEventId?: string;
   outboxId?: string;
   quarantineId?: string;
+  priorOutcome?: "projected" | "duplicate" | "quarantined" | "ignored_stale" | "no_op";
 }>;
 ```
 
-The function must revalidate the observation, binding/provider/edition, contest edition, winner contest
-entry, result state, and source type. The TypeScript repository may prepare a validated command, but SQL
-must reject arbitrary canonical UUID injection and recheck the locked mapping/edition relationship.
+The function must require an existing observation created by the evidence boundary, derive binding/provider/
+edition and the normalized result from that observation’s validated snapshot, resolve the contest and winner
+entry through provider mappings, and reject arbitrary canonical UUID injection. It derives source type,
+audit event type, outbox intent type, audience, actor, version, superseded result, and correction
+classification inside the transaction. A caller key is untrusted: SQL recomputes the expected semantic key,
+rejects a mismatched supplied key, and returns the prior verified outcome on an exact or semantic replay.
 
 **Transaction and lock invariants:**
 
-1. Insert or locate the immutable provider observation using its existing revision/hash uniqueness.
+1. Require the immutable provider observation and validated normalized snapshot; this function never inserts
+   an observation from only its UUID.
 2. Lock relevant provider refs in deterministic entity-kind order, then lock the target contest projection
    key with `pg_advisory_xact_lock(hashtextextended('bracket-fyi:contest-projection:' || contest_id::text, 0))`.
 3. Revalidate contest and winner-entry same-edition membership under the lock.
@@ -722,11 +789,14 @@ must reject arbitrary canonical UUID injection and recheck the locked mapping/ed
 8. Any unexpected failure rolls back the whole command. A deliberate quarantine commits the observation and
    quarantine together. The function returns the prior outcome on replay.
 
-**Outbox scope recommendation:** until the separate notification slice is approved, create only one
-operator-audience intent for accepted `result_final` and `result_correction` events. Do not fan out per
-league or participant and do not deliver anything. This recommendation requires D6 approval.
+**Outbox scope:** create only one operator-audience intent for the first accepted `final`/`awarded` result
+(`result_final`) and one intent for an accepted correction after a prior terminal result
+(`result_correction`). Provisional, unresolved, quarantined, canceled/void first results, and semantic
+replays create no intent; a correction creates exactly one correction intent and never also emits final.
+There is no fan-out or delivery.
 
-**TDD/database matrix:** first final result; provisional/live progression; exact replay; semantic duplicate
+**TDD/database matrix:** first final result; provisional result progression plus independent contest
+lifecycle progression; exact replay; semantic duplicate
 from a different observation; concurrent duplicate; newer update; older update; equal timestamp identical;
 equal timestamp changed; illegal regression; accepted explicit correction; conflicting terminal correction;
 unresolved correction; canceled/void; result through contest and winner-entry identity; missing/ambiguous
@@ -744,12 +814,13 @@ beta, notification-delivery, lifecycle, or production claim.
 its grants. After any observations/results/audit/outbox exist, disable the binding/write path and use a
 forward repair; never delete append-only result, audit, or observation evidence.
 
-**Stop conditions:** D4/D6/D8 unresolved; SQL function can be invoked by browser roles; concurrent calls
+**Stop conditions:** a caller can supply a result/contest/edition/provider/audit/outbox identity that SQL
+trusts; an observation can be missing; D4/D6/D8 semantics can drift from TypeScript; SQL function can be invoked by browser roles; concurrent calls
 can produce duplicate versions or outbox intents; a changed terminal result is accepted without approved
 correction evidence; or a result writes `template_results`, lifecycle state, pushes, or UI state.
 
-**Next gate:** architecture/security approval of the transaction function, changed-terminal policy, and
-outbox scope before any migration is created.
+**Next gate:** accept result transaction, conformance, security, and rollback evidence and proceed to replay
+acceptance.
 
 ### 2B.6 — Synthetic sports/ceremony replay acceptance
 
@@ -1020,22 +1091,22 @@ category, through the same provider-neutral interfaces:
 Every sub-slice evidence file must record commit, migration version if any, exact commands, synthetic data
 classification, pass/fail totals, security review, rollback/repair state, residual risks, and next gate.
 
-## 11. Unresolved decision register
+## 11. Resolved decision register
 
-These decisions must be approved before the affected implementation sub-slice. The recommendations are
-explicit proposals, not silent decisions.
+The following decisions are approved for this local implementation. A future adapter packet may add
+provider-specific policy only where explicitly noted.
 
-| ID / owner | Options | Recommendation | Risks | Exact approval needed |
-|---|---|---|---|---|
-| **D1 — Product owner + architecture owner: first-seen canonical creation** | A. Never auto-create; operator creates canonical row and reviews mapping. B. Create in shadow as an untrusted proposal. C. Auto-create deterministic canonical rows. | A for 2B. Existing Slice 2A data lacks canonical keys for several entities, and display-name slugs are unsafe. | Slower onboarding and more quarantine; B/C risk identity pollution and unstable keys. | Approve whether 2B may create any first-seen organization, competition, competitor, edition, stage, round, contest, or bracket, and who supplies the canonical key. |
-| **D2 — Architecture owner: normalized identity/alias algorithm ownership** | Provider-specific normalizers; shared TypeScript normalizer; database normalization; external library. | Shared versioned TypeScript normalizer with Unicode/locale tests; persist algorithm version in mapping metadata; DB remains an invariant store. | Algorithm changes can split/merge aliases; locale/punctuation behavior can create ambiguity. | Approve owner, normalization versioning, Unicode/locale rules, and whether an alias change requires re-review. |
-| **D3 — Architecture owner + provider owner: provider-revision comparison** | Lexical revision order; provider-specific comparator; timestamp/hash only; operator-only revision disposition. | Treat revisions as opaque identity only. Use provider timestamps/effective times and approved adapter comparators later; never lexical-compare by default. | Some providers omit timestamps; stale or changed revisions may quarantine more often. | Approve the default for missing/opaque revisions and whether a provider-specific comparator may be added in a later adapter slice. |
-| **D4 — Product owner + architecture owner: changed terminal trust** | Auto-accept newest; require explicit provider correction marker; operator review for every changed terminal; allow a provider-specific rule. | Quarantine changed terminal results by default; accept only an explicit, attributable correction with nonblank reason and approved policy. | Delayed real corrections versus wrong winner/scoring if trusted automatically. | Approve the correction signal, actor/provenance requirement, allowed terminal transitions, and whether unresolved corrections may reopen later lifecycle state. |
-| **D5 — Architecture owner: canonical normalized snapshot persistence** | Observations only; copy full normalized data into result/audit JSON; dedicated normalized-snapshot table. | Keep immutable sanitized observations as replay source; store only the normalized result/audit state required by current tables and reference observation ID. | Re-normalization after algorithm changes may differ; duplication increases sensitive-data surface. | Approve whether a versioned normalized snapshot is required for deterministic replay and where it is retained. |
-| **D6 — Product owner + notifications owner: Slice 2B outbox intents** | No outbox until M5; one operator intent per canonical result version; per-league/participant intents; all result events. | Create only one operator-scoped `result_final`/`result_correction` intent per accepted canonical result version; no delivery or fan-out in 2B. | Operator intents may be redundant; per-league fan-out risks lifecycle/compatibility coupling and duplicates. | Approve event types, audience, correction behavior, and whether outbox insertion is mandatory for every accepted result. |
-| **D7 — Architecture owner: structural projection breadth** | Result-only; full canonical structure; full structure plus legacy/template projection. | Full canonical structural projection only, excluding legacy/template, scoring, lifecycle, and notifications. | Broad structure increases dependency/quarantine complexity; result-only cannot resolve future results safely. | Approve entity kinds included in 2B and explicitly keep template/scoring projection for a later slice. |
-| **D8 — Architecture/security owner: transaction API location** | SQL `SECURITY DEFINER` function; server repository transaction; split TypeScript policy plus SQL write function. | Split boundary: pure TypeScript policy/command preparation plus a service-role-only SQL function for locked result/audit/outbox writes. | SQL function complexity; repository-only transactions may lack atomicity through the current client; split adds revalidation burden. | Approve function signature, lock scope, search path/grants, and which decisions are revalidated inside SQL. |
-| **D9 — Product owner: correction/outbox semantics** | Correction emits one intent; correction emits final plus correction; no intent for quarantined corrections. | One correction intent only after a corrected version commits; quarantined corrections emit none. | Clients may miss a transition if later lifecycle owns reopening; duplicate user messaging if both events emit. | Approve the event taxonomy and whether 2B may reference lifecycle consequences without implementing them. |
+| ID / owner | Resolution | Implementation consequence |
+|---|---|---|
+| **D1 — Product + architecture** | Organization, competition, event edition, and competitor are pre-provisioned or operator-reviewed roots. No display-name/provider-ID key generation. Edition-scoped event entries, stages, rounds, contests/entries, brackets/edges may be created atomically only from approved canonical keys and resolved parents. Missing roots quarantine. | Root mappings are required; structural SQL may create only edition-scoped rows and their mappings in one transaction. |
+| **D2 — Architecture** | Shared TypeScript normalization v1: NFKC, validated BCP-47 locale, locale-aware lowercase, apostrophe/dash variants, punctuation separators to spaces, Unicode whitespace collapse/trim, letters/numbers/diacritics preserved, explicit aliases only. Persist version; reviewed mappings survive algorithm changes. | `IDENTITY_NORMALIZATION_VERSION` is part of automatic mapping metadata and every normalized snapshot. |
+| **D3 — Architecture + provider owner** | Provider revisions are opaque identity values, never lexically ordered. Trusted provider/effective timestamps govern ordering. Provider comparators require a later adapter packet and tests. Missing timestamps cannot replace an accepted terminal result. | Pure ordering and SQL use timestamps/effective times; revisions only select evidence identity. |
+| **D4 — Product + architecture** | Changed terminal results quarantine by default. Acceptance requires nonblank correction reason, attributable provenance, newer trusted effective/provider timestamp, and binding policy permission. Accepted corrections append a version; unresolved correction is accepted under the same explicit correction conditions and lifecycle reopening is deferred. | SQL derives correction classification and creates `result_correction` only after commit. |
+| **D5 — Architecture** | Every evidence-boundary observation carries a validated versioned normalized snapshot in `provider_observations.metadata`; no snapshot table. Snapshot includes contract/config/normalization versions, completeness, normalized entity, semantic hash, and optional correction provenance. | Observation RPC validates the exact metadata envelope; revision conflicts preserve attempted evidence separately. |
+| **D6 — Product + notifications** | Operator-only outbox intents: first final/awarded result → `result_final`; accepted correction after terminal → `result_correction`; no provisional/unresolved/quarantine/canceled-or-void first-result intent, fan-out, or delivery. | SQL derives intent type/audience and inserts at most one intent per accepted result version. |
+| **D7 — Architecture** | Full canonical structural projection, excluding legacy/template/scoring/lifecycle projection. Roots follow D1; edition-scoped structures may be created. | Structural function covers all canonical structural tables and never touches legacy tables. |
+| **D8 — Architecture + security** | Pure TypeScript policy plus service-role-only `SECURITY DEFINER` SQL boundaries. Fixed safe search path, schema-qualified objects, revoked browser execution, service-role grant, derived/revalidated security values, deterministic lock order, prior verified outcome on replay. | Evidence, mapping/quarantine, structural, and result functions are separate forward migrations with matching down documents. |
+| **D9 — Product** | One accepted correction creates exactly one operator `result_correction` intent after the corrected result commits; never also `result_final`; quarantined corrections emit none; lifecycle reopening remains later work. | Audit/outbox insertion is transactionally coupled to result version creation. |
 
 ## 12. Explicit exclusions and later gates
 
@@ -1050,5 +1121,5 @@ Slice 2B planning and any eventual implementation exclude:
 - canonical-to-legacy `template_results` projection, scoring changes, override mutation/release routes, and
   public compatibility read rewrites.
 
-The next approval gate is architecture/security review of D1–D9, followed by explicit approval of 2B.1.
-No lower-consumption model may begin 2B.1–2B.6 from this planning packet alone.
+Local implementation is approved through 2B.1–2B.6. The next gate after local acceptance is independent
+read-only review and remediation of surviving findings; no 2C work is authorized by this packet.
