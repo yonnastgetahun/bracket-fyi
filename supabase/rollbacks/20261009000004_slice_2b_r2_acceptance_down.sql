@@ -1,0 +1,7 @@
+-- Slice 2B-R2 forward-repair notes.
+-- No automatic destructive down migration is provided. The safe rollback is:
+-- 1. stop local projection callers;
+-- 2. restore reviewed prior function bodies and grants in a maintenance migration;
+-- 3. archive/reconcile edition-scoped provenance before removing the R2 triggers;
+-- 4. retain generated immutable conflict hashes and re-run the disposable suite.
+-- This migration has not been hosted; any rollback must remain local until review.

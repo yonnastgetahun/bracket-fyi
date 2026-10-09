@@ -125,13 +125,24 @@ describe("separate contest lifecycle and result ordering", () => {
     expect(compareResultOrdering({ current, incoming, explicitCorrection: true, bindingAllowsTrustedCorrections: false })).toMatchObject({ decision: "quarantine_terminal_conflict" });
   });
 
-  it("keeps terminal-to-provisional illegal even with correction provenance", () => {
-    expect(compareResultOrdering({
-      current: state({ normalizedResult: result({ resultStatus: "final", outcomeType: "draw" }), providerEffectiveAt: "2026-10-08T18:00:00Z" }),
-      incoming: state({ normalizedResult: result({ resultStatus: "provisional", outcomeType: "pending", correctionReason: "correction" }), providerEffectiveAt: "2026-10-08T19:00:00Z", correctionProvenance: "synthetic-operator", semanticKey: "provisional" }),
-      explicitCorrection: true,
-      bindingAllowsTrustedCorrections: true,
-    })).toMatchObject({ decision: "quarantine_regression" });
+  it.each([
+    ["final", { resultStatus: "final", outcomeType: "draw" }],
+    ["awarded", { resultStatus: "awarded", outcomeType: "winner", winnerEventEntryExternalId: "entry-1" }],
+    ["canceled", { resultStatus: "canceled", outcomeType: "no_contest" }],
+    ["void", { resultStatus: "void", outcomeType: "no_contest" }],
+  ] as const)("keeps %s-to-provisional illegal before stale ordering", (_terminalStatus, terminalResult) => {
+    for (const incomingProviderUpdatedAt of [
+      "2026-10-08T17:00:00Z",
+      "2026-10-08T18:00:00Z",
+      "2026-10-08T19:00:00Z",
+    ]) {
+      expect(compareResultOrdering({
+        current: state({ normalizedResult: result(terminalResult), providerEffectiveAt: "2026-10-08T18:00:00Z" }),
+        incoming: state({ normalizedResult: result({ resultStatus: "provisional", outcomeType: "pending", correctionReason: "correction" }), providerEffectiveAt: incomingProviderUpdatedAt, correctionProvenance: "synthetic-operator", semanticKey: `provisional-${incomingProviderUpdatedAt}` }),
+        explicitCorrection: true,
+        bindingAllowsTrustedCorrections: true,
+      })).toMatchObject({ decision: "quarantine_regression" });
+    }
   });
 
   it("separately rejects an illegal contest lifecycle regression", () => {

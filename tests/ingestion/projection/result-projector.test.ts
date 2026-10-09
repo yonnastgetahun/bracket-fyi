@@ -45,12 +45,12 @@ describe("atomic result, audit, and operator-outbox projection", () => {
   it("returns an explicit typed skip for disabled or shadow bindings", async () => {
     const repository = createResultRepository({
       rpc: vi.fn().mockResolvedValue({
-        data: [{ outcome: "skipped_shadow", contest_result_id: null, result_version: null, audit_event_id: null, outbox_id: null, quarantine_id: null, prior_outcome: null }],
+        data: [{ outcome: "skipped_non_write", contest_result_id: null, result_version: null, audit_event_id: null, outbox_id: null, quarantine_id: null, prior_outcome: null }],
         error: null,
       }),
     });
     await expect(projectProviderResult({ observationId: "disabled-observation" }, repository)).resolves.toEqual({
-      outcome: "skipped_shadow",
+      outcome: "skipped_non_write",
     });
   });
 });

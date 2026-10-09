@@ -1,7 +1,7 @@
 export type StructuralProjectionOutcome =
   | Readonly<{ kind: "projected"; canonicalId: string }>
   | Readonly<{ kind: "unchanged"; canonicalId: string }>
-  | Readonly<{ kind: "skipped_shadow" }>
+  | Readonly<{ kind: "skipped_non_write" }>
   | Readonly<{ kind: "quarantined"; quarantineId: string }>;
 
 export type StructuralProjectionCommand = Readonly<{
@@ -16,7 +16,7 @@ type RpcClient = {
 };
 
 type StructuralRow = {
-  outcome: "projected" | "unchanged" | "skipped_shadow" | "quarantined";
+  outcome: "projected" | "unchanged" | "skipped_non_write" | "quarantined";
   canonical_id?: string | null;
   quarantine_id?: string | null;
 };
@@ -38,7 +38,7 @@ export function createStructuralRepository(client: RpcClient): StructuralReposit
         if (!row.quarantine_id) throw new Error("Structural quarantine returned no quarantine ID");
         return { kind: "quarantined", quarantineId: row.quarantine_id };
       }
-      if (row.outcome === "skipped_shadow") return { kind: "skipped_shadow" };
+      if (row.outcome === "skipped_non_write") return { kind: "skipped_non_write" };
       if (!row.canonical_id) throw new Error("Structural projection returned no canonical ID");
       return { kind: row.outcome, canonicalId: row.canonical_id };
     },

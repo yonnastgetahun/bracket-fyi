@@ -95,22 +95,20 @@ as $$
 $$;
 
 alter table provider_observation_conflicts
-  add column if not exists normalized_snapshot_hash text;
-
-update provider_observation_conflicts
-set normalized_snapshot_hash = encode(
-  extensions.digest(slice_2b_canonical_json(normalized_snapshot), 'sha256'), 'hex'
-)
-where normalized_snapshot_hash is null;
-
-alter table provider_observation_conflicts
-  alter column normalized_snapshot_hash set not null;
-
-alter table provider_observation_conflicts
   drop constraint if exists provider_observation_conflicts_original_observation_id_payload_hash_key;
 
 alter table provider_observation_conflicts
   drop constraint if exists provider_observation_conflict_original_observation_id_paylo_key;
+
+alter table provider_observation_conflicts
+  drop constraint if exists provider_observation_conflicts_snapshot_hash_valid,
+  drop constraint if exists provider_observation_conflicts_identity_unique,
+  drop column if exists normalized_snapshot_hash;
+
+alter table provider_observation_conflicts
+  add column normalized_snapshot_hash text generated always as (
+    encode(extensions.digest(slice_2b_canonical_json(normalized_snapshot), 'sha256'), 'hex')
+  ) stored;
 
 alter table provider_observation_conflicts
   add constraint provider_observation_conflicts_snapshot_hash_valid
@@ -174,11 +172,11 @@ begin
     insert into provider_observation_conflicts (
       original_observation_id, ingestion_run_id, binding_id, provider_id, event_edition_id,
       external_object_kind, external_object_id, provider_revision, provider_updated_at, received_at,
-      sanitization_version, sanitized_payload, normalized_snapshot, normalized_snapshot_hash, conflict_reason
+      sanitization_version, sanitized_payload, normalized_snapshot, conflict_reason
     ) values (
       v_existing.id, p_ingestion_run_id, p_binding_id, v_provider_id, v_event_edition_id,
       p_external_object_kind, p_external_object_id, p_provider_revision, p_provider_updated_at, p_received_at,
-      p_sanitization_version, p_sanitized_payload, p_normalized_snapshot, v_snapshot_hash,
+      p_sanitization_version, p_sanitized_payload, p_normalized_snapshot,
       case when p_provider_revision is null
         then 'revisionless replay changed normalized evidence'
         else 'same provider revision received with different evidence or normalized snapshot' end

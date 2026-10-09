@@ -56,4 +56,25 @@ describe("observation evidence repository", () => {
       conflictId: "conflict-1",
     });
   });
+
+  it("keeps the JavaScript JSON wire value used by SQL canonicalization", async () => {
+    const rpc = vi.fn(async (_name: string, args: Record<string, unknown>) => {
+      const wireArgs = JSON.parse(JSON.stringify(args)) as {
+        p_normalized_snapshot: { normalizedEntity: { value: number } };
+      };
+      expect(JSON.stringify(wireArgs.p_normalized_snapshot.normalizedEntity)).toBe(
+        '{"value":1.2345678901234568e+21}',
+      );
+      return { data: [{ outcome: "inserted", observation_id: "observation-number", conflict_id: null }], error: null };
+    });
+    const repository = createObservationEvidenceRepository({ rpc });
+
+    await expect(repository.record({
+      ...command,
+      snapshot: {
+        ...command.snapshot,
+        normalizedEntity: { value: 1.2345678901234567e21 },
+      },
+    })).resolves.toMatchObject({ outcome: "inserted", observationId: "observation-number" });
+  });
 });

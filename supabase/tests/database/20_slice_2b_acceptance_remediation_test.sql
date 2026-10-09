@@ -49,7 +49,7 @@ select lives_ok($sql$
   )
 $sql$, 'shadow mode retains observation evidence');
 
-select is((select outcome from project_structural_observation((select id from provider_observations where external_object_id = 'entry-shadow'))), 'skipped_shadow', 'shadow structural projection skips canonical mutation');
+select is((select outcome from project_structural_observation((select id from provider_observations where external_object_id = 'entry-shadow'))), 'skipped_non_write', 'shadow structural projection skips canonical mutation');
 select is((select count(*) from event_entries where id = 'a0000000-0000-4000-8000-000000000008'), 1::bigint, 'shadow structural projection does not add canonical rows');
 
 select lives_ok($sql$
@@ -111,7 +111,7 @@ select lives_ok($sql$
     jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','remediation-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition','contestExternalId','contest-disabled','resultStatus','final','outcomeType','draw','resultData',jsonb_build_object()),'semanticHash',repeat('4',64))
   )
 $sql$, 'disabled mode retains result evidence');
-select is((select outcome from project_provider_result((select id from provider_observations where external_object_id = 'contest-disabled'))), 'skipped_shadow', 'disabled result projection skips canonical mutation');
+select is((select outcome from project_provider_result((select id from provider_observations where external_object_id = 'contest-disabled'))), 'skipped_non_write', 'disabled result projection skips canonical mutation');
 
 insert into provider_bindings (id, provider_id, event_edition_id, binding_key, role, mode, health_status, adapter_config)
 values ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'remediation-write', 'fallback', 'write', 'healthy', '{"allowTrustedCorrections":true}'::jsonb);

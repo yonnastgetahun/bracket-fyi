@@ -53,6 +53,14 @@ describe("deterministic Slice 2B idempotency keys", () => {
     })).toBe('{"large":1e+21,"negativeZero":0,"ordinary":42,"safeMax":9007199254740991,"safeMin":-9007199254740991,"threshold":0.000001,"tiny":1e-7}');
   });
 
+  it("preserves the JavaScript-serialized RPC number before canonicalization", () => {
+    // This literal is intentionally the acceptance vector; JSON.stringify applies
+    // JavaScript's shortest-round-trip representation before the RPC is sent.
+    const serialized = JSON.stringify({ value: 1.2345678901234567e21 });
+    expect(serialized).toBe('{"value":1.2345678901234568e+21}');
+    expect(canonicalJson(JSON.parse(serialized))).toBe(serialized);
+  });
+
   it("uses opaque provider revisions as identity inputs, never sortable values", () => {
     const base = {
       bindingId: "binding-1",

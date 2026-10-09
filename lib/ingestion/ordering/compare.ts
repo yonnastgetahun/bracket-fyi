@@ -46,6 +46,12 @@ export function compareResultOrdering(input: OrderingInput): OrderingOutcome {
     return outcome("no_op_duplicate", "Incoming result has the accepted semantic key");
   }
 
+  const currentTerminal = resultStatusIsTerminal(input.current.normalizedResult.resultStatus);
+  const incomingTerminal = resultStatusIsTerminal(input.incoming.normalizedResult.resultStatus);
+  if (currentTerminal && input.incoming.normalizedResult.resultStatus === "provisional") {
+    return outcome("quarantine_regression", "A terminal result cannot regress to a provisional result");
+  }
+
   const currentTrusted = trustedTimestamp(input.current);
   const incomingTrusted = trustedTimestamp(input.incoming);
   if (currentTrusted !== undefined && incomingTrusted !== undefined) {
@@ -62,11 +68,9 @@ export function compareResultOrdering(input: OrderingInput): OrderingOutcome {
     }
   }
 
-  const currentTerminal = resultStatusIsTerminal(input.current.normalizedResult.resultStatus);
-  const incomingTerminal = resultStatusIsTerminal(input.incoming.normalizedResult.resultStatus);
   if (currentTerminal && !incomingTerminal) {
     if (input.incoming.normalizedResult.resultStatus !== "unresolved") {
-      return outcome("quarantine_regression", "A terminal result cannot regress to a provisional result");
+      return outcome("quarantine_regression", "A terminal result cannot regress to a non-terminal result");
     }
     if (
       input.explicitCorrection
