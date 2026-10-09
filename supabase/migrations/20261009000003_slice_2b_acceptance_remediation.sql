@@ -279,6 +279,8 @@ create table if not exists canonical_structural_projection_scope (
 create index if not exists canonical_structural_projection_scope_observation_idx
   on canonical_structural_projection_scope (last_observation_id);
 alter table canonical_structural_projection_scope enable row level security;
+revoke all on table canonical_structural_projection_scope from public, anon, authenticated;
+grant all on table canonical_structural_projection_scope to service_role;
 
 create or replace function slice_2b_resolve_quarantine(p_observation_id uuid)
 returns void
