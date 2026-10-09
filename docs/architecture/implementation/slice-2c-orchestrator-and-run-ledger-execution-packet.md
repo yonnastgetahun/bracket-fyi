@@ -249,12 +249,19 @@ completion authoritative under concurrency and crash recovery.
 
 - `supabase/migrations/20261010000000_slice_2c_run_ledger.sql`
 - `supabase/rollbacks/20261010000000_slice_2c_run_ledger_down.sql`
+- `supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql`
+- `supabase/rollbacks/20261010000001_slice_2c_2_acceptance_remediation_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `lib/ingestion/orchestrator/run-ledger-repository.ts`
 - `tests/ingestion/orchestrator/run-ledger-repository.test.ts`
 - `docs/architecture/implementation/slice-2c-2-run-ledger-evidence.md`
 
 No provider adapter, scheduler, UI, legacy result table, hosted migration, or budget table may change.
+
+The acceptance-remediation migration `20261010000001` is limited to forward repair of the local 2C.2
+boundary: authoritative database-clock lease checks, due-selection and lifecycle gates, binding-first
+locking, request-key race serialization, UTF-8 page-key parity, checkpoint indexing, and bounded sanitized
+run metadata. It does not introduce provider-budget persistence; that remains a later 2C.5 migration.
 
 **Required forward schema changes:**
 
@@ -276,6 +283,10 @@ No provider adapter, scheduler, UI, legacy result table, hosted migration, or bu
   `skipped_delta`, `failed_delta`, `disposition_fingerprint`, and `committed_at`. Use a unique
   `(binding_id, page_key)`, a checkpoint-generation index, an immutable trigger, JSON-object checks, and
   nonnegative/count-conservation checks.
+- Bound `error_class` and `error_message`, bound serialized run metadata, and reject recursively sensitive
+  metadata keys such as `authorization`, `cookie`, `credential`, `password`, `secret`, `token`, `payload`,
+  `raw`, and `body`. Callers submit already-sanitized failures; the database never stores raw responses,
+  headers, credentials, or provider payloads.
 - Revoke `service_role` direct `INSERT`, `UPDATE`, `DELETE`, and `TRUNCATE` on `provider_bindings`,
   `ingestion_runs`, and `ingestion_page_ledger`; restore only `SELECT` to `service_role`. Revoke the same
   privileges from `PUBLIC`, `anon`, and `authenticated`. SECURITY DEFINER owners retain private writes.
@@ -289,10 +300,10 @@ For the current binding checkpoint, canonicalize the Slice 2A JSON cursor and ET
 
 ```text
 page_key = sha256hex(
-  "slice-2c-page-v1" || length(binding_id) || binding_id ||
-  length(checkpoint_generation) || checkpoint_generation ||
-  length(canonicalJson(expected_cursor)) || canonicalJson(expected_cursor) ||
-  length(coalesce(expected_etag, "")) || coalesce(expected_etag, "")
+  "slice-2c-page-v1" || octet_length(binding_id::text) || binding_id ||
+  octet_length(checkpoint_generation::text) || checkpoint_generation ||
+  octet_length(canonicalJson(expected_cursor)) || canonicalJson(expected_cursor) ||
+  octet_length(coalesce(expected_etag, "")) || coalesce(expected_etag, "")
 )
 ```
 
@@ -409,9 +420,10 @@ finish_ingestion_run(
 ) returns table (run_id uuid, status text, health_status text, next_poll_at timestamptz, next_retry_at timestamptz)
 ```
 
-Every function is `SECURITY DEFINER`, fixes `search_path = public, pg_temp`, qualifies all objects, revokes
-execution from `PUBLIC`, `anon`, and `authenticated`, and grants only `service_role`. Internal helpers are
-not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conflict`, and `page_conflict`.
+Every public mutation RPC is `SECURITY DEFINER`, fixes `search_path = public, pg_temp`, qualifies all objects,
+revokes execution from `PUBLIC`, `anon`, and `authenticated`, and grants only `service_role`. Private helpers
+are ungranted and may remain invoker-rights; they are callable only through an approved public RPC boundary.
+Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conflict`, `page_conflict`, and lifecycle rejection.
 
 **Claim identity and lifecycle:**
 
@@ -435,9 +447,13 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
   that existing child without a lease token. One parent can therefore create at most one child, and the chain
   has at most four total attempts.
 - `claim_due_ingestion_run` evaluates the union of eligible retry parents and ordinary due bindings in one
-  locked selection. Its ordering is retry priority first, then retry time, then ordinary `next_poll_at`, then
-  binding UUID. The ordinary-poll branch excludes every binding with any unresolved retry parent, whether the
-  retry is future or due, so an earlier ordinary poll cannot bypass backoff or reset the retry chain.
+  locked selection. A retry is eligible only at `next_retry_at <= p_now`; an ordinary binding is eligible only
+  when `next_poll_at is null or next_poll_at <= p_now`, and the ordinary branch excludes every binding with
+  any unresolved retry parent, whether the retry is future or due. Its ordering is retry priority first, then
+  retry time, then ordinary `next_poll_at`, then binding UUID, so an earlier ordinary poll cannot bypass
+  backoff or reset the retry chain. Before selecting, the normalized request key takes a transaction-scoped
+  advisory lock and exact replay is checked again; a different concurrent request may claim another binding or
+  receive no row, but never aliases another request's run.
 - Reclamation marks the old `claimed`/`running` run terminal with system class `lease_expired`, preserves its
   cursor, records bounded retry state when allowed, and releases the one-active-run index. A later retry
   claim increments `claim_generation`; its claim key is distinct even when the due time is unchanged. If a
@@ -448,11 +464,14 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
   operator request must use a new key and creates a new claim generation. Manual fetch is rejected for a
   disabled binding; replaying stored evidence remains a separate Slice 2B operation.
 - Lifecycle is explicit: `claimed -> running -> succeeded|partial|failed|rate_limited|canceled`. The
-  worker must call `start_ingestion_run` before its first provider call. A terminal run cannot be reopened.
-- Lease duration is min 60 seconds, default 300 seconds, max 900 seconds. The safety threshold is 60 seconds
-  remaining. The worker renews at least every `min(lease_duration / 3, 60 seconds)` and must renew before
-  every provider call and every page commit when remaining time is below the threshold. Provider call timeout
-  must be shorter than lease duration minus the safety threshold.
+  worker must call `start_ingestion_run` before its first provider call; an exact start replay by the same
+  active lease returns the existing running state. Response, page, and finish RPCs require `running`, and a
+  merely claimed run cannot finish. A terminal run cannot be reopened.
+- Lease duration is min 60 seconds, default 300 seconds, max 900 seconds. Claim, renewal, and lease validity
+  use database `clock_timestamp()`; caller `p_now` values never authorize a stale worker. The safety threshold
+  is 60 seconds remaining. The worker renews at least every `min(lease_duration / 3, 60 seconds)` and must
+  renew before every provider call and every page commit when remaining time is below the threshold. Provider
+  call timeout must be shorter than lease duration minus the safety threshold.
 - Backoff and `Retry-After` never hold a lease. `finish_ingestion_run` persists the terminal attempt,
   `retry_index`, and `next_retry_at`; a later claim creates the next attempt. Three retries means four total
   provider-call attempts. Success or terminal failure clears retry state deterministically. Lease expiry is a
@@ -460,8 +479,9 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 
 **Page commit semantics:**
 
-- The function first locks and validates the run's active lease, then recomputes `page_key` from the submitted
-  expected checkpoint and verifies the disposition fingerprint. It looks up `(binding_id,page_key)` before
+- The function first resolves and locks the binding, then locks and validates the running run's active lease,
+  then recomputes `page_key` from the submitted expected checkpoint and verifies the disposition fingerprint.
+  It looks up `(binding_id,page_key)` before
   applying the current binding checkpoint CAS.
 - If the ledger row already exists and every submitted field is identical, return `replayed` with the original
   ledger ID, counters, and checkpoint. Do not apply the current CAS, increment counters, or update the
@@ -476,7 +496,8 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 - A lost lease or failed CAS aborts without cursor/ETag advancement. The immutable ledger remains the source
   of the prior committed page effect.
 
-**TDD/database matrix:** concurrent same-page commit; response-loss sequence of first commit advancing the
+**TDD/database matrix:** concurrent two-session same-page commit with one committed and one replayed outcome;
+response-loss sequence of first commit advancing the
 binding generation followed by identical replay returning `replayed` before CAS; same key with changed
 cursor, ETag, counts, or disposition; stale expected generation for a new page; generation increment; one
 ledger row and one counter effect; exact automated request replay before due-binding selection; distinct
@@ -489,6 +510,9 @@ distinct claim identity; old worker
 cannot renew/start/commit/finish; claimed-to-running transition; lease min/default/max and cadence; no-sleep
 retry persistence; disabled/shadow/write claims; `has_table_privilege` and `has_function_privilege` vectors;
 direct `SET ROLE service_role` INSERT/UPDATE/DELETE/TRUNCATE denial for bindings, runs, and page ledger;
+future ordinary polling, null `next_poll_at`, exact due boundaries, stale caller-time bypass attempts for
+start/renew/response/page/finish, bounded and sensitive-metadata rejection, UTF-8 page-key golden parity,
+same-key advisory-lock races, and binding-first deadlock probes;
 wrapper claim/start/page/finish success; anonymous/authenticated/helper execution denial; rollback on every
 induced partial failure.
 
@@ -712,8 +736,8 @@ authoritative and observable without adding a scheduler or notification worker.
 - `tests/ingestion/orchestrator/accounting.test.ts`
 - `tests/ingestion/orchestrator/health.test.ts`
 - `tests/ingestion/rate-limit/repository.test.ts`
-- `supabase/migrations/20261010000001_slice_2c_rate_budget.sql`
-- `supabase/rollbacks/20261010000001_slice_2c_rate_budget_down.sql`
+  - `supabase/migrations/20261010000002_slice_2c_rate_budget.sql`
+  - `supabase/rollbacks/20261010000002_slice_2c_rate_budget_down.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5-accounting-health-evidence.md`
 
@@ -1055,7 +1079,7 @@ The packet makes the following bounded recommendations for review:
 11. **Manual replay:** later operator-authenticated replay uses a new request key and remains subject to mode,
     lease, budget, retry, and idempotency policy; it cannot fetch while disabled.
 12. **Schema/RPC boundary:** forward migration `20261010000000` owns claim/lease/attempt/page-ledger/checkpoint
-    persistence and `20261010000001` owns budget/health persistence; all writes are wrapper-owned, service-role-
+    persistence and `20261010000002` owns budget/health persistence; all writes are wrapper-owned, service-role-
     only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
     together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 

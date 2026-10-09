@@ -126,6 +126,15 @@ describe("run ledger repository", () => {
     expect(computeIngestionPageKey(page)).toBe(expected);
   });
 
+  it("uses UTF-8 byte lengths for the cross-runtime non-BMP golden vector", () => {
+    expect(computeIngestionPageKey({
+      ...page,
+      bindingId: "c2000000-0000-4000-8000-000000000007",
+      expectedCursor: { cursor: "😀" },
+      expectedEtag: "etag-😀",
+    })).toBe("13d8b9896be43bfb59674c09d8bdbfc0d76a6d4e00a083d2e253f5c00d2d2673");
+  });
+
   it("commits and replays a page without changing the caller-owned key", async () => {
     const rpc = vi.fn()
       .mockResolvedValueOnce({ data: [{ outcome: "committed", page_ledger_id: "page-1", run_id: "run-1", checkpoint_generation: 1, cursor_after: { page: 1 }, provider_etag: "etag-1" }], error: null })

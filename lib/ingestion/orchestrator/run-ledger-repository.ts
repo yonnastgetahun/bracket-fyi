@@ -141,7 +141,7 @@ const pageKeyMaterial = (input: Pick<PageCommitInput, "bindingId" | "expectedChe
   const generation = String(input.expectedCheckpointGeneration);
   const cursor = canonicalJson(input.expectedCursor);
   const etag = input.expectedEtag ?? "";
-  return `slice-2c-page-v1${bindingId.length}${bindingId}${generation.length}${generation}${cursor.length}${cursor}${etag.length}${etag}`;
+  return `slice-2c-page-v1${Buffer.byteLength(bindingId, "utf8")}${bindingId}${Buffer.byteLength(generation, "utf8")}${generation}${Buffer.byteLength(cursor, "utf8")}${cursor}${Buffer.byteLength(etag, "utf8")}${etag}`;
 };
 
 export function computeIngestionPageKey(input: Pick<PageCommitInput, "bindingId" | "expectedCheckpointGeneration" | "expectedCursor" | "expectedEtag">): string {
