@@ -41,6 +41,9 @@ export type ResultKeyInput = Readonly<{
 }>;
 
 export function resultIdempotencyKey(input: ResultKeyInput): string {
+  const providerEffectiveAt = input.providerEffectiveAt
+    ? new Date(input.providerEffectiveAt).toISOString()
+    : null;
   return key("result", {
     contestId: input.contestId,
     resultStatus: input.resultStatus,
@@ -48,7 +51,7 @@ export function resultIdempotencyKey(input: ResultKeyInput): string {
     winnerEventEntryId: input.winnerEventEntryId ?? null,
     score: input.score ?? null,
     resultData: input.resultData,
-    providerEffectiveAt: input.providerEffectiveAt ?? null,
+    providerEffectiveAt,
     correctionReason: input.correctionReason ?? null,
     orderingPolicyVersion: input.orderingPolicyVersion,
   });

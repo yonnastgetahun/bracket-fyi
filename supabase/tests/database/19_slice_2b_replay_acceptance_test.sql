@@ -84,7 +84,7 @@ select is((select result_status from contest_results where contest_id = '9900000
 select is((select result_status from contest_results where contest_id = '99000000-0000-4000-8000-000000000009'), 'awarded', 'ceremony replay preserves awarded status');
 select is((select count(*) from result_audit_events), 2::bigint, 'sports and ceremony replay create one audit each');
 select is((select count(*) from notification_outbox where audience_kind = 'operator'), 2::bigint, 'sports and ceremony replay create operator intents only');
-select is((select outcome from project_provider_result((select observation_id from slice_2b_replay_observations where name = 'sports'))), 'duplicate', 'sports exact replay is idempotent');
+select is((select outcome from project_provider_result((select observation_id from slice_2b_replay_observations where name = 'sports'), 'v1:result:5be279699f32423f9de6e5164d8db47fc77a733a53d0159cf45f616fb21f19d0')), 'duplicate', 'sports exact replay verifies the TypeScript/SQL semantic key');
 select is((select outcome from project_provider_result((select observation_id from slice_2b_replay_observations where name = 'sports-semantic-replay'))), 'duplicate', 'sports semantic replay is idempotent');
 select is((select count(*) from contest_results where contest_id = '99000000-0000-4000-8000-000000000008'), 1::bigint, 'sports replay creates no duplicate version');
 select is((select count(*) from result_audit_events), 2::bigint, 'replay creates no duplicate audit event');

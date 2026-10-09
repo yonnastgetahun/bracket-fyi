@@ -1,6 +1,6 @@
 begin;
 
-select plan(37);
+select plan(39);
 
 select is(
   (select count(*) from information_schema.role_routine_grants
@@ -64,6 +64,11 @@ values
 create temporary table slice_2b_result_observations (name text primary key, observation_id uuid);
 
 insert into slice_2b_result_observations
+select 'invalid-state', observation_id from record_provider_observation(
+  '98000000-0000-4000-8000-000000000013', '98000000-0000-4000-8000-000000000012', 'result', 'result-invalid-state', 'revision-invalid', '2026-10-08T17:59:00Z', '2026-10-08T17:59:30Z', 1, '{"synthetic":true}'::jsonb,
+  jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','result-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition-1','contestExternalId','contest-1','resultStatus','final','outcomeType','pending','resultData',jsonb_build_object('source','sports'),'providerEffectiveAt','2026-10-08T17:59:00Z'),'semanticHash',repeat('0',64))
+);
+insert into slice_2b_result_observations
 select 'final-a', observation_id from record_provider_observation(
   '98000000-0000-4000-8000-000000000013', '98000000-0000-4000-8000-000000000012', 'result', 'result-final-a', 'revision-1', '2026-10-08T18:00:00Z', '2026-10-08T18:01:00Z', 1, '{"synthetic":true}'::jsonb,
   jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','result-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition-1','contestExternalId','contest-1','resultStatus','final','outcomeType','winner','winnerEventEntryExternalId','entry-a','resultData',jsonb_build_object('source','sports'),'score',jsonb_build_object('home',2,'away',1),'providerEffectiveAt','2026-10-08T18:00:00Z'),'semanticHash',repeat('1',64))
@@ -104,6 +109,8 @@ select 'rollback-failure', observation_id from record_provider_observation(
   jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','result-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition-1','contestExternalId','rollback-failure-contest','resultStatus','final','outcomeType','draw','resultData',jsonb_build_object('source','rollback'),'providerEffectiveAt','2026-10-08T23:00:00Z'),'semanticHash',repeat('7',64))
 );
 
+select is((select outcome from project_provider_result((select observation_id from slice_2b_result_observations where name = 'invalid-state'))), 'quarantined', 'incompatible result status and outcome are quarantined');
+select is((select count(*) from contest_results where contest_id = '98000000-0000-4000-8000-000000000006'), 0::bigint, 'invalid result state creates no canonical result');
 select is((select outcome from project_provider_result((select observation_id from slice_2b_result_observations where name = 'final-a'))), 'projected', 'first final result projects');
 select is((select count(*) from contest_results where contest_id = '98000000-0000-4000-8000-000000000006'), 1::bigint, 'first projection creates one immutable result version');
 select is((select count(*) from result_audit_events where contest_id = '98000000-0000-4000-8000-000000000006'), 1::bigint, 'first projection creates one audit event');

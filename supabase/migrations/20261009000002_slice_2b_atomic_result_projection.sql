@@ -1,6 +1,27 @@
 -- Bracket.fyi Slice 2B.5 — atomic provider result, audit, and operator outbox projection.
 -- Forward-only. The observation must already exist; no legacy or lifecycle writes occur here.
 
+create or replace function slice_2b_canonical_json(p_value jsonb)
+returns text
+language sql
+immutable
+set search_path = public, pg_temp
+as $$
+  select case jsonb_typeof(p_value)
+    when 'object' then
+      '{' || coalesce((
+        select string_agg(to_json(entry.key)::text || ':' || slice_2b_canonical_json(entry.value), ',' order by entry.key)
+        from jsonb_each(p_value) as entry(key, value)
+      ), '') || '}'
+    when 'array' then
+      '[' || coalesce((
+        select string_agg(slice_2b_canonical_json(entry.value), ',' order by entry.ordinality)
+        from jsonb_array_elements(p_value) with ordinality as entry(value, ordinality)
+      ), '') || ']'
+    else p_value::text
+  end
+$$;
+
 create or replace function slice_2b_result_idempotency_key(
   p_contest_id uuid,
   p_result_status text,
@@ -17,7 +38,7 @@ set search_path = public, pg_temp
 as $$
   select 'v1:result:' || encode(
     extensions.digest(
-      jsonb_build_object(
+      slice_2b_canonical_json(jsonb_build_object(
         'contestId', p_contest_id::text,
         'resultStatus', p_result_status,
         'outcomeType', p_outcome_type,
@@ -27,7 +48,7 @@ as $$
         'providerEffectiveAt', case when p_provider_effective_at is null then null else to_char(p_provider_effective_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') end,
         'correctionReason', p_correction_reason,
         'orderingPolicyVersion', 'result-ordering-v1'
-      )::text,
+      )),
       'sha256'
     ),
     'hex'
@@ -39,7 +60,7 @@ returns text
 language sql
 set search_path = public, pg_temp
 as $$
-  select 'v1:audit:' || encode(extensions.digest(jsonb_build_object('resultKey', p_result_key, 'eventType', p_event_type)::text, 'sha256'), 'hex')
+  select 'v1:audit:' || encode(extensions.digest(slice_2b_canonical_json(jsonb_build_object('resultKey', p_result_key, 'eventType', p_event_type)), 'sha256'), 'hex')
 $$;
 
 create or replace function slice_2b_outbox_idempotency_key(p_result_key text, p_intent_type text)
@@ -47,7 +68,7 @@ returns text
 language sql
 set search_path = public, pg_temp
 as $$
-  select 'v1:outbox:' || encode(extensions.digest(jsonb_build_object('resultKey', p_result_key, 'intentType', p_intent_type, 'audience', 'operator')::text, 'sha256'), 'hex')
+  select 'v1:outbox:' || encode(extensions.digest(slice_2b_canonical_json(jsonb_build_object('resultKey', p_result_key, 'intentType', p_intent_type, 'audience', 'operator')), 'sha256'), 'hex')
 $$;
 
 create or replace function project_provider_result(
@@ -142,7 +163,13 @@ begin
     or jsonb_typeof(v_result_data) <> 'object'
     or (v_score is not null and jsonb_typeof(v_score) <> 'object')
     or (v_outcome_type = 'winner' and nullif(v_data->>'winnerEventEntryExternalId','') is null)
-    or (v_outcome_type <> 'winner' and v_data ? 'winnerEventEntryExternalId') then
+    or (v_outcome_type <> 'winner' and nullif(v_data->>'winnerEventEntryExternalId','') is not null)
+    or not (
+      (v_result_status in ('provisional','unresolved') and v_outcome_type = 'pending')
+      or (v_result_status = 'final' and v_outcome_type in ('winner','draw'))
+      or (v_result_status = 'awarded' and v_outcome_type = 'winner')
+      or (v_result_status in ('canceled','void') and v_outcome_type = 'no_contest')
+    ) then
     select oq.id into v_quarantine_id from open_ingestion_quarantine(
       v_observation.id,v_observation.ingestion_run_id,v_observation.binding_id,
       'schema_invalid','blocking','result',v_observation.external_object_id,'{}'::uuid[],
@@ -313,5 +340,7 @@ $$;
 revoke all on function slice_2b_result_idempotency_key(uuid,text,text,uuid,jsonb,jsonb,timestamptz,text) from public, anon, authenticated;
 revoke all on function slice_2b_audit_idempotency_key(text,text) from public, anon, authenticated;
 revoke all on function slice_2b_outbox_idempotency_key(text,text) from public, anon, authenticated;
+revoke all on function slice_2b_canonical_json(jsonb) from public, anon, authenticated;
 revoke all on function project_provider_result(uuid,text) from public, anon, authenticated;
+grant execute on function slice_2b_canonical_json(jsonb) to service_role;
 grant execute on function project_provider_result(uuid,text) to service_role;

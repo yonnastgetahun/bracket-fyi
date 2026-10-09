@@ -258,10 +258,13 @@ begin
       select oq.id into v_quarantine_id from open_ingestion_quarantine(v_observation.id,v_observation.ingestion_run_id,v_observation.binding_id,'unsupported_shape','blocking',v_kind,v_observation.external_object_id,'{}'::uuid[],jsonb_build_object('reason','contest entries repeat an external identity or ordinal')) oq;
       return query select 'quarantined'::text,null::uuid,v_quarantine_id; return;
     end if;
-    insert into contests (event_edition_id,stage_id,round_id,parent_contest_id,contest_key,name,kind,status,scheduled_at,starts_at,ends_at,best_of,required_for_completion,metadata)
-    values (v_event_edition_id,v_stage_id,v_round_id,v_parent_id,v_data->>'contestKey',v_data->>'name',v_data->>'contestKind',v_data->>'status',(v_data->>'scheduledAt')::timestamptz,(v_data->>'startsAt')::timestamptz,(v_data->>'endsAt')::timestamptz,(v_data->>'bestOf')::integer,(v_data->>'requiredForCompletion')::boolean,v_data->'metadata')
-    on conflict (event_edition_id,contest_key) do update set stage_id=excluded.stage_id,round_id=excluded.round_id,parent_contest_id=excluded.parent_contest_id,name=excluded.name,kind=excluded.kind,status=excluded.status,scheduled_at=excluded.scheduled_at,starts_at=excluded.starts_at,ends_at=excluded.ends_at,best_of=excluded.best_of,required_for_completion=excluded.required_for_completion,metadata=excluded.metadata,updated_at=now()
-    returning id into v_canonical_id;
+    if v_canonical_id is null then
+      select c.id into v_canonical_id
+      from contests c
+      where c.event_edition_id = v_event_edition_id
+        and c.contest_key = v_data->>'contestKey'
+      for update;
+    end if;
     if exists (
       select 1
       from contest_entries ce
@@ -272,6 +275,10 @@ begin
       select oq.id into v_quarantine_id from open_ingestion_quarantine(v_observation.id,v_observation.ingestion_run_id,v_observation.binding_id,'unsupported_shape','blocking',v_kind,v_observation.external_object_id,'{}'::uuid[],jsonb_build_object('reason','contest ordinal already belongs to another entry')) oq;
       return query select 'quarantined'::text,null::uuid,v_quarantine_id; return;
     end if;
+    insert into contests (event_edition_id,stage_id,round_id,parent_contest_id,contest_key,name,kind,status,scheduled_at,starts_at,ends_at,best_of,required_for_completion,metadata)
+    values (v_event_edition_id,v_stage_id,v_round_id,v_parent_id,v_data->>'contestKey',v_data->>'name',v_data->>'contestKind',v_data->>'status',(v_data->>'scheduledAt')::timestamptz,(v_data->>'startsAt')::timestamptz,(v_data->>'endsAt')::timestamptz,(v_data->>'bestOf')::integer,(v_data->>'requiredForCompletion')::boolean,v_data->'metadata')
+    on conflict (event_edition_id,contest_key) do update set stage_id=excluded.stage_id,round_id=excluded.round_id,parent_contest_id=excluded.parent_contest_id,name=excluded.name,kind=excluded.kind,status=excluded.status,scheduled_at=excluded.scheduled_at,starts_at=excluded.starts_at,ends_at=excluded.ends_at,best_of=excluded.best_of,required_for_completion=excluded.required_for_completion,metadata=excluded.metadata,updated_at=now()
+    returning id into v_canonical_id;
     insert into contest_entries (event_edition_id,contest_id,event_entry_id,role,side,ordinal,metadata)
     select v_event_edition_id,v_canonical_id,per.canonical_id,entry.value->>'role',entry.value->>'side',(entry.value->>'ordinal')::integer,entry.value->'metadata'
     from jsonb_array_elements(v_data->'entries') as entry(value)

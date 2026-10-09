@@ -15,6 +15,7 @@ export type ProviderEntityRef = Readonly<{
   entityKind: MappableProviderEntityKind;
   externalId: string;
   canonicalRef: CanonicalRef;
+  resolutionStatus: "unresolved" | "automatic" | "reviewed" | "rejected";
   confidence?: number;
   reviewedBy?: string;
   reviewedAt?: string;
@@ -53,6 +54,7 @@ export type RejectedMapping = Readonly<{
 export type MappingOutcome = Readonly<{
   outcome: "created" | "unchanged" | "conflict" | "quarantined";
   ref: ProviderEntityRef;
+  quarantineId?: string;
 }>;
 
 type RpcClient = {
@@ -76,6 +78,7 @@ type RefRow = {
   reviewed_by?: string | null;
   reviewed_at?: string | null;
   metadata: JsonObject;
+  quarantine_id?: string | null;
 };
 
 const toCanonicalRef = (row: RefRow): CanonicalRef => {
@@ -94,6 +97,7 @@ const toProviderEntityRef = (row: RefRow): ProviderEntityRef => ({
   entityKind: row.entity_kind,
   externalId: row.external_id,
   canonicalRef: toCanonicalRef(row),
+  resolutionStatus: row.resolution_status,
   ...(row.confidence === null || row.confidence === undefined ? {} : { confidence: row.confidence }),
   ...(row.reviewed_by ? { reviewedBy: row.reviewed_by } : {}),
   ...(row.reviewed_at ? { reviewedAt: row.reviewed_at } : {}),
@@ -105,7 +109,11 @@ async function callMapping(client: RpcClient, args: Record<string, unknown>): Pr
   if (error) throw new Error(error.message);
   const row = (Array.isArray(data) ? data[0] : data) as RefRow | undefined;
   if (!row?.ref_id || !row.outcome) throw new Error("Mapping RPC returned no outcome");
-  return { outcome: row.outcome, ref: toProviderEntityRef(row) };
+  return {
+    outcome: row.outcome,
+    ref: toProviderEntityRef(row),
+    ...(row.quarantine_id ? { quarantineId: row.quarantine_id } : {}),
+  };
 }
 
 export interface IdentityRepository {

@@ -19,13 +19,16 @@ evidence.
   append-only result history; lifecycle reopening is deferred.
 - An induced audit failure rolls back the result and outbox atomically. No legacy/template/scoring,
   lifecycle, push, or delivery tables are touched.
+- The TypeScript result-key builder and SQL result-key helper share a canonical JSON vector, including
+  UTC millisecond timestamp normalization; the replay database test verifies the vector through the
+  untrusted caller-key check.
 
 ## Verification
 
 | Command | Result |
 |---|---|
 | `npm test -- tests/ingestion/projection/result-projector.test.ts` | 1 file, 2 tests passed |
-| `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/18_slice_2b_atomic_result_projection_test.sql` | 37/37 pgTAP assertions passed |
+| `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/18_slice_2b_atomic_result_projection_test.sql` | 39/39 pgTAP assertions passed |
 | `npx tsc --noEmit` | passed |
 
 The local database was reset before the focused database verification. All fixture values were synthetic.

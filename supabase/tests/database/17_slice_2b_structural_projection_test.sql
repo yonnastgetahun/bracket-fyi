@@ -1,6 +1,6 @@
 begin;
 
-select plan(18);
+select plan(20);
 
 select has_table('public', 'canonical_structural_projection_state', 'structural projection records observation provenance');
 select is((select relrowsecurity from pg_class where oid = 'public.canonical_structural_projection_state'::regclass), true, 'structural provenance is protected by RLS');
@@ -63,6 +63,13 @@ select 'contest-1', observation_id from record_provider_observation(
 );
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='contest-1'))),'projected','contest and contest entries project after dependencies');
 select is((select count(*) from contest_entries),2::bigint,'contest entries are complete after atomic projection');
+insert into slice_2b_structural_observations
+select 'contest-1-ordinal-conflict', observation_id from record_provider_observation(
+  '97000000-0000-4000-8000-000000000010','97000000-0000-4000-8000-000000000009','contest','contest-1','contest-1-ordinal-conflict','2026-10-08T20:30:00Z','2026-10-08T20:31:00Z',1,'{"synthetic":true}'::jsonb,
+  jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','structural-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition-1','stageExternalId','stage-1','contestKey','game-1','name','Conflicting Ordinals','contestKind','game','status','scheduled','requiredForCompletion',true,'entries',jsonb_build_array(jsonb_build_object('eventEntryExternalId','entry-a','role','home','ordinal',2,'metadata','{}'::jsonb),jsonb_build_object('eventEntryExternalId','entry-b','role','away','ordinal',1,'metadata','{}'::jsonb)),'metadata',jsonb_build_object('synthetic',true)),'semanticHash',repeat('a',64))
+);
+select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='contest-1-ordinal-conflict'))),'quarantined','conflicting contest ordinals quarantine before structural writes');
+select is((select name from contests where contest_key='game-1'),'Synthetic Game','ordinal conflict does not partially update the contest');
 
 insert into slice_2b_structural_observations
 select 'contest-1-partial', observation_id from record_provider_observation(

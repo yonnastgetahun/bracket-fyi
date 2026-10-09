@@ -13,7 +13,8 @@ legacy, beta, device, or production evidence.
   versus contest-lifecycle ordering.
 - Disposable local replay covers sports and ceremony result projection, source observation provenance,
   exact replay, semantic duplicate replay, one audit per accepted result, one operator-only outbox intent,
-  no duplicate audit or intent, edition scoping, and no legacy template writes.
+  no duplicate audit or intent, edition scoping, no legacy template writes, and the SQL/TypeScript
+  semantic-key conformance vector.
 - All fixture values and payloads are synthetic; no provider name, URL, credential, or provider payload was
   used.
 

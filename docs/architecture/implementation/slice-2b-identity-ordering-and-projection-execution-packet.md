@@ -568,6 +568,7 @@ export type NormalizedSnapshot = Readonly<{
   completeness: "full" | "partial";
   normalizedEntity: JsonObject;
   semanticHash: string;
+  correctionProvenance?: string;
 }>;
 
 export type ObservationEvidenceCommand = Readonly<{

@@ -61,4 +61,17 @@ describe("deterministic Slice 2B idempotency keys", () => {
     expect(auditIdempotencyKey(resultKey, "result.projected")).toMatch(/^v1:audit:[a-f0-9]{64}$/);
     expect(outboxIdempotencyKey(resultKey, "result_final", "operator")).toMatch(/^v1:outbox:[a-f0-9]{64}$/);
   });
+
+  it("matches the SQL canonicalization vector used by result projection", () => {
+    expect(resultIdempotencyKey({
+      contestId: "99000000-0000-4000-8000-000000000008",
+      resultStatus: "final",
+      outcomeType: "winner",
+      winnerEventEntryId: "99000000-0000-4000-8000-000000000012",
+      score: { away: 1, home: 2 },
+      resultData: { fixture: "synthetic-sports" },
+      providerEffectiveAt: "2026-10-08T18:00:00Z",
+      orderingPolicyVersion: "result-ordering-v1",
+    })).toBe("v1:result:5be279699f32423f9de6e5164d8db47fc77a733a53d0159cf45f616fb21f19d0");
+  });
 });
