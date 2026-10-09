@@ -3,4 +3,3 @@
 
 revoke all on table canonical_structural_projection_state from public, anon, authenticated, service_role;
 grant select on table canonical_structural_projection_state to service_role;
-
