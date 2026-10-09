@@ -4,7 +4,7 @@
 
 **Status:** Planning packet drafted; awaiting architecture approval; implementation not started.
 
-**Baseline:** `b5c4ce3b17033e49e247ec836bd679c249c6707e` (`chore: normalize slice 2b-r3 migration EOF`)
+**Baseline:** `60735ef334086a30818fdff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
 **Authorization:** This document authorizes planning only. It authorizes no application code, migration,
 database reset, provider call, credential access, deployment, hosted change, notification delivery, or
@@ -27,8 +27,8 @@ The implementation must follow these rules:
 - One run is owned by one lease token at a time. A crashed or expired worker cannot renew or finish it.
 - At-least-once delivery is intentional. Repeated pages and runs rely on Slice 2B observation and projection
   idempotency; the orchestrator never claims exactly-once provider delivery.
-- A cursor or validator advances only after the current page's evidence and every normalized observation
-  have a durable terminal disposition in the same local transaction boundary.
+- A cursor or ETag validator advances only after the current page's immutable ledger row, evidence, every
+  normalized observation, counters, and compare-and-set checkpoint have committed in one transaction.
 - Disabled bindings do not fetch or project. Shadow bindings may fetch and retain sanitized evidence but
   never mutate canonical/result/audit/outbox state. Write bindings may project through the accepted
   service-role wrappers.
@@ -76,23 +76,27 @@ The applied `supabase/migrations/20261006000002_ingestion_evidence_and_delivery.
 
 | Object | Existing behavior Slice 2C must use | Missing for Slice 2C |
 |---|---|---|
-| `provider_bindings` | Provider/edition FKs; unique `(provider_id,event_edition_id,binding_key)` and `(id,provider_id,event_edition_id)`; modes `disabled`, `shadow`, `write`; roles `primary`, `fallback`, `shadow`; health `disabled`, `healthy`, `degraded`, `stale`; `credential_ref`; JSON `adapter_config`, `poll_policy`, and `provider_cursor`; `stale_after_seconds >= 60`; `next_poll_at`; attempt/success/data timestamps; failure count; config version; due and provider indexes; RLS with service-role operational access. | Atomic claim ownership, lease token, explicit ETag/Last-Modified storage, provider-wide budget state, and health transition RPC. |
-| `ingestion_runs` | Binding/provider/edition composite FK; globally unique nonblank `claim_key`; trigger kinds `schedule`, `manual`, `retry`, `replay`; statuses `claimed`, `running`, `succeeded`, `partial`, `failed`, `rate_limited`, `canceled`; lease and finish checks; JSON cursors/metadata; rate headers; error fields; nonnegative counters; one active run per binding partial unique index; binding/status indexes. | Claim/renew/finish/reclaim functions, lease ownership, page checkpoint atomicity, shadow skip accounting, and authoritative health updates. |
+| `provider_bindings` | Provider/edition FKs; unique `(provider_id,event_edition_id,binding_key)` and `(id,provider_id,event_edition_id)`; modes `disabled`, `shadow`, `write`; roles `primary`, `fallback`, `shadow`; health `disabled`, `healthy`, `degraded`, `stale`; `credential_ref`; JSON `adapter_config`, `poll_policy`, and `provider_cursor`; `stale_after_seconds >= 60`; `next_poll_at`; attempt/success/data timestamps; failure count; config version; due and provider indexes; RLS with service-role operational access. | Atomic claim generation/ownership, lease token, explicit ETag storage, provider-wide budget state, and health transition RPC. Last-Modified is deferred because Slice 2A exposes only `etag`. |
+| `ingestion_runs` | Binding/provider/edition composite FK; globally unique nonblank `claim_key`; trigger kinds `schedule`, `manual`, `retry`, `replay`; statuses `claimed`, `running`, `succeeded`, `partial`, `failed`, `rate_limited`, `canceled`; lease and finish checks; JSON cursors/metadata; rate headers; error fields; nonnegative counters; one active run per binding partial unique index; binding/status indexes. | Claim request/generation identity, lease ownership, durable retry state, page checkpoint atomicity, shadow skip accounting, and authoritative health updates. |
+| `ingestion_page_ledger` | Not present. Planned immutable page-effect ledger keyed by binding and deterministic page key, with expected checkpoint, resulting cursor/ETag, disposition deltas, fingerprint, and commit time. | New table, immutable constraints/trigger, service-role SELECT only, and RPC-owned writes. |
 | `provider_observations` | Immutable sanitized evidence with generated payload hash, provider revision/timestamp, run/binding/provider/edition composite FK, and immutable trigger. | Orchestrator caller and page checkpoint integration; no new raw payload field is permitted. |
 | `ingestion_quarantine` | Unique `(observation_id, issue_code)`; open/resolved/ignored status; sanitized details; service-role-only operational access. | Run-level provider failure disposition is still recorded in `ingestion_runs`; item-level quarantine is delegated to Slice 2B. |
 | `data_providers` | Unique adapter key and enabled flag. | No provider is enabled by this packet; no provider adapter is created. |
 
-The existing service-role grants allow operational table writes, but they do not provide a safe claim
-transaction. Slice 2C must not add direct browser grants. New RPCs are `SECURITY DEFINER`, use a fixed safe
-search path and schema-qualified objects, revoke `PUBLIC`, `anon`, and `authenticated`, and grant only
-`service_role`.
+The existing migration grants `service_role` direct `SELECT, INSERT, UPDATE` on `provider_bindings` and
+`ingestion_runs`. Those grants are unsafe for Slice 2C because they bypass claim, lease, checkpoint, retry,
+and health invariants. The first Slice 2C migration must revoke all direct `INSERT`, `UPDATE`, `DELETE`, and
+`TRUNCATE` privileges from `service_role` on those tables and restore only required `SELECT`. It must apply
+the same boundary to the new page ledger; the budget sub-slice applies it to budget and reservation tables.
+New RPCs are `SECURITY DEFINER`, use a fixed safe search path and schema-qualified objects, revoke `PUBLIC`,
+`anon`, and `authenticated`, and grant only `service_role`. SECURITY DEFINER owners retain private writes.
 
 ### 2.3 Existing operational boundaries and gaps
 
 Existing RLS is enabled on the ingestion tables with no public policies. Existing database constraints must
 remain the final defense for provider/edition relationships, run lifecycle, rate-header bounds, and
 immutable evidence. No scheduler, orchestrator, retry loop, rate-budget table, claim RPC, lease RPC, page
-checkpoint RPC, or health transition function exists. No provider adapter is approved or implemented.
+ledger/checkpoint RPC, or health transition function exists. No provider adapter is approved or implemented.
 
 The current `ProviderBatch` already carries `nextCursor`, `etag`, `providerRequestId`, and rate-limit
 metadata. Slice 2C will persist the cursor and validator through new server-only boundaries; it will not
@@ -154,9 +158,9 @@ export type RateBudgetDecision = Readonly<{
 }>;
 
 export function decideRateBudget(input: Readonly<{
-  limit?: number;
-  remaining?: number;
-  resetAt?: string;
+  configuredLimit?: number;
+  available?: number;
+  trustedResetAt?: string;
   now: string;
   cost?: number;
 }>): RateBudgetDecision;
@@ -186,11 +190,16 @@ export function decideRetry(input: Readonly<{
   `postgameSeconds` exactly; `nextPollAt` is never earlier than `now`.
 - A provider-wide budget is required before a provider call. Unknown or invalid budget is fail-closed as
   `unknown_budget` or `invalid_budget`; it creates a recorded rate-limited run outcome and makes no call.
-  Cost is one request unless a later adapter packet explicitly defines a different cost.
+  Cost is one request unless a later adapter packet explicitly defines a different cost. The policy never
+  raises `available` from observed headers; only the trusted configured reset boundary can restore the
+  configured ceiling.
 - `maxRetries = 3` means three retries after the initial attempt, four total attempts. Retryable failures
   are `timeout`, `network`, and `provider_server`; `rate_limited` uses `provider_reset`; all other Slice 2A
   codes are terminal. `Retry-After` is honored; when both it and a provider reset are present, the later
   safe time wins.
+- Lease policy is fixed at minimum 60 seconds, default 300 seconds, maximum 900 seconds, with renewal at
+  least every `min(lease / 3, 60)` seconds and before a call or page commit inside the 60-second safety
+  threshold. Backoff and `Retry-After` never sleep while a lease is held.
 - Backoff is `min(900, 30 * 2^retryIndex)` seconds with deterministic full jitter in `[0, delay]`. Jitter
   is derived from `SHA-256("slice-2c-jitter-v1" + claimKey + ":" + retryIndex)` and is not random state.
 - Every policy accepts an injected `Clock`; tests never use wall-clock sleeps. Manual replay does not reset
@@ -223,10 +232,11 @@ the implementation requires provider-specific branching.
 **Next approval gate:** Architecture approval of policy evidence and constants before any run-ledger or
 orchestrator implementation.
 
-### 2C.2 — Atomic claim, lease, renewal, expiry, and run completion
+### 2C.2 — Atomic claim, lease, retry-attempt, page ledger, and run completion
 
-**Objective:** Add the smallest service-role-only database boundary that makes one active run and lease
-ownership authoritative under concurrency and crash recovery.
+**Objective:** Add the service-role-only database boundary that makes claim identity, one active run,
+lease ownership, durable retry attempts, immutable page effects, compare-and-set checkpoints, and run
+completion authoritative under concurrency and crash recovery.
 
 **Exact allowlist:**
 
@@ -237,22 +247,52 @@ ownership authoritative under concurrency and crash recovery.
 - `tests/ingestion/orchestrator/run-ledger-repository.test.ts`
 - `docs/architecture/implementation/slice-2c-2-run-ledger-evidence.md`
 
-No provider adapter, scheduler, UI, legacy result table, or hosted migration may change.
+No provider adapter, scheduler, UI, legacy result table, hosted migration, or budget table may change.
 
 **Required forward schema changes:**
 
-- Add `provider_bindings.provider_etag text` with a nonblank-if-present check.
-- Add `ingestion_runs.lease_token text`, `ingestion_runs.skipped_count integer not null default 0`, and
-  nonnegative checks. The lease token is an opaque server-generated ownership value, not provider or user
-  credential material.
-- Add an index supporting due binding order `(next_poll_at, id)` for non-disabled bindings if the existing
-  partial due index is insufficient; prove the query plan before adding a duplicate index.
-- Preserve all existing columns, constraints, RLS, and grants. No applied migration is rewritten.
+- Add `provider_bindings.provider_etag text`, `provider_bindings.claim_generation bigint not null default 0`,
+  and `provider_bindings.checkpoint_generation bigint not null default 0`, with nonnegative checks.
+- Add `ingestion_runs.claim_request_key text`, `claim_generation bigint`, `lease_token text`,
+  `retry_index integer not null default 0`, `retry_of_run_id uuid`, `next_retry_at timestamptz`, and
+  `skipped_count integer not null default 0`, with bounded/nonnegative checks and indexes on
+  `(binding_id, claim_request_key)` and `(binding_id, next_retry_at)`.
+- Add immutable `ingestion_page_ledger` with: `id`, `binding_id`, `run_id`, deterministic `page_key`,
+  `expected_checkpoint_generation`, `expected_cursor`, `expected_etag`, `next_cursor`, `response_etag`,
+  `fetched_delta`, `normalized_delta`, `projected_delta`, `unchanged_delta`, `quarantined_delta`,
+  `skipped_delta`, `failed_delta`, `disposition_fingerprint`, and `committed_at`. Use a unique
+  `(binding_id, page_key)`, a checkpoint-generation index, an immutable trigger, JSON-object checks, and
+  nonnegative/count-conservation checks.
+- Revoke `service_role` direct `INSERT`, `UPDATE`, `DELETE`, and `TRUNCATE` on `provider_bindings`,
+  `ingestion_runs`, and `ingestion_page_ledger`; restore only `SELECT` to `service_role`. Revoke the same
+  privileges from `PUBLIC`, `anon`, and `authenticated`. SECURITY DEFINER owners retain private writes.
+- Add only a due-order index if `EXPLAIN` proves the existing partial `(mode,next_poll_at)` index cannot
+  support the deterministic claim query. Do not add a duplicate index speculatively.
+- Preserve all existing columns and constraints through a forward migration; do not rewrite an applied
+  migration.
+
+**Deterministic page identity:** The SQL boundary owns the key formula and verifies any caller-supplied key.
+For the current binding checkpoint, canonicalize the Slice 2A JSON cursor and ETag and compute:
+
+```text
+page_key = sha256hex(
+  "slice-2c-page-v1" || length(binding_id) || binding_id ||
+  length(checkpoint_generation) || checkpoint_generation ||
+  length(canonicalJson(expected_cursor)) || canonicalJson(expected_cursor) ||
+  length(coalesce(expected_etag, "")) || coalesce(expected_etag, "")
+)
+```
+
+The page key excludes `run_id`, worker ID, and lease token so a response lost after commit or a reclaimed
+attempt recomputes the same logical page key. The page ledger fingerprint includes the expected checkpoint,
+result cursor/ETag, all seven deltas, and the canonical disposition counts. Same key plus a different value
+is an immutable conflict; it is never updated or silently discarded.
 
 **Exact SQL function signatures:**
 
 ```sql
 claim_due_ingestion_run(
+  p_claim_request_key text,
   p_now timestamptz,
   p_worker_id text,
   p_lease_seconds integer
@@ -260,7 +300,11 @@ claim_due_ingestion_run(
   run_id uuid,
   binding_id uuid,
   claim_key text,
+  claim_request_key text,
+  claim_generation bigint,
+  retry_index integer,
   lease_token text,
+  lease_acquired boolean,
   provider_id uuid,
   event_edition_id uuid,
   adapter_key text,
@@ -281,7 +325,13 @@ claim_manual_ingestion_run(
   p_worker_id text,
   p_now timestamptz,
   p_lease_seconds integer
-) returns same row shape as claim_due_ingestion_run
+) returns the identical table shape above
+
+start_ingestion_run(
+  p_run_id uuid,
+  p_lease_token text,
+  p_now timestamptz
+) returns table (run_id uuid, status text, started_at timestamptz)
 
 renew_ingestion_run(
   p_run_id uuid,
@@ -290,17 +340,32 @@ renew_ingestion_run(
   p_lease_seconds integer
 ) returns table (run_id uuid, lease_expires_at timestamptz)
 
+record_ingestion_response(
+  p_run_id uuid,
+  p_lease_token text,
+  p_http_status integer,
+  p_rate_limit_limit integer,
+  p_rate_limit_remaining integer,
+  p_rate_limit_reset_at timestamptz,
+  p_retry_after_at timestamptz,
+  p_observed_at timestamptz
+) returns table (run_id uuid, recorded boolean)
+
 reclaim_expired_ingestion_runs(
   p_now timestamptz,
-  p_reason text
-) returns table (run_id uuid, binding_id uuid, reclaimed_at timestamptz)
+  p_reason text,
+  p_retry_at timestamptz
+) returns table (run_id uuid, binding_id uuid, retry_index integer, reclaimed_at timestamptz)
 
 commit_ingestion_page(
   p_run_id uuid,
   p_lease_token text,
-  p_advance_checkpoint boolean,
-  p_cursor_after jsonb,
-  p_provider_etag text,
+  p_page_key text,
+  p_expected_checkpoint_generation bigint,
+  p_expected_cursor jsonb,
+  p_expected_etag text,
+  p_next_cursor jsonb,
+  p_response_etag text,
   p_fetched_delta integer,
   p_normalized_delta integer,
   p_projected_delta integer,
@@ -308,7 +373,14 @@ commit_ingestion_page(
   p_quarantined_delta integer,
   p_skipped_delta integer,
   p_failed_delta integer
-) returns table (run_id uuid, cursor_after jsonb, provider_etag text)
+) returns table (
+  outcome text,
+  page_ledger_id uuid,
+  run_id uuid,
+  checkpoint_generation bigint,
+  cursor_after jsonb,
+  provider_etag text
+)
 
 finish_ingestion_run(
   p_run_id uuid,
@@ -316,62 +388,90 @@ finish_ingestion_run(
   p_outcome text,
   p_finished_at timestamptz,
   p_next_poll_at timestamptz,
+  p_next_retry_at timestamptz,
   p_data_changed boolean,
   p_failure_code text,
   p_error_message text,
   p_metadata jsonb
-) returns table (run_id uuid, status text, health_status text, next_poll_at timestamptz)
+) returns table (run_id uuid, status text, health_status text, next_poll_at timestamptz, next_retry_at timestamptz)
 ```
 
-The signatures above are exact design contracts. Return types may add no security-sensitive values. Every
-function is `SECURITY DEFINER`, fixes `search_path = public, pg_temp`, qualifies all objects, revokes
-execution from `PUBLIC`, `anon`, and `authenticated`, and grants only `service_role`. Internal helper
-functions are not granted directly.
+Every function is `SECURITY DEFINER`, fixes `search_path = public, pg_temp`, qualifies all objects, revokes
+execution from `PUBLIC`, `anon`, and `authenticated`, and grants only `service_role`. Internal helpers are
+not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conflict`, and `page_conflict`.
 
-**Claim and lease semantics:**
+**Claim identity and lifecycle:**
 
-- A scheduled claim selects one eligible non-disabled binding with `next_poll_at` null or not later than
-  `p_now`, ordered by `(next_poll_at nulls first, id)`, using `FOR UPDATE SKIP LOCKED`.
-- Before claiming, the transaction reclaims expired `claimed`/`running` runs in deterministic `run_id`
-  order: set them to `failed`, `finished_at = p_now`, `error_class = lease_expired`, preserve all evidence,
-  and never advance their cursor. A later claim may then create a new run.
-- A scheduled claim key is derived inside SQL as
-  `v1:schedule:<binding_uuid>:<due_epoch_seconds>`. A manual/replay request key is normalized and scoped as
-  `v1:manual:<binding_uuid>:<request_key>`. Callers cannot choose another binding's claim key.
-- Exact claim-key replay returns the existing run and its prior terminal/active outcome. An active run owned
-  by another lease is not stolen. A manual claim against `disabled` is rejected; replay of stored evidence
-  remains a separate Slice 2B operation.
-- `lease_token` is generated by SQL and returned only to the server-side worker. Renewal requires the exact
-  token, an active status, and an unexpired lease. A lost or expired lease cannot be renewed or finished.
-- `commit_ingestion_page` requires the lease token and updates the run counters, run checkpoint, and binding
-  cursor/ETag atomically. `p_advance_checkpoint = false` leaves both cursor and ETag unchanged.
-- `finish_ingestion_run` is idempotent for the same run and verified lease token. It returns the existing
-  terminal outcome on replay and never reopens a finished run. Unexpected SQL errors roll back the run,
-  checkpoint, binding, and health mutation together.
+- The caller supplies a stable `p_claim_request_key` for one scheduler tick or operator request. SQL locks a
+  due binding with `FOR UPDATE SKIP LOCKED`, increments its monotonic `claim_generation`, and creates a
+  claim key `v1:<trigger_kind>:<binding_uuid>:g<claim_generation>`. The due-time is scheduling input only,
+  never identity.
+- Exact `(binding_id, claim_request_key)` replay returns the same run. The worker that owns the active lease
+  receives its token; a competing worker receives the row with `lease_acquired = false` and a null token.
+  It cannot renew, start, commit, or finish that run.
+- Reclamation marks the old `claimed`/`running` run terminal with system class `lease_expired`, preserves its
+  cursor, records bounded retry state when allowed, and releases the one-active-run index. A later claim
+  increments `claim_generation`; its claim key is therefore distinct even when the due time is unchanged.
+  A retry attempt uses `retry_of_run_id` and `retry_index + 1`; it never reuses the old claim key.
+- A manual request key is binding-scoped. Replaying the same operator request returns the prior run; a new
+  operator request must use a new key and creates a new claim generation. Manual fetch is rejected for a
+  disabled binding; replaying stored evidence remains a separate Slice 2B operation.
+- Lifecycle is explicit: `claimed -> running -> succeeded|partial|failed|rate_limited|canceled`. The
+  worker must call `start_ingestion_run` before its first provider call. A terminal run cannot be reopened.
+- Lease duration is min 60 seconds, default 300 seconds, max 900 seconds. The safety threshold is 60 seconds
+  remaining. The worker renews at least every `min(lease_duration / 3, 60 seconds)` and must renew before
+  every provider call and every page commit when remaining time is below the threshold. Provider call timeout
+  must be shorter than lease duration minus the safety threshold.
+- Backoff and `Retry-After` never hold a lease. `finish_ingestion_run` persists the terminal attempt,
+  `retry_index`, and `next_retry_at`; a later claim creates the next attempt. Three retries means four total
+  provider-call attempts. Success or terminal failure clears retry state deterministically. Lease expiry is a
+  retryable system outcome only until the same bounded retry limit is exhausted.
 
-**TDD/database matrix:** two concurrent due claims yield one run; exact claim replay; manual key scoped to
-one binding; lease renewal before/after expiry; worker crash and deterministic reclamation; old worker cannot
-finish after reclamation; disabled binding not claimed; shadow and write bindings claimed; invalid lease
-duration/worker/key rejected; page checkpoint and counter atomicity; rollback on invalid page update; finish
-replay returns prior outcome; one-active-run unique constraint remains effective; anonymous/authenticated and
-direct helper execution denied.
+**Page commit semantics:**
+
+- The function locks the run and binding, verifies the lease token, expected checkpoint generation, exact
+  expected cursor, and exact expected ETag, then recomputes and verifies `page_key` and the disposition
+  fingerprint.
+- If `(binding_id,page_key)` already exists and every submitted field is identical, return `replayed` with
+  the original ledger ID and checkpoint; do not increment counters or update the checkpoint. This is the safe
+  response-loss retry path.
+- If the key exists with a changed cursor, ETag, delta, or disposition, return `page_conflict` and mutate
+  nothing. If the expected generation/CAS precondition is stale, return `checkpoint_conflict` and mutate
+  nothing. Concurrent callers can therefore produce one ledger row and one counter/checkpoint effect.
+- If no ledger row exists and the CAS matches, insert the immutable page row and update run counters,
+  `provider_bindings.provider_cursor`, `provider_bindings.provider_etag`, and `checkpoint_generation` in
+  the same transaction. `normalized_delta` must equal projected + unchanged + quarantined + skipped + failed.
+- A lost lease or failed CAS aborts without cursor/ETag advancement. The immutable ledger remains the source
+  of the prior committed page effect.
+
+**TDD/database matrix:** concurrent same-page commit; response-loss exact replay; same key with changed
+cursor, ETag, counts, or disposition; stale expected generation; generation increment; one ledger row and
+one counter effect; claim-call replay; competing worker receives no token; reclamation creates distinct
+claim identity; old worker cannot renew/start/commit/finish; claimed-to-running transition; lease min/default/
+max and cadence; no-sleep retry persistence; disabled/shadow/write claims; `has_table_privilege` and
+`has_function_privilege` vectors; direct `SET ROLE service_role` INSERT/UPDATE/DELETE/TRUNCATE denial for
+bindings, runs, and page ledger; wrapper claim/start/page/finish success; anonymous/authenticated/helper
+execution denial; rollback on every induced partial failure.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/run-ledger-repository.test.ts`; `npx tsc --noEmit`;
 `npm run lint`; `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`; `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/23_slice_2c_run_ledger_test.sql`;
 `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning`; `git diff --check`.
 
-**Evidence ceiling:** Synthetic local database concurrency and TypeScript repository evidence only. No
-provider or hosted lease evidence.
+**Evidence ceiling:** Synthetic local database concurrency, immutable page-ledger, grant, and TypeScript
+repository evidence only. No provider or hosted lease evidence.
 
-**Rollback/forward repair:** Before hosted data, the down note may remove only the new functions/indexes and
-nullable columns after stopping local workers. After hosted runs exist, disable claims, preserve completed
-runs and observations, and use a forward repair; never delete or rewrite run history.
+**Rollback/forward repair:** Before hosted data, the down note may remove only new functions, indexes,
+ledger, and nullable columns after stopping local workers. After hosted runs exist, disable claims, preserve
+all runs/page ledgers/observations, and use a forward repair; never delete, rewrite, or reuse a committed
+page key.
 
-**Stop conditions:** a claim relies on an application pre-read, two active runs can exist, an expired worker
-can finish, a caller can inject a lease token or binding identity, cursor state advances without a page
-commit, a helper is directly executable, or rollback requires deleting evidence.
+**Stop conditions:** a claim uses due time as its sole identity; a competing worker receives a lease token;
+an expired worker can renew or finish; retry sleeps while holding a lease; a response-loss replay increments
+counters; page commit lacks an expected-checkpoint CAS; direct service-role table mutation remains possible;
+a helper is directly executable; or rollback requires deleting evidence.
 
-**Next approval gate:** accept run-ledger concurrency and grant evidence before implementing the orchestrator.
+**Next approval gate:** accept claim/retry/page-ledger concurrency and RPC-only grant evidence before
+implementing the orchestrator.
 
 ### 2C.3 — Provider-neutral orchestration and mode enforcement
 
@@ -421,9 +521,12 @@ value in a serializable command.
 
 **Execution behavior:**
 
-1. Receive a verified claimed run; if its mode is disabled, finish canceled without a provider call.
-2. Reserve one provider-wide budget unit through the repository. If unavailable, finish `rate_limited`
-   with no adapter call and the policy-derived retry time.
+1. Receive a verified claimed run, call `start_ingestion_run`, and if its mode is disabled, finish canceled
+   without a provider call.
+2. Before every provider request/page, including every retry, renew when the safety threshold requires it and
+   reserve one provider-wide budget unit through the repository. If unavailable, finish `rate_limited` with
+   no adapter call and the policy-derived retry time. A response header is recorded through the lease-checked
+   run-response RPC, never by direct table write.
 3. Resolve the adapter by `providerKey`, build the Slice 2A `ProviderPullRequest`, resolve the credential
    reference through the server-only `CredentialResolver`, and call `pull`.
 4. For each normalized observation, call `record_provider_observation` before any identity or projection.
@@ -432,10 +535,11 @@ value in a serializable command.
    projector. In `write`, dispatch structural kinds to `project_structural_observation` and results to
    `project_provider_result`; non-write outcomes cannot mutate canonical/result/audit/outbox state.
 6. Commit the page checkpoint only after every observation has a terminal evidence/projection/quarantine/
-   skipped outcome. Finish the run through the lease RPC.
-7. Classify adapter errors through `classifyError`, apply the injected-clock retry policy, and persist only
-   sanitized failure code/message/details. Retry within the same lease until the policy limit; then finish
-   with the terminal run outcome.
+   skipped outcome, using the immutable page key and expected-checkpoint CAS. Finish the attempt through the
+   lease RPC.
+7. Classify adapter errors through `classifyError`, persist only sanitized failure code/message/details, and
+   persist the next retry time/index. Do not sleep while holding the lease or retry within the same attempt;
+   a later claim runs the next bounded attempt. Success and terminal failure close retry state.
 
 **Invariants:** no provider conditional in orchestration; no call for disabled or budget-exhausted binding;
 shadow has evidence but zero canonical/result/audit/outbox mutations; write uses only accepted RPCs; one
@@ -466,7 +570,7 @@ or an orchestrator branch names a provider.
 **Next approval gate:** accept provider-neutral orchestration and mode evidence before pagination/checkpoint
 implementation.
 
-### 2C.4 — Cursor, validator, pagination, partial-batch, and checkpoint policy
+### 2C.4 — Cursor, ETag, pagination, partial-batch, and checkpoint policy
 
 **Objective:** Make page progression restartable and bounded without losing observations, skipping pages, or
 advancing past unprocessed data.
@@ -511,23 +615,26 @@ export const MAX_PAGES_PER_RUN = 25;
 
 - A successful page advances `cursor_after` only when transport succeeded, the page cursor is valid, every
   normalized observation has a terminal disposition, and the next cursor is not a previously seen cursor.
-- An empty `ProviderBatch` is a successful unchanged/no-data page. Persist a returned ETag/Last-Modified
-  validator, retain the cursor, update `last_success_at`, and do not update `last_data_at`.
+- An empty `ProviderBatch` is a successful unchanged/no-data page. Persist a returned ETag, retain the
+  cursor, update `last_success_at`, and do not update `last_data_at`. Last-Modified is explicitly deferred
+  until a separately approved provider-neutral contract extension adds its schema and RPC surface.
 - A valid partial batch may advance after every emitted observation is projected, quarantined, unchanged, or
   skipped. It never deletes unseen entities. A transport/normalization failure before a complete page holds
   the prior cursor and retries the page.
 - A repeated cursor is `invalid_response`, quarantines the run-level failure, does not advance, and stops the
   run. A run processes at most 25 pages; a valid next cursor at the cap finishes `partial` after committing
   the last safe checkpoint and schedules immediate continuation.
-- ETags are sent on the next request and stored separately from the JSON cursor. A validator change does not
-  itself project data; observations and Slice 2B ordering decide projection.
+- ETags are sent on the next request and stored separately from the JSON cursor. An ETag change does not
+  itself project data; observations and Slice 2B ordering decide projection. No Last-Modified field or
+  conditional-request behavior is introduced by this slice.
 - Cursor and ETag writes occur in the same transaction as the page disposition counters. A crash before the
   commit repeats the page safely; a crash after commit resumes from the committed checkpoint.
 
 **TDD sequence and focused matrix:** first page/no cursor; multi-page progression; ETag unchanged page;
-Last-Modified equivalent; empty unchanged page; partial observations with quarantine; transient failure
-before checkpoint; repeated cursor; max-page cap; crash before/after commit; exact page replay; cursor JSON
-validation and stable repeated-cursor hash; no deletion from absent objects.
+ETag changed page; empty unchanged page; partial observations with quarantine; transient failure before
+checkpoint; repeated cursor; max-page cap; crash before/after commit; exact page replay; cursor JSON
+validation and stable repeated-cursor hash; no deletion from absent objects; explicit rejection of any
+Last-Modified input until the separately approved contract extension.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/pagination.test.ts tests/ingestion/orchestrator/checkpoint.test.ts`;
 `npx tsc --noEmit`; `npm run lint`; `git diff --check`.
@@ -569,80 +676,133 @@ authoritative and observable without adding a scheduler or notification worker.
 create table provider_rate_budgets (
   provider_id uuid not null references data_providers(id) on delete restrict,
   scope_key text not null,
-  limit_count integer not null,
-  remaining_count integer not null,
-  reset_at timestamptz,
-  observed_at timestamptz not null,
+  configured_limit_count integer not null,
+  configured_window_seconds integer not null,
+  available_count integer not null,
+  trusted_reset_at timestamptz not null,
+  observed_limit_count integer,
+  observed_remaining_count integer,
+  observed_reset_at timestamptz,
+  observed_at timestamptz,
   updated_at timestamptz not null default now(),
   primary key (provider_id, scope_key),
-  check (btrim(scope_key) <> ''),
-  check (limit_count >= 0 and remaining_count >= 0 and remaining_count <= limit_count)
+  check (btrim(scope_key) = 'provider'),
+  check (configured_limit_count > 0 and configured_window_seconds > 0),
+  check (available_count >= 0 and available_count <= configured_limit_count),
+  check (observed_limit_count is null or observed_limit_count >= 0),
+  check (observed_remaining_count is null or observed_remaining_count >= 0),
+  check (observed_limit_count is null or observed_remaining_count is null
+         or observed_remaining_count <= observed_limit_count)
+);
+
+create table provider_rate_budget_reservations (
+  id uuid primary key default gen_random_uuid(),
+  provider_id uuid not null,
+  scope_key text not null,
+  attempt_key text not null,
+  cost integer not null,
+  reserved_at timestamptz not null,
+  remaining_after integer not null,
+  unique (provider_id, scope_key, attempt_key),
+  foreign key (provider_id, scope_key)
+    references provider_rate_budgets(provider_id, scope_key),
+  check (btrim(attempt_key) <> '' and cost > 0 and remaining_after >= 0)
 );
 
 reserve_provider_budget(
   p_provider_id uuid,
   p_scope_key text,
+  p_attempt_key text,
   p_now timestamptz,
   p_cost integer
-) returns table (allowed boolean, remaining_count integer, retry_at timestamptz, reason text)
+) returns table (outcome text, reservation_id uuid, remaining_count integer, retry_at timestamptz)
 
 record_provider_rate_headers(
   p_provider_id uuid,
   p_scope_key text,
-  p_limit_count integer,
-  p_remaining_count integer,
-  p_reset_at timestamptz,
+  p_observed_limit_count integer,
+  p_observed_remaining_count integer,
+  p_observed_reset_at timestamptz,
   p_observed_at timestamptz
-) returns table (remaining_count integer, reset_at timestamptz)
+) returns table (accepted boolean, available_count integer, trusted_reset_at timestamptz)
 ```
 
-The initial scope key is exactly `provider`. A later adapter packet may add a documented provider-specific
-scope only with dedicated tests. Both functions lock the budget row, validate nonnegative bounds, and are
-service-role-only `SECURITY DEFINER` functions. Missing budget rows fail closed. Reservation is one request
-unit and is consumed even when the provider returns 429, 401, or 5xx. A reset timestamp may restore the
-configured limit only at or after its trusted boundary; untrusted headers cannot increase a budget without
-the same bounds check.
+The initial scope key is exactly `provider`. Missing configuration fails closed with
+`configuration_missing`. Each provider call, page request, retry request, and 429/Retry-After attempt
+reserves one unit before the request; the reservation key is
+`v1:request:<run_id>:<retry_index>:<page_key>` and is unique across concurrent replays. An exact reservation
+replay returns the original reservation and remaining count without decrementing again. A changed cost or
+scope for the same attempt key is a conflict.
+
+`configured_limit_count` is the hard ceiling and is never raised by a provider header. Headers can only
+reduce `available_count` (subject to nonnegative bounds) and update observed metadata. Header observations
+whose timestamp is not newer than the stored observation are ignored. A trusted, locally configured
+`trusted_reset_at` boundary can restore `available_count` to the configured ceiling; an untrusted reset
+header cannot. Reset and header handling are performed while locking the budget row.
+
+Both functions and the run-response RPC from 2C.2 are `SECURITY DEFINER`, schema-qualified, fixed-search-
+path, and service-role-only. RLS is enabled on both tables. `PUBLIC`, `anon`, `authenticated`, and
+`service_role` receive no direct `INSERT`, `UPDATE`, `DELETE`, or `TRUNCATE`; `service_role` receives only
+`SELECT`. The function owner retains private writes. Database tests must use `has_table_privilege` and
+`SET ROLE service_role` to prove direct mutation denial and wrapper success, including the budget and
+reservation tables.
+
+`record_ingestion_response(...)` from 2C.2 persists sanitized HTTP status, observed rate headers, and
+`Retry-After` timing into the existing run ledger through the lease-checked RPC. No adapter or orchestrator
+code may write `ingestion_runs` or the budget tables directly.
 
 **Run count and status invariants:**
 
 - `fetched_count` counts provider objects returned by successful pages; `normalized_count` counts emitted
   normalized observations; `projected_count`, `unchanged_count`, `quarantined_count`, `skipped_count`, and
   `failed_count` are mutually exclusive terminal dispositions for emitted observations.
-- When all emitted observations have a disposition:
+- Count conservation is checked in the same page-ledger/checkpoint transaction:
   `normalized_count = projected_count + unchanged_count + quarantined_count + skipped_count + failed_count`.
   A transport failure before normalization may have all observation counts zero and a terminal failed run.
-- `skipped_count` is nonzero only for shadow/non-write projection outcomes. Disabled bindings do not fetch,
-  so they do not produce skipped observations.
-- `succeeded` means the final page was consumed without item failure and no continuation remains. `partial`
-  means safe work was committed but a valid continuation remains or some items quarantined/skipped. `failed`
+- An intentional shadow/non-write skip may still produce a `succeeded` run when all work was retained and
+  no continuation or item failure remains. `partial` means a continuation, quarantine, or actual item
+  failure remains; shadow mode alone is not a reason for `partial`. Disabled bindings do not fetch and do
+  not produce skipped observations.
+- `succeeded` means the final page was consumed without item failure and no continuation remains. `failed`
   means no safe retry remains or a terminal provider/validation failure occurred. `rate_limited` means no
   provider call was permitted or a 429 reschedule ended the run. `canceled` is operator/lease control only.
-- Error class/message are sanitized and bounded. No raw response, authorization header, credential, or
-  provider payload is stored in `ingestion_runs.error_message` or metadata.
+- `invalid_response` is terminal. Retryable classes are limited to timeout, network, provider-server, and
+  rate-limited outcomes under the Slice 2A taxonomy; changing that classification requires a separately
+  approved policy update. Three retries means four total provider-call attempts.
+- Error class and message are sanitized and bounded. Provider failure classes use `provider:<Slice 2A code>`;
+  system classes such as `system:lease_expired`, `system:checkpoint_conflict`, and `system:page_conflict`
+  are distinct and never masquerade as provider failures. No raw response, authorization header, credential,
+  or provider payload is stored in `ingestion_runs.error_message` or metadata.
 
 **Health transitions:**
 
+- `DEGRADED_AFTER_FAILURES = 1` is the explicit fixed local policy constant for this slice. A later
+  configurable threshold requires a separate schema/config approval and tests.
 - `disabled` is the operator/mode kill state. Authentication or authorization failure sets mode and health
   to disabled and clears automatic scheduling; only an operator can re-enable it.
 - A successful changed-data page sets `healthy`, resets consecutive failures, and updates `last_data_at`.
 - A successful empty/not-modified page resets consecutive failures and updates `last_success_at`; it updates
   `healthy` only if accepted data is still within `stale_after_seconds`.
-- A retryable network/5xx/invalid-page failure increments consecutive failures and sets `degraded` while
-  accepted data remains fresh. Once `now - last_data_at > stale_after_seconds` (or no data has ever arrived),
-  the state is `stale`. Stale takes precedence over degraded.
-- 429/rate-limited does not increment consecutive failures; it preserves degraded/stale calculation from data
-  age and schedules at the later of `Retry-After`, provider reset, and deterministic backoff.
-- Not-found, unsupported shape, and permanent configuration failures stop automatic scheduling, preserve
-  evidence, and set `degraded` until operator disposition; they do not delete canonical state.
+- A retryable timeout, network, provider-server, or rate-limit outcome increments or preserves the configured
+  failure state as specified by the policy and sets `degraded` after the threshold while accepted data remains
+  fresh. Once `now - last_data_at > stale_after_seconds` (or no data has ever arrived), state is `stale`.
+  Stale takes precedence over degraded.
+- 429/rate-limited does not count as an item failure; it schedules at the later of `Retry-After`, trusted
+  provider reset, and deterministic backoff. A missing or stale header cannot restore budget or freshness.
+- Not-found, unsupported shape, invalid response, and permanent configuration failures stop automatic
+  scheduling, preserve evidence, and set `degraded` until operator disposition; they do not delete canonical
+  state.
 
-`finish_ingestion_run` from 2C.2 is the only state transition writer. The 2C.5 migration may replace its
-forward function body or add a private helper, but it may not create a second competing finish path.
+`finish_ingestion_run` from 2C.2 is the only run state-transition writer. The 2C.5 migration may replace
+its forward function body or add a private helper, but it may not create a second competing finish path.
 
-**TDD/database matrix:** budget reservation available/exhausted/reset; concurrent provider reservations;
-invalid headers; 429 Retry-After; count conservation for write/shadow/quarantine; transport failure with zero
-normalized items; success/empty/partial/failure/rate-limited terminal statuses; authentication disablement;
-degraded/stale/healthy transitions; stale recovery; sanitized error fields; no public grants; rollback after
-budget or health update failure.
+**TDD/database matrix:** configured-ceiling reservation available/exhausted/reset; missing configuration;
+concurrent reservation and exact reservation replay; changed attempt-key conflict; headers above the ceiling;
+stale and out-of-order headers; trusted reset; 429 Retry-After; reservation before every page/retry; count
+conservation for write/shadow/quarantine; transport failure with zero normalized items; success/empty/partial/
+failure/rate-limited terminal statuses; authentication disablement; invalid-response terminality;
+degraded/stale/healthy transitions; stale recovery; bounded provider and system error fields; direct mutation
+denial for both tables; wrapper success; rollback after budget or health update failure.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/accounting.test.ts tests/ingestion/orchestrator/health.test.ts tests/ingestion/rate-limit/repository.test.ts`;
 `npx tsc --noEmit`; `npm run lint`; `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`;
@@ -652,14 +812,15 @@ budget or health update failure.
 **Evidence ceiling:** Synthetic local database budget/health evidence and pure TypeScript accounting only.
 No real quota, provider, hosted, or deployment evidence.
 
-**Rollback/forward repair:** Before hosted data, remove only the new budget table/functions through the
-reviewed down note. After hosted data, stop claims, preserve observed headers and run history, and forward-
-repair budget/health state; never reset a provider budget by deleting evidence.
+**Rollback/forward repair:** Before hosted data, remove only the new budget/reservation tables and functions
+through the reviewed down note. After hosted data, stop claims, preserve observed headers, reservations, and
+run history, and forward-repair budget/health state; never reset a provider budget by deleting evidence.
 
-**Stop conditions:** budget reservation is per league instead of provider-wide; unknown budget fails open;
-count meanings overlap; a 429 is treated as data failure; stale state clears without fresh accepted data;
-authentication failure continues automatic calls; secrets enter error fields; or direct table writes bypass
-the RPC.
+**Stop conditions:** configured and observed budgets are conflated; a header raises the hard ceiling; unknown
+budget fails open; reservation is not idempotent; a request/page/retry bypasses reservation; count meanings
+overlap; a 429 is treated as an item failure; `invalid_response` retries without an approved taxonomy change;
+stale state clears without fresh accepted data; authentication failure continues automatic calls; secrets
+enter error fields; direct table writes bypass the RPC; or browser roles can mutate budget state.
 
 **Next approval gate:** accept accounting, budget, health, and grant evidence before complete synthetic replay.
 
@@ -678,7 +839,15 @@ including claim/retry/checkpoint/health behavior and the accepted Slice 2B proje
 - `docs/architecture/implementation/slice-2c-6-replay-evidence.md`
 
 Fixtures must be synthetic and contain no real provider payload, URL, credential, header, or token. The
-replay harness consumes `ProviderAdapter` through the registry and never branches on adapter/provider name.
+private source shapes must be materially different before normalization:
+
+- sports uses `SportsSourcePage` with `teams`, `matches`, `scheduledAt`, match lifecycle status, scores,
+  and a final winner reference. Its private match/score objects are never exposed outside the sports adapter.
+- ceremony uses `CeremonySourcePage` with `categories`, `nominees`, ceremony lifecycle status, and an
+  awarded winner. Its private category/nominee objects are never exposed outside the ceremony adapter.
+
+Both adapters emit only the shared normalized `ProviderObservation`/`ProviderBatch` contracts, use the same
+registry and orchestrator path, and have no provider-name branch in orchestration, persistence, or projection.
 
 **Required acceptance matrix:**
 
@@ -718,25 +887,33 @@ fixture work requires a separate G2 approval; shadow/beta/deployment work requir
 The intended local flow is:
 
 ```text
-claim due binding
-  -> reserve provider-wide budget
+claim due binding with a monotonic generation and lease
+  -> start the claimed run
+  -> renew before every provider call/page when below the safety threshold
+  -> reserve provider-wide budget for this request/page/retry
   -> pull one page under lease
+  -> record sanitized response headers through the response RPC
   -> evidence insertion/replay boundary
   -> identity/order/structural-or-result projection boundary
-  -> commit page cursor + counters atomically
-  -> renew or finish run + health transition
+  -> commit immutable page ledger + cursor/ETag + counters by CAS atomically
+  -> finish the attempt, persist retry state, or claim the next retry later
+  -> update health through the finish boundary
 ```
 
 The binding row is the lock root for claims, budget state is the lock root for provider-wide reservation,
-and the run row is the lock root for lease renewal/finish. Claim locks are acquired in binding UUID order;
-budget locks are acquired by `(provider_id, scope_key)`; run locks are acquired by `run_id`. No transaction
-locks a provider observation or canonical contest before its binding/run lock is established. This fixed
-order prevents a scheduler worker and an in-flight page worker from deadlocking.
+and the run row is the lock root for lease renewal/finish/page commit. Claim locks are acquired in binding
+UUID order; budget locks are acquired by `(provider_id, scope_key)`; run locks are acquired by `run_id`.
+The page ledger is inserted while holding the run lock and its unique page key. No transaction locks a
+provider observation or canonical contest before its binding/run lock is established. This fixed order
+prevents a scheduler worker and an in-flight page worker from deadlocking.
 
 A page is at-least-once: evidence and projection may be replayed after a crash, but Slice 2B deterministic
-keys and SQL uniqueness return prior outcomes. Cursor/ETag checkpoint and page counters commit only after
-all page observations reach a terminal disposition. A lease loss aborts the current transaction; a later
-worker reclaims the run and repeats from the last committed checkpoint.
+keys and SQL uniqueness return prior outcomes. The immutable page key and ledger return the prior page outcome
+without incrementing counters on response-loss replay. Cursor/ETag checkpoint and page counters commit only
+after all page observations reach a terminal disposition and the expected checkpoint still matches. A lease
+loss aborts the current transaction; a later worker reclaims the run with a new claim generation and repeats
+from the last committed checkpoint. Backoff and `Retry-After` sleep occur after the attempt is finished, not
+while a lease is held.
 
 No notification is delivered by Slice 2C. Slice 2B may create an operator-audience outbox intent for an
 accepted result, but the outbox worker and delivery semantics remain outside this slice.
@@ -778,26 +955,38 @@ claim/lease/budget/checkpoint/health assertions must run against disposable loca
 
 The packet makes the following bounded recommendations for review:
 
-1. **Lease model:** SQL-generated opaque lease token, one active run per binding, expired runs become failed
-   with `lease_expired`, and no cursor advancement occurs during reclamation.
-2. **Claim identity:** SQL-derived scheduled key plus binding-scoped manual request key; exact replay returns
-   the prior run rather than creating a duplicate.
-3. **At-least-once delivery:** repeat pages after crash; rely on accepted Slice 2B idempotency and return
-   prior outcomes.
-4. **Checkpoint rule:** advance only after every emitted observation has a terminal disposition; 25-page
-   maximum per run; repeated cursor is terminal invalid response.
-5. **Budget rule:** provider-wide scope, one request cost, fail closed when unknown, reserve before fetch,
-   honor the later of `Retry-After` and provider reset.
-6. **Retry rule:** three retries after the initial attempt, 30-second exponential base, 15-minute cap,
-   deterministic full jitter, and no automatic retries for auth/configuration errors.
-7. **Mode rule:** disabled does not fetch, shadow retains evidence but skips canonical projection, and write
-   invokes Slice 2B wrappers. No mode automatically enables another mode.
-8. **Health rule:** successful fresh data is healthy; retryable failures are degraded; stale data age takes
-   precedence; auth disables; 429 does not count as a data failure.
-9. **Manual replay:** later operator-authenticated replay uses a new request key and remains subject to mode,
-   lease, budget, and idempotency policy; it cannot fetch while disabled.
-10. **Schema/RPC boundary:** forward migrations `20261010000000` and `20261010000001` own run/lease/checkpoint
-    and provider-budget/health persistence respectively; all writes are service-role-only SQL boundaries.
+1. **Lease model:** SQL-generated opaque lease token, one active run per binding, minimum/default/maximum
+   lease durations of 60/300/900 seconds, renewal at least every `min(lease/3, 60)` seconds and before a
+   call/page commit inside the 60-second safety threshold, and no cursor advancement after lease loss.
+2. **Claim identity:** a monotonic binding claim generation forms the claim key; an exact binding-scoped
+   request-key replay returns the prior run and token only to its owner, a competing worker receives no token,
+   and reclamation creates a distinct generation. Manual replay uses a new request key.
+3. **Attempt lifecycle:** `claimed -> running -> terminal` requires `start_ingestion_run`; expired attempts
+   finish as `lease_expired`, cannot renew/commit/finish afterward, and a later claim creates the bounded next
+   retry attempt.
+4. **At-least-once delivery:** repeat pages after crash; rely on the immutable page ledger plus accepted Slice
+   2B idempotency and return prior outcomes without a second counter/checkpoint effect.
+5. **Checkpoint rule:** advance only after every emitted observation has a terminal disposition and the page
+   ledger CAS matches the expected generation/cursor/ETag; 25-page maximum per run; repeated cursor is terminal
+   `invalid_response`.
+6. **Budget rule:** provider-wide scope, configured hard ceiling separate from observed headers, one idempotent
+   reservation per request/page/retry, fail closed when unknown, stale headers ignored, and only a trusted reset
+   boundary can restore allowance.
+7. **Retry rule:** three retries after the initial attempt, 30-second exponential base, 15-minute cap,
+   deterministic full jitter, persisted next retry/index, no lease held during sleep, and no automatic retries
+   for auth/configuration or `invalid_response` failures.
+8. **Mode rule:** disabled does not fetch, shadow retains evidence and may still yield a successful run while
+   skipping canonical projection, and write invokes Slice 2B wrappers. No mode automatically enables another.
+9. **Health/accounting rule:** shadow skip is not by itself `partial`; `partial` means continuation, quarantine,
+   or item failure; `invalid_response` is terminal; `DEGRADED_AFTER_FAILURES = 1` is the fixed local policy;
+   stale data age takes precedence; auth disables; 429 follows retry scheduling without item-failure counting.
+10. **Validator rule:** Slice 2C persists and sends only ETag. Last-Modified requires a separately approved
+    Slice 2A contract extension.
+11. **Manual replay:** later operator-authenticated replay uses a new request key and remains subject to mode,
+    lease, budget, retry, and idempotency policy; it cannot fetch while disabled.
+12. **Schema/RPC boundary:** forward migration `20261010000000` owns claim/lease/attempt/page-ledger/checkpoint
+    persistence and `20261010000001` owns budget/health persistence; all writes are wrapper-owned, service-role-
+    only SQL boundaries with direct table mutation denied.
 
 Architecture approval must explicitly accept or reject these constants and boundaries before 2C.1 begins.
 Rejection of any item returns this packet for revision; implementation must not silently choose a variant.
@@ -827,7 +1016,8 @@ For this planning change, run only:
 
 ```sh
 git diff --check
-git diff --name-only b5c4ce3b17033e49e247ec836bd679c249c6707e...HEAD
+git diff --check 60735ef334086a30818fdff3140ae56587c7810...HEAD
+git diff --name-only 60735ef334086a30818fdff3140ae56587c7810...HEAD
 ```
 
 Review the packet against:
