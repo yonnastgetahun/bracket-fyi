@@ -183,6 +183,10 @@ export function decideRetry(input: Readonly<{
 }>): RetryDecision;
 ```
 
+The pure 2C.1 policies receive explicit ISO `now` values through these function signatures. The later
+orchestrator owns an injected `Clock`, calls `clock.now()`, and passes the resulting ISO value into each
+policy; the pure policies do not directly depend on or construct a clock.
+
 **Decisions and invariants:**
 
 - `disabled` is never due. `shadow` and `write` are due by the same phase schedule; mode controls only
@@ -203,13 +207,15 @@ export function decideRetry(input: Readonly<{
   threshold. Backoff and `Retry-After` never sleep while a lease is held.
 - Backoff is `min(900, 30 * 2^retryIndex)` seconds with deterministic full jitter in `[0, delay]`. Jitter
   is derived from `SHA-256("slice-2c-jitter-v1" + claimKey + ":" + retryIndex)` and is not random state.
-- Every policy accepts an injected `Clock`; tests never use wall-clock sleeps. Manual replay does not reset
-  retry history unless it creates a new operator request key.
+- The future orchestrator injects `Clock`; 2C.1 policies remain deterministic over explicit ISO inputs and
+  tests never use wall-clock sleeps. Manual replay does not reset retry history unless it creates a new
+  operator request key.
 
 **TDD sequence and focused matrix:** due/not-due boundary; all phases; disabled/shadow/write; valid,
 exhausted, missing, and invalid budgets; 429 with and without `Retry-After`; timeout/network/5xx retries;
 401/403/404/invalid-response/permanent terminal failures; maximum retry count; deterministic jitter across
-processes; clock boundary and timezone-independent ISO output.
+processes; fixed SHA-256 golden vector; clock boundary and timezone-independent ISO output; runtime rejection
+of unknown failure codes, retry-strategy mismatches, malformed details, and malformed provider timestamps.
 
 **Verification:**
 
@@ -254,13 +260,16 @@ No provider adapter, scheduler, UI, legacy result table, hosted migration, or bu
 
 - Add `provider_bindings.provider_etag text`, `provider_bindings.claim_generation bigint not null default 0`,
   and `provider_bindings.checkpoint_generation bigint not null default 0`, with nonnegative checks.
-- Add `ingestion_runs.claim_request_key text`, `claim_generation bigint`, `lease_token text`,
+- Before enforcing the claim key invariant, backfill every pre-2C row with the deterministic nonblank value
+  `legacy:<run_id>`. Then add `ingestion_runs.claim_request_key text not null`, a check
+  `btrim(claim_request_key) <> ''`, and `unique (claim_request_key)`. Automated input keys are normalized
+  into the `automated:v1:<operation-key>` namespace; manual input keys are normalized into
+  `manual:v1:<binding-id>:<operation-key>`, so the namespaces cannot collide.
+- Add `ingestion_runs.claim_generation bigint`, `lease_token text`,
   `retry_index integer not null default 0`, `retry_of_run_id uuid`, `next_retry_at timestamptz`, and
   `skipped_count integer not null default 0`, with bounded/nonnegative checks and indexes on
-  `(binding_id, next_retry_at)`. Add `unique (claim_request_key)` for the normalized stored key. Automated
-  keys are globally unique claim-operation identities; manual keys are normalized with their binding ID
-  before storage. Add a unique partial index on `retry_of_run_id` so one terminal attempt can create at most
-  one retry child, and indexes supporting retry priority and due selection.
+  `(binding_id, next_retry_at)`. Add a unique partial index on `retry_of_run_id` so one terminal attempt can
+  create at most one retry child, and indexes supporting retry priority and due selection.
 - Add immutable `ingestion_page_ledger` with: `id`, `binding_id`, `run_id`, deterministic `page_key`,
   `expected_checkpoint_generation`, `expected_cursor`, `expected_etag`, `next_cursor`, `response_etag`,
   `fetched_delta`, `normalized_delta`, `projected_delta`, `unchanged_delta`, `quarantined_delta`,
@@ -407,31 +416,34 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 **Claim identity and lifecycle:**
 
 - The caller supplies a stable request key for exactly one claim operation. Automated scheduler and retry keys
-  are globally unique claim-operation identities, not keys for a multi-binding dispatcher tick; a dispatcher
-  must generate a distinct key for every claim it requests. Manual/operator keys remain binding-scoped and are
-  expanded with the binding ID before storage. SQL first resolves an exact stored request-key replay, before
-  selecting any other due binding. Only when no replay exists does it lock a due binding with `FOR UPDATE
-  SKIP LOCKED`, increment its monotonic `claim_generation`, and create a claim key
+  are normalized into `automated:v1:<operation-key>` and are globally unique, not keys for a multi-binding
+  dispatcher tick; a dispatcher must generate a distinct key for every claim it requests. Manual/operator
+  keys are normalized into `manual:v1:<binding-id>:<operation-key>`. SQL first resolves an exact stored
+  request-key replay, before selecting any other due binding. Only when no replay exists does it lock a due
+  binding with `FOR UPDATE SKIP LOCKED`, increment its monotonic `claim_generation`, and create a claim key
   `v1:<trigger_kind>:<binding_uuid>:g<claim_generation>`. Due time is scheduling input only, never identity.
 - Exact request-key replay returns the same run. The worker that owns the active lease receives its token; a
   competing worker receives the row with `lease_acquired = false` and a null token. It cannot renew, start,
-  commit, or finish that run. SQL enforces nonblank global uniqueness for stored automated keys.
-- A retry-eligible terminal attempt is a `failed` or `rate_limited` run with `next_retry_at <= p_now`,
-  `retry_index < 3`, and no existing child identified by the unique `retry_of_run_id` index. Retry candidates
-  have priority over ordinary scheduled polls, ordered by `next_retry_at`, then binding UUID, then parent run
-  ID. A retry claim creates `trigger_kind = retry`, `retry_of_run_id = parent.run_id`, and
-  `retry_index = parent.retry_index + 1`; a concurrent loser returns that existing child without a lease token.
-  One parent can therefore create at most one child, and the chain has at most four total attempts.
+  commit, or finish that run. The nonblank and global-uniqueness constraints apply after namespace
+  normalization, including legacy backfill rows.
+- An unresolved retry parent is a terminal `failed` or `rate_limited` run with `retry_index < 3`, no existing
+  child identified by the unique `retry_of_run_id` index, and a non-null `next_retry_at`, regardless of whether
+  that time is future or due. Before `next_retry_at`, the binding is suppressed from both retry and ordinary
+  poll branches. At the exact boundary, the retry branch may claim it; retry candidates are ordered by
+  `next_retry_at`, then binding UUID, then parent run ID. A retry claim creates `trigger_kind = retry`,
+  `retry_of_run_id = parent.run_id`, and `retry_index = parent.retry_index + 1`; a concurrent loser returns
+  that existing child without a lease token. One parent can therefore create at most one child, and the chain
+  has at most four total attempts.
 - `claim_due_ingestion_run` evaluates the union of eligible retry parents and ordinary due bindings in one
   locked selection. Its ordering is retry priority first, then retry time, then ordinary `next_poll_at`, then
-  binding UUID. A binding with an eligible retry is excluded from the ordinary-poll branch, so a scheduled
-  poll cannot consume the one-active-run slot ahead of its retry.
+  binding UUID. The ordinary-poll branch excludes every binding with any unresolved retry parent, whether the
+  retry is future or due, so an earlier ordinary poll cannot bypass backoff or reset the retry chain.
 - Reclamation marks the old `claimed`/`running` run terminal with system class `lease_expired`, preserves its
   cursor, records bounded retry state when allowed, and releases the one-active-run index. A later retry
   claim increments `claim_generation`; its claim key is distinct even when the due time is unchanged. If a
-  retry is scheduled, `provider_bindings.next_poll_at` is set no later than `next_retry_at`; ordinary poll
-  selection is suppressed while an eligible retry is pending. After the retry succeeds or exhausts, the finish
-  boundary deterministically schedules the next ordinary poll.
+  retry is scheduled, `provider_bindings.next_poll_at` is set exactly to `next_retry_at`; ordinary poll
+  selection is suppressed while any unresolved retry is pending. After the retry succeeds or exhausts, the
+  finish boundary deterministically schedules the next ordinary poll.
 - A manual request key is binding-scoped. Replaying the same operator request returns the prior run; a new
   operator request must use a new key and creates a new claim generation. Manual fetch is rejected for a
   disabled binding; replaying stored evidence remains a separate Slice 2B operation.
@@ -468,9 +480,12 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 binding generation followed by identical replay returning `replayed` before CAS; same key with changed
 cursor, ETag, counts, or disposition; stale expected generation for a new page; generation increment; one
 ledger row and one counter effect; exact automated request replay before due-binding selection; distinct
-dispatcher key per claim; competing worker receives no token; retry priority over ordinary polls; retry parent
-with `next_retry_at <= now`; one retry child under concurrent claims; exact retry replay; retry lineage capped
-at four total attempts; `next_poll_at` interaction; reclamation creates distinct claim identity; old worker
+dispatcher key per claim; competing worker receives no token; future unresolved retry suppresses an earlier
+ordinary poll; retry remains suppressed before `next_retry_at`; exact-boundary retry claim; retry priority over
+ordinary polls; retry parent with `next_retry_at <= now`; one retry child under concurrent claims; exact retry
+replay; retry lineage capped at four total attempts; `next_poll_at` set exactly to retry time; legacy claim-key
+backfill plus NOT NULL/nonblank/global-unique constraints; namespace collision rejection; reclamation creates
+distinct claim identity; old worker
 cannot renew/start/commit/finish; claimed-to-running transition; lease min/default/max and cadence; no-sleep
 retry persistence; disabled/shadow/write claims; `has_table_privilege` and `has_function_privilege` vectors;
 direct `SET ROLE service_role` INSERT/UPDATE/DELETE/TRUNCATE denial for bindings, runs, and page ledger;
@@ -485,13 +500,14 @@ induced partial failure.
 repository evidence only. No provider or hosted lease evidence.
 
 **Rollback/forward repair:** Before hosted data, the down note may remove only new functions, indexes,
-ledger, and nullable columns after stopping local workers. After hosted runs exist, disable claims, preserve
-all runs/page ledgers/observations, and use a forward repair; never delete, rewrite, or reuse a committed
-page key.
+ledger, and newly added columns after stopping local workers, reversing the claim-key constraint only in the
+disposable pre-hosted state. After hosted runs exist, preserve the legacy backfill and all runs/page
+ledgers/observations through a forward repair; never delete, rewrite, or reuse a committed page key.
 
 **Stop conditions:** a claim uses due time as its sole identity; exact request replay is checked after due-row
-selection; automated claim keys are reusable across a dispatcher loop; a retry-eligible terminal attempt is
-not discoverable or can create multiple children; a competing worker receives a lease token; an expired worker
+selection; automated claim keys are reusable across a dispatcher loop; an unresolved future or due retry can be
+bypassed by an ordinary poll; a retry-eligible terminal attempt is not discoverable or can create multiple
+children; a competing worker receives a lease token; an expired worker
 can renew or finish; retry sleeps while holding a lease; a response-loss replay increments counters or returns
 checkpoint conflict after generation advancement; page commit lacks an expected-checkpoint CAS; direct
 service-role table mutation remains possible; a helper is directly executable; or rollback requires deleting
@@ -1006,13 +1022,15 @@ The packet makes the following bounded recommendations for review:
 1. **Lease model:** SQL-generated opaque lease token, one active run per binding, minimum/default/maximum
    lease durations of 60/300/900 seconds, renewal at least every `min(lease/3, 60)` seconds and before a
    call/page commit inside the 60-second safety threshold, and no cursor advancement after lease loss.
-2. **Claim identity:** a monotonic binding claim generation forms the claim key; automated and retry request
-   keys identify one global claim operation and are unique in SQL, while manual keys are binding-scoped. Exact
+2. **Claim identity:** pre-2C rows are backfilled as `legacy:<run_id>`, then claim request keys become
+   NOT NULL, nonblank, globally unique, and namespace-normalized as `automated:v1:<operation-key>` or
+   `manual:v1:<binding-id>:<operation-key>`. A monotonic binding claim generation forms the claim key; exact
    request replay resolves before selecting another binding, returns the prior run/token only to its owner,
    and a competing worker receives no token. Manual replay uses a new request key.
 3. **Attempt lifecycle:** `claimed -> running -> terminal` requires `start_ingestion_run`; expired attempts
    finish as `lease_expired`, cannot renew/commit/finish afterward, and a later claim creates one bounded
-   retry child with `trigger_kind = retry`, parent ID, and incremented retry index.
+   retry child with `trigger_kind = retry`, parent ID, and incremented retry index. Any unresolved retry parent
+   suppresses ordinary polling until its exact retry boundary; `next_poll_at` equals that retry time.
 4. **At-least-once delivery:** repeat pages after crash; evidence/projection RPCs commit independently, while
    the immutable page ledger plus accepted Slice 2B idempotency return prior outcomes without a second
    counter/checkpoint effect.

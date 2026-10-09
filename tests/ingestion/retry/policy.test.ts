@@ -94,6 +94,23 @@ describe("retry and deterministic backoff policy", () => {
     expect(first.delaySeconds).toBeLessThanOrEqual(60);
   });
 
+  it("matches the process-independent SHA-256 jitter golden vector", () => {
+    const decision = decideRetry({
+      failure: failure("timeout"),
+      retryIndex: 2,
+      now: "2026-10-08T17:00:00Z",
+      claimKey: "golden-claim",
+    });
+
+    expect(decision).toEqual({
+      retry: true,
+      retryIndex: 3,
+      retryAt: "2026-10-08T17:00:16.738Z",
+      delaySeconds: 16.7381181640625,
+      reason: "retryable",
+    });
+  });
+
   it("normalizes retry output to UTC regardless of input timezone", () => {
     const decision = decideRetry({
       failure: failure("timeout"),
@@ -111,5 +128,19 @@ describe("retry and deterministic backoff policy", () => {
     expect(() => decideRetry({ failure: failure("timeout"), retryIndex: 0, now: "not-a-time", claimKey: "claim" })).toThrow();
     expect(() => decideRetry({ failure: failure("timeout"), retryIndex: 0, now: "2026-10-08T17:00:00Z", claimKey: " " })).toThrow();
     expect(() => decideRetry({ failure: failure("timeout"), retryIndex: 0, now: "2026-10-08T17:00:00Z", claimKey: "claim", retryAfterAt: "not-a-time" })).toThrow();
+  });
+
+  it.each([
+    { ...failure("timeout"), code: "unknown" },
+    { ...failure("timeout"), retry: "never" },
+    { ...failure("timeout"), details: "malformed" },
+    { ...failure("rate_limited"), retryAt: "not-a-time" },
+  ])("runtime-validates malformed provider failure: $code/$retry", (malformed) => {
+    expect(() => decideRetry({
+      failure: malformed as unknown as ProviderFailure,
+      retryIndex: 0,
+      now: "2026-10-08T17:00:00Z",
+      claimKey: "claim-synthetic",
+    })).toThrow();
   });
 });
