@@ -13,7 +13,7 @@ production-data action was performed.
 - Same-revision conflict evidence is immutable, idempotent by original observation, payload hash, and
   normalized-snapshot hash, and preserves distinct normalized evidence for the same raw payload.
 - Competitor mappings validate global competitors; event-entry projection remains edition-scoped and
-  creates the edition entry after competitor resolution.
+  creates the edition entry after competitor resolution, including the no-preexisting-entry case.
 - Root structural updates are limited to approved mutable fields; edition-scoped structural provenance
   is keyed by edition, entity kind, and canonical ID.
 - SQL lifecycle ordering matches the TypeScript policy for progression, regression, stale timestamps,
@@ -36,7 +36,7 @@ The acceptance test was added and run red before the remediation migration. The 
 
 The corrected focused database suite passed with 124 assertions across database tests 17–20 before the
 final revisionless and quarantine additions; the final complete database suite passed with 20 files and
-261 assertions, including 48 assertions in test 20 and 21 assertions in test 17. The focused
+264 assertions, including 51 assertions in test 20 and 21 assertions in test 17. The focused
 TypeScript policy/idempotency/identity/projection tests passed with 5 test files and 29 tests. The
 complete ingestion suite passed with 15 files and 122 tests; the complete application suite passed with
 21 files and 144 tests.
@@ -59,7 +59,7 @@ Final verification results:
 - `npm run lint`: pass, 0 errors / 10 pre-existing warnings.
 - `npm run build`: pass.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`: pass.
-- `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database`: pass, 20 files / 261 assertions.
+- `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database`: pass, 20 files / 264 assertions.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning`: pass, no schema errors.
 - `git diff --check`: pass.
 

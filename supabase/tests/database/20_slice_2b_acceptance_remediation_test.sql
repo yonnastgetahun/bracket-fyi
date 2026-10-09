@@ -1,6 +1,6 @@
 begin;
 
-select plan(48);
+select plan(51);
 
 select ok(to_regprocedure('public.record_provider_observation(uuid,uuid,text,text,text,timestamptz,timestamptz,integer,jsonb,jsonb)') is not null, 'observation evidence boundary exists');
 select ok(to_regprocedure('public.project_structural_observation(uuid)') is not null, 'structural projection boundary exists');
@@ -19,7 +19,9 @@ values ('a0000000-0000-4000-8000-000000000005', 'a0000000-0000-4000-8000-0000000
 insert into contests (id, event_edition_id, stage_id, contest_key, name, kind)
 values ('a0000000-0000-4000-8000-000000000006', 'a0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000005', 'final', 'Final', 'match');
 insert into competitors (id, competitor_key, kind, canonical_name)
-values ('a0000000-0000-4000-8000-000000000007', 'remediation-team', 'team', 'Remediation Team');
+values
+  ('a0000000-0000-4000-8000-000000000007', 'remediation-team', 'team', 'Remediation Team'),
+  ('a0000000-0000-4000-8000-000000000023', 'remediation-team-new', 'team', 'Remediation Team New');
 insert into event_entries (id, event_edition_id, competitor_id, role)
 values ('a0000000-0000-4000-8000-000000000008', 'a0000000-0000-4000-8000-000000000004', 'a0000000-0000-4000-8000-000000000007', 'team');
 insert into contest_entries (contest_id, event_edition_id, event_entry_id, role, ordinal)
@@ -124,6 +126,8 @@ values
   ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'stage', 'lifecycle-stage', 'a0000000-0000-4000-8000-000000000005', 'reviewed', 'test', now()),
   ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'contest', 'lifecycle-contest', 'a0000000-0000-4000-8000-000000000006', 'reviewed', 'test', now()),
   ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'event_entry', 'lifecycle-entry', 'a0000000-0000-4000-8000-000000000008', 'reviewed', 'test', now());
+insert into provider_entity_refs (binding_id, provider_id, event_edition_id, entity_kind, external_id, canonical_id, resolution_status, reviewed_by, reviewed_at)
+values ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'competitor', 'competitor-global-new', 'a0000000-0000-4000-8000-000000000023', 'automatic', null, null);
 
 create temporary table slice_2b_remediation_observations (name text primary key, observation_id uuid);
 insert into slice_2b_remediation_observations
@@ -142,6 +146,11 @@ select is((select outcome from project_structural_observation((select observatio
 select is((select status from event_editions where id='a0000000-0000-4000-8000-000000000004'),'active','edition mutable fields update while its key remains approved');
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_remediation_observations where name='root-team'))),'projected','approved competitor root projects');
 select is((select competitor_key from competitors where id='a0000000-0000-4000-8000-000000000007'),'remediation-team','competitor canonical key is never provider-generated or mutated');
+insert into slice_2b_remediation_observations
+select 'entry-from-global-competitor', observation_id from record_provider_observation('a0000000-0000-4000-8000-000000000014','a0000000-0000-4000-8000-000000000013','event_entry','entry-from-global-competitor','entry-1','2026-10-08T20:04:30Z','2026-10-08T20:04:31Z',1,'{"fixture":"global-competitor"}'::jsonb,jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','remediation-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','root-edition','competitorExternalId','competitor-global-new','role','team','status','confirmed','metadata',jsonb_build_object()),'semanticHash',repeat('f',64)));
+select is((select outcome from project_structural_observation((select observation_id from slice_2b_remediation_observations where name='entry-from-global-competitor'))),'projected','event entry is created from a resolved global competitor');
+select is((select count(*) from event_entries where event_edition_id='a0000000-0000-4000-8000-000000000004' and competitor_id='a0000000-0000-4000-8000-000000000023'),1::bigint,'edition entry projection creates the missing scoped entry');
+select is((select resolution_status from provider_entity_refs where binding_id='a0000000-0000-4000-8000-000000000013' and entity_kind='event_entry' and external_id='entry-from-global-competitor'),'automatic','event entry mapping is created atomically with the entry');
 
 insert into event_editions (id, competition_id, edition_key, name, season_label)
 values ('a0000000-0000-4000-8000-000000000015','a0000000-0000-4000-8000-000000000003','2027','Remediation Cup 2027','2027');
