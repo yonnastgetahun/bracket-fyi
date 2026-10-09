@@ -20,7 +20,7 @@ evidence.
 | Command | Result |
 |---|---|
 | `npm test -- tests/ingestion/projection/structural-projector.test.ts` | 1 file, 2 tests passed |
-| `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/17_slice_2b_structural_projection_test.sql` | 18/18 pgTAP assertions passed |
+| `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/17_slice_2b_structural_projection_test.sql` | 20/20 pgTAP assertions passed |
 | `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning` | no schema errors |
 | `npx tsc --noEmit` | passed |
 | `npm run lint` | passed; 0 errors, 10 pre-existing unrelated warnings |
