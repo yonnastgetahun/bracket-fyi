@@ -14,6 +14,7 @@ const claimedRow = {
   claim_request_key: "automated:v1:tick-1",
   claim_generation: 1,
   retry_index: 0,
+  checkpoint_generation: 0,
   lease_token: "lease-1",
   lease_acquired: true,
   provider_id: "provider-1",
@@ -56,6 +57,7 @@ describe("run ledger repository", () => {
     await expect(repository.claimDue({ requestKey: "tick-1", now: "2026-10-08T18:00:00Z", workerId: "worker-1" })).resolves.toMatchObject({
       runId: "run-1",
       claimRequestKey: "automated:v1:tick-1",
+      checkpointGeneration: 0,
       leaseToken: "lease-1",
       leaseAcquired: true,
     });

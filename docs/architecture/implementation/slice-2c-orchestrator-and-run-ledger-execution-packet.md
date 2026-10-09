@@ -2,14 +2,16 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Planning packet drafted; awaiting architecture approval; implementation not started.
+**Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
+disposable-local database evidence through R2/R3; Slice 2C.3 awaits implementation approval and has not
+started. Provider, hosted, deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
-**Authorization:** This document authorizes planning only. It authorizes no application code, migration,
-database reset, provider call, credential access, deployment, hosted change, notification delivery, or
-production action. Slice 2C implementation requires explicit architecture approval after review of this
-packet. Provider, recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
+**Authorization:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification are
+accepted. This packet authorizes no Slice 2C.3 application code, provider call, credential access, deployment,
+hosted change, notification delivery, or production action. Slice 2C.3 implementation requires explicit
+approval. Provider, recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
 
 **Evidence ceiling for the planned local work:** Pure TypeScript policy evidence, deterministic synthetic
 adapter tests, and disposable-local Supabase integration only. Recorded-provider and live-provider evidence
@@ -253,6 +255,8 @@ completion authoritative under concurrency and crash recovery.
 - `supabase/rollbacks/20261010000001_slice_2c_2_acceptance_remediation_down.sql`
 - `supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql`
 - `supabase/rollbacks/20261010000002_slice_2c_2_clock_remediation_down.sql`
+- `supabase/migrations/20261010000003_slice_2c_2_claim_checkpoint_contract.sql`
+- `supabase/rollbacks/20261010000003_slice_2c_2_claim_checkpoint_contract_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `lib/ingestion/orchestrator/run-ledger-repository.ts`
 - `tests/ingestion/orchestrator/run-ledger-repository.test.ts`
@@ -265,6 +269,12 @@ of the local 2C.2 boundary: authoritative database-clock lease checks, due-selec
 binding-first locking, request-key race serialization, UTF-8 page-key parity, checkpoint indexing, and
 bounded sanitized run metadata. They do not introduce provider-budget persistence; that remains a later
 2C.5 migration.
+
+The R3 bridge adds `checkpoint_generation bigint` to the row mapper and both claim result shapes. It is
+read from the authoritative binding together with the returned cursor and ETag, so the orchestrator can
+pass it directly as the page-commit expected checkpoint without an independent unsafe read. The bridge
+recreates only the affected claim functions in dependency order; public wrappers remain service-role-only
+`SECURITY DEFINER` functions and private helpers remain ungranted invoker-rights functions.
 
 **Required forward schema changes:**
 
@@ -330,6 +340,7 @@ claim_due_ingestion_run(
   claim_request_key text,
   claim_generation bigint,
   retry_index integer,
+  checkpoint_generation bigint,
   lease_token text,
   lease_acquired boolean,
   provider_id uuid,
@@ -561,6 +572,24 @@ evidence boundary, and accepted Slice 2B projection wrappers without provider-sp
 **Public interfaces:**
 
 ```ts
+export type PullWindow = Readonly<{
+  windowStart: string;
+  windowEnd: string;
+}>;
+
+export interface PullWindowResolver {
+  resolve(input: Readonly<{
+    run: ClaimedIngestionRun;
+    requestedAt: string;
+  }>): PullWindow;
+}
+
+export type CurrentBindingMode = "disabled" | "shadow" | "write";
+
+export interface BindingModeReader {
+  read(bindingId: string): Promise<CurrentBindingMode>;
+}
+
 export interface CredentialResolver {
   resolve(reference: string): Promise<ProviderCredential>;
 }
@@ -587,14 +616,24 @@ export type RunExecutionOutcome = Readonly<{
 ```
 
 `ports.ts` owns server-only repository seams for the 2C run ledger, observation evidence, structural
-projector, result projector, rate budget, and clock. No port accepts a provider raw page or credential
-value in a serializable command.
+projector, result projector, injected rate-budget repository, binding-mode reader, pull-window resolver,
+and clock. No port accepts a provider raw page or credential value in a serializable command. The
+`PullWindowResolver` receives the claimed run and `requestedAt`, and returns provider-neutral window bounds.
+The resulting `ProviderPullRequest` must pass `providerPullRequestSchema` before adapter invocation.
+
+Before any budget reservation, credential resolution, or provider call, `BindingModeReader` rechecks the
+current binding mode. Effective mode is least privilege: `disabled` if either claimed or current mode is
+disabled; `shadow` if either is shadow and neither is disabled; and `write` only when both are write. A
+current mode change may downgrade execution but never promote it. A missing `credentialRef` on a
+fetch-enabled binding fails closed before adapter invocation. The rate-budget repository is an injected
+port with synthetic tests in 2C.3; concrete budget persistence remains Slice 2C.5.
 
 **Execution behavior:**
 
-1. Receive a verified claimed run, call `start_ingestion_run`, and if its mode is disabled, finish canceled
-   without a provider call.
-2. Before every provider request/page, including every retry, renew when the safety threshold requires it and
+1. Receive a verified claimed run, call `start_ingestion_run`, resolve a one-batch pull window, and if its
+   effective mode is disabled, finish canceled without a provider call.
+2. Validate the resulting request with `providerPullRequestSchema`; before the provider call, renew when the
+   safety threshold requires it and
    reserve one provider-wide budget unit through the repository. If unavailable, finish `rate_limited` with
    no adapter call and the policy-derived retry time. A response header is recorded through the lease-checked
    run-response RPC, never by direct table write.
@@ -611,6 +650,9 @@ value in a serializable command.
 7. Classify adapter errors through `classifyError`, persist only sanitized failure code/message/details, and
    persist the next retry time/index. Do not sleep while holding the lease or retry within the same attempt;
    a later claim runs the next bounded attempt. Success and terminal failure close retry state.
+
+Slice 2C.3 processes one provider batch only. Pagination loops, repeated-cursor detection, and the
+25-page limit remain Slice 2C.4 and must not be introduced through this sub-slice.
 
 **Invariants:** no provider conditional in orchestration; no call for disabled or budget-exhausted binding;
 shadow has evidence but zero canonical/result/audit/outbox mutations; write uses only accepted RPCs; one
@@ -740,8 +782,8 @@ authoritative and observable without adding a scheduler or notification worker.
 - `tests/ingestion/orchestrator/accounting.test.ts`
 - `tests/ingestion/orchestrator/health.test.ts`
 - `tests/ingestion/rate-limit/repository.test.ts`
-  - `supabase/migrations/20261010000003_slice_2c_rate_budget.sql`
-  - `supabase/rollbacks/20261010000003_slice_2c_rate_budget_down.sql`
+  - `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
+  - `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5-accounting-health-evidence.md`
 
@@ -1083,7 +1125,7 @@ The packet makes the following bounded recommendations for review:
 11. **Manual replay:** later operator-authenticated replay uses a new request key and remains subject to mode,
     lease, budget, retry, and idempotency policy; it cannot fetch while disabled.
 12. **Schema/RPC boundary:** forward migration `20261010000000` owns claim/lease/attempt/page-ledger/checkpoint
-    persistence and `20261010000003` owns budget/health persistence; all writes are wrapper-owned, service-role-
+    persistence and `20261010000004` owns budget/health persistence; all writes are wrapper-owned, service-role-
     only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
     together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 

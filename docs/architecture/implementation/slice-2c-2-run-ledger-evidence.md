@@ -1,11 +1,11 @@
-# Slice 2C.2-R2 Run-Ledger Clock Acceptance-Remediation Evidence
+# Slice 2C.2-R3 Run-Ledger Claim-Checkpoint Bridge Evidence
 
 **Scope:** Acceptance remediation for atomic claim, lease, retry-attempt, page-ledger, checkpoint, response
 metadata, reclamation, and run-completion persistence. Slice 2C.3 was not started.
 
-**Baseline:** `f51ac6d06fc8548c111c4aabfd3b9acc3f9bccff` (`fix: remediate slice 2c.2 acceptance defects`)
+**Baseline:** `8e92800f934306c51280ba330d628aec1913e88d` (`fix: harden slice 2c.2 database clock boundaries`)
 
-**Status:** Implemented and verified locally against the approved Slice 2C.2-R2 remediation contract. This
+**Status:** Implemented and verified locally against the approved Slice 2C.2-R3 bridge contract. This
 evidence is limited to disposable local PostgreSQL and synthetic TypeScript fixtures.
 
 ## Delivered
@@ -14,7 +14,13 @@ evidence is limited to disposable local PostgreSQL and synthetic TypeScript fixt
   The new migration adds fresh post-lock database-clock timestamps for replay authorization, claim expiry,
   renewal, lifecycle transitions, and reclamation; schema-qualified public RPC bodies; and safe no-op rollback
   companions that preserve helper dependencies and immutable evidence. Planned Slice 2C.5 budget persistence
-  is now reserved as migration `20261010000003` in the packet.
+  is now reserved as migration `20261010000004` in the packet.
+- Forward-only claim-checkpoint bridge migration `20261010000003`; it recreates the affected claim row
+  functions in dependency order and adds authoritative `checkpoint_generation` to due, manual, replay, and
+  competing-worker claim results. The planned Slice 2C.5 budget migration is now `20261010000004`.
+- Provider-neutral 2C.3 planning ports were documented only: `PullWindowResolver` and `BindingModeReader`,
+  least-privilege current-mode evaluation, pre-adapter request validation, missing-credential fail-closed
+  behavior, injected budget seam, and one-batch scope. No 2C.3 source or test files were created.
 - The original run-ledger migration remains unchanged and retains its executable-order claim-key backfill:
   nullable column,
   `legacy:<run_id>` backfill, nonblank check, `NOT NULL`, and global uniqueness.
@@ -38,7 +44,8 @@ evidence is limited to disposable local PostgreSQL and synthetic TypeScript fixt
 
 The repository test includes a fixed SHA-256 page-key vector containing non-BMP cursor and ETag values. The
 database test was expanded from the table-existence tracer into the complete claim/lease/page/retry/security
-matrix. It now characterizes expired exact request replay as a no-token response. Migration resets and focused
+matrix. It now characterizes expired exact request replay as a no-token response and verifies initial,
+advanced-replay, competing-worker, and manual claim checkpoint state. Migration resets and focused
 database runs exposed and corrected SQL binding-selection, lifecycle ambiguity, stale-CAS, metadata-defense,
 byte-framing, and fresh-clock issues before the final green run.
 
@@ -89,8 +96,8 @@ Final totals from the complete verification sequence:
 | Lint | passed; 0 errors, 10 pre-existing unrelated warnings |
 | Build | passed; Next.js production build completed |
 | Targeted database test 12 | 1 file, 35 passed |
-| Targeted database test 23 | 1 file, 89 passed |
-| Full database suite | 23 files, 473 passed |
+| Targeted database test 23 | 1 file, 99 passed |
+| Full database suite | 23 files, 483 passed |
 | Database lint | passed; no schema errors; three expected unused caller `p_now` warnings |
 | Diff check | passed |
 

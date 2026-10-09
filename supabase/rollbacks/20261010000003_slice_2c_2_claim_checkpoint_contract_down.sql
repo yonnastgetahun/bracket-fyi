@@ -1,0 +1,11 @@
+-- Bracket.fyi Slice 2C.2-R3 claim-checkpoint bridge rollback note.
+--
+-- This is intentionally non-destructive. The forward migration recreates public
+-- claim wrappers and their private helpers with an expanded return contract;
+-- dropping those functions would remove the approved public claim boundary or
+-- leave dependent helpers unresolved. Run a reviewed forward repair before any
+-- hosted rollback. Never delete run, page-ledger, or observation evidence.
+--
+-- Disposable-local rehearsal: invoke both public claim wrappers before and
+-- after including this file in a transaction, then roll the transaction back.
+-- The wrappers must remain resolvable and executable, and no fixture may remain.

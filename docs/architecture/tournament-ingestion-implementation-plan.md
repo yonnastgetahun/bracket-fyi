@@ -169,7 +169,10 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 
 ### Slice 2C: orchestrator and run ledger
 
-**Status:** Planning packet drafted; awaiting architecture approval; implementation not started. Provider, hosted, deployment, beta, device, production, and external scheduler validation remain out of scope.
+**Status:** Slice 2C.1 accepted for local/synthetic evidence. Slice 2C.2 accepted for local/synthetic and
+disposable-local database evidence through R2/R3. Slice 2C.3 awaits implementation approval and has not
+started. Provider, hosted, deployment, beta, device, production, and external scheduler validation remain
+unverified.
 
 Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).
 

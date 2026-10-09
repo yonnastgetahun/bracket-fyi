@@ -1,6 +1,6 @@
 begin;
 
-select plan(89);
+select plan(99);
 
 select has_table('public', 'ingestion_page_ledger', 'immutable page ledger exists');
 select ok(has_table_privilege('service_role', 'public.provider_bindings', 'select'), 'service_role can read bindings');
@@ -61,6 +61,7 @@ select * from claim_due_ingestion_run('scheduler-operation-1', now(), 'worker-a'
 select is((select count(*) from first_claim), 1::bigint, 'due claim creates one run');
 select is((select claim_generation from first_claim), 1::bigint, 'first claim has monotonic generation one');
 select is((select retry_index from first_claim), 0, 'ordinary claim starts retry index zero');
+select is((select checkpoint_generation from first_claim), 0::bigint, 'claim exposes the authoritative initial checkpoint generation');
 select is((select mode from first_claim), 'write', 'claim returns binding mode');
 select ok((select lease_token is not null from first_claim), 'owner receives a lease token');
 select is((select claim_request_key from first_claim), 'automated:v1:scheduler-operation-1', 'automated keys use the disjoint namespace');
@@ -90,6 +91,14 @@ select is((select checkpoint_generation from first_page), 1::bigint, 'page commi
 select is((select count(*) from ingestion_page_ledger), 1::bigint, 'page ledger has one immutable row');
 select is((select normalized_count from ingestion_runs where id = (select run_id from first_claim)), 2, 'page commit increments normalized count');
 select is((select provider_cursor from provider_bindings where id = 'c2000000-0000-4000-8000-000000000005'), '{"page": 1}'::jsonb, 'page commit advances cursor');
+create temporary table advanced_claim_replay as
+select * from claim_due_ingestion_run('scheduler-operation-1', now(), 'worker-c', 900);
+select is((select count(*) from advanced_claim_replay), 1::bigint, 'exact claim replay returns one current checkpoint row');
+select is((select run_id from advanced_claim_replay), (select run_id from first_claim), 'advanced replay returns the original run');
+select is((select checkpoint_generation from advanced_claim_replay), 1::bigint, 'advanced replay returns the current checkpoint generation');
+select is((select provider_cursor from advanced_claim_replay), '{"page": 1}'::jsonb, 'advanced replay returns the current provider cursor');
+select is((select provider_etag from advanced_claim_replay), 'etag-1', 'advanced replay returns the current provider ETag');
+select ok((select lease_token is null from advanced_claim_replay), 'competing advanced replay remains tokenless while exposing checkpoint state');
 create temporary table null_poll_claim as
 select * from claim_due_ingestion_run('future-ordinary-poll', now(), 'null-worker', 900);
 select is((select binding_id from null_poll_claim), 'c2000000-0000-4000-8000-000000000009'::uuid, 'future ordinary binding is skipped while null next_poll_at is eligible');
@@ -156,6 +165,9 @@ create temporary table manual_claim as
 select * from claim_manual_ingestion_run('c2000000-0000-4000-8000-000000000005', 'operator-replay', 'operator-a', now(), 900);
 select is((select claim_request_key from manual_claim), 'manual:v1:c2000000-0000-4000-8000-000000000005:operator-replay', 'manual keys include binding namespace');
 select is((select trigger_kind from ingestion_runs where id = (select run_id from manual_claim)), 'manual', 'manual claim records manual trigger');
+select is((select checkpoint_generation from manual_claim), 1::bigint, 'manual claim exposes the authoritative checkpoint generation');
+select is((select provider_cursor from manual_claim), '{"page": 1}'::jsonb, 'manual claim exposes the current provider cursor');
+select is((select provider_etag from manual_claim), 'etag-1', 'manual claim exposes the current provider ETag');
 select throws_ok(
   $$ select * from record_ingestion_response((select run_id from manual_claim), (select lease_token from manual_claim), 200, 10, 9, null, null, now()) $$,
   'P0004', null, 'response recording rejects a merely claimed run'

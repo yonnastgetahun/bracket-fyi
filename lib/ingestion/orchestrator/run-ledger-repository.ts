@@ -22,6 +22,7 @@ export type ClaimedIngestionRun = Readonly<{
   claimRequestKey: string;
   claimGeneration: number;
   retryIndex: number;
+  checkpointGeneration: number;
   leaseToken: string | null;
   leaseAcquired: boolean;
   providerId: string;
@@ -86,6 +87,7 @@ type RunLedgerRow = {
   claim_request_key: string;
   claim_generation: number;
   retry_index: number;
+  checkpoint_generation: number;
   lease_token?: string | null;
   lease_acquired: boolean;
   provider_id: string;
@@ -155,6 +157,7 @@ const toClaimedRun = (row: RunLedgerRow): ClaimedIngestionRun => ({
   claimRequestKey: row.claim_request_key,
   claimGeneration: row.claim_generation,
   retryIndex: row.retry_index,
+  checkpointGeneration: row.checkpoint_generation,
   leaseToken: row.lease_token ?? null,
   leaseAcquired: row.lease_acquired,
   providerId: row.provider_id,
