@@ -217,6 +217,7 @@ aliases, missing/ambiguous mappings, and advisory fuzzy candidates without touch
 - `lib/ingestion/identity/types.ts`
 - `lib/ingestion/identity/normalize.ts`
 - `lib/ingestion/identity/resolve.ts`
+- `lib/ingestion/contracts.ts` (shared mappable-kind type export)
 - `tests/ingestion/identity/normalize.test.ts`
 - `tests/ingestion/identity/resolve.test.ts`
 - `docs/architecture/implementation/slice-2b-1-identity-policy-evidence.md`
