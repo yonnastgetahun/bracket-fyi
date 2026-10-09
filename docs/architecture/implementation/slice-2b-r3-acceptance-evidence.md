@@ -1,6 +1,7 @@
 # Slice 2B-R3 acceptance evidence
 
-**Status:** Implemented and verified locally; Slice 2B remains pending independent acceptance review.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, beta, device,
+and production acceptance remain unverified.
 
 This is static/local and disposable-local synthetic evidence only. No provider calls, provider
 documentation, credentials, hosted database, deployment, notification delivery, production data, beta,
@@ -9,7 +10,9 @@ device, or production action occurred. Slice 2C was not started.
 ## Remediation coverage
 
 - Forward migration `20261009000005_slice_2b_r3_provenance_grants.sql` revokes all direct privileges on
-  both structural provenance tables from `service_role`, then restores `SELECT` only. Projection remains
+  the legacy `canonical_structural_projection_state` table from `service_role`, then restores `SELECT`
+  only. Migration 00004 had already secured the edition-scoped `canonical_structural_projection_scope`
+  table; the cumulative 00004+00005 chain therefore secures both provenance tables. Projection remains
   available through the service-role RPC wrapper `project_structural_observation(uuid)` and its
   `SECURITY DEFINER` owner.
 - Database test 22 asserts the complete privilege matrix for
@@ -33,7 +36,8 @@ the same synthetic test passed with 27 assertions. Existing R2 tests remained gr
 
 Evidence is static/local, synthetic TypeScript, and disposable-local database evidence only. Recorded-
 provider, live-provider, hosted, deployment, notification-delivery, beta, device, and production
-evidence remain unverified and out of scope. Slice 2B remains pending independent acceptance review.
+evidence remain unverified and out of scope. Slice 2B is accepted only for the local/synthetic evidence
+level recorded here.
 
 Final command totals from the local working tree:
 

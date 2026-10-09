@@ -2,7 +2,8 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Slice 2B-R3 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, beta, device,
+and production acceptance remain unverified
 
 **Starting commit:** `944e72df9075d0ce414768a21d256fd9aa12f132` (`test: close slice 2a acceptance coverage gaps`)
 

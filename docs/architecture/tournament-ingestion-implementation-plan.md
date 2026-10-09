@@ -151,7 +151,7 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B-R3 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review. Provider, hosted, deployment, beta, device, production, and Slice 2C validation remain out of scope.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C planning is documented separately; implementation has not started.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
 
@@ -168,6 +168,10 @@ R3 evidence: [`implementation/slice-2b-r3-acceptance-evidence.md`](implementatio
 Implement reviewed external-ID mappings, exact alias candidates, quarantine for ambiguity, monotonic result versions, duplicate suppression, out-of-order rejection, correction handling, and transactional audit/outbox intent creation. Fuzzy matching may suggest but must never auto-accept an identity.
 
 ### Slice 2C: orchestrator and run ledger
+
+**Status:** Planning packet drafted; awaiting architecture approval; implementation not started. Provider, hosted, deployment, beta, device, production, and external scheduler validation remain out of scope.
+
+Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).
 
 **Proposed files:**
 
