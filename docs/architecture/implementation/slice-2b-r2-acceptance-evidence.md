@@ -47,9 +47,9 @@ evidence remain unverified and out of scope. Slice 2C was not started.
 
 Final command totals from the local working tree:
 
-- `npm test -- tests/ingestion`: pass, 15 files / 124 tests.
+- `npm test -- tests/ingestion`: pass, 15 files / 127 tests.
 - `npx tsc --noEmit`: pass.
-- `npm test`: pass, 21 files / 146 tests.
+- `npm test`: pass, 21 files / 149 tests.
 - `npm run lint`: pass, 0 errors / 10 pre-existing warnings.
 - `npm run build`: pass.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`: pass; migrations through 00004 applied.
