@@ -1,6 +1,6 @@
 begin;
 
-select plan(85);
+select plan(89);
 
 select has_table('public', 'ingestion_page_ledger', 'immutable page ledger exists');
 select ok(has_table_privilege('service_role', 'public.provider_bindings', 'select'), 'service_role can read bindings');
@@ -113,6 +113,18 @@ select is((select outcome from replay_page), 'replayed', 'response-loss replay i
 select is((select page_ledger_id from replay_page), (select page_ledger_id from first_page), 'replay returns original immutable page ID');
 select is((select count(*) from ingestion_page_ledger), 1::bigint, 'exact replay does not add a ledger row');
 select is((select normalized_count from ingestion_runs where id = (select run_id from first_claim)), 2, 'exact replay does not increment counters');
+update ingestion_runs
+set lease_expires_at = clock_timestamp() - interval '1 second'
+where id = (select run_id from first_claim);
+create temporary table expired_request_replay as
+select * from claim_due_ingestion_run('scheduler-operation-1', now() - interval '1 day', 'worker-a', 900);
+select is((select count(*) from expired_request_replay), 1::bigint, 'expired exact request replay still returns its prior run');
+select is((select run_id from expired_request_replay), (select run_id from first_claim), 'expired replay returns the original run');
+select ok((select not lease_acquired from expired_request_replay), 'expired replay does not grant a lease');
+select ok((select lease_token is null from expired_request_replay), 'expired replay does not expose a token');
+update ingestion_runs
+set lease_expires_at = clock_timestamp() + interval '15 minutes'
+where id = (select run_id from first_claim);
 select throws_ok(
   $$ select * from commit_ingestion_page(
     (select run_id from first_claim), (select lease_token from first_claim),

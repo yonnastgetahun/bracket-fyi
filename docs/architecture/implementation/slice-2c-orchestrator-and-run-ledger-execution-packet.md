@@ -251,6 +251,8 @@ completion authoritative under concurrency and crash recovery.
 - `supabase/rollbacks/20261010000000_slice_2c_run_ledger_down.sql`
 - `supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql`
 - `supabase/rollbacks/20261010000001_slice_2c_2_acceptance_remediation_down.sql`
+- `supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql`
+- `supabase/rollbacks/20261010000002_slice_2c_2_clock_remediation_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `lib/ingestion/orchestrator/run-ledger-repository.ts`
 - `tests/ingestion/orchestrator/run-ledger-repository.test.ts`
@@ -258,10 +260,11 @@ completion authoritative under concurrency and crash recovery.
 
 No provider adapter, scheduler, UI, legacy result table, hosted migration, or budget table may change.
 
-The acceptance-remediation migration `20261010000001` is limited to forward repair of the local 2C.2
-boundary: authoritative database-clock lease checks, due-selection and lifecycle gates, binding-first
-locking, request-key race serialization, UTF-8 page-key parity, checkpoint indexing, and bounded sanitized
-run metadata. It does not introduce provider-budget persistence; that remains a later 2C.5 migration.
+The acceptance-remediation migrations `20261010000001` and `20261010000002` are limited to forward repair
+of the local 2C.2 boundary: authoritative database-clock lease checks, due-selection and lifecycle gates,
+binding-first locking, request-key race serialization, UTF-8 page-key parity, checkpoint indexing, and
+bounded sanitized run metadata. They do not introduce provider-budget persistence; that remains a later
+2C.5 migration.
 
 **Required forward schema changes:**
 
@@ -443,9 +446,10 @@ Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conflict`, `page_conflict`
   that time is future or due. Before `next_retry_at`, the binding is suppressed from both retry and ordinary
   poll branches. At the exact boundary, the retry branch may claim it; retry candidates are ordered by
   `next_retry_at`, then binding UUID, then parent run ID. A retry claim creates `trigger_kind = retry`,
-  `retry_of_run_id = parent.run_id`, and `retry_index = parent.retry_index + 1`; a concurrent loser returns
-  that existing child without a lease token. One parent can therefore create at most one child, and the chain
-  has at most four total attempts.
+  `retry_of_run_id = parent.run_id`, and `retry_index = parent.retry_index + 1`; an identical normalized
+  request-key loser replays that existing child without a lease token. A different request key may claim
+  another binding or return no row, but it never aliases the first request's child. One parent can therefore
+  create at most one child, and the chain has at most four total attempts.
 - `claim_due_ingestion_run` evaluates the union of eligible retry parents and ordinary due bindings in one
   locked selection. A retry is eligible only at `next_retry_at <= p_now`; an ordinary binding is eligible only
   when `next_poll_at is null or next_poll_at <= p_now`, and the ordinary branch excludes every binding with
@@ -736,8 +740,8 @@ authoritative and observable without adding a scheduler or notification worker.
 - `tests/ingestion/orchestrator/accounting.test.ts`
 - `tests/ingestion/orchestrator/health.test.ts`
 - `tests/ingestion/rate-limit/repository.test.ts`
-  - `supabase/migrations/20261010000002_slice_2c_rate_budget.sql`
-  - `supabase/rollbacks/20261010000002_slice_2c_rate_budget_down.sql`
+  - `supabase/migrations/20261010000003_slice_2c_rate_budget.sql`
+  - `supabase/rollbacks/20261010000003_slice_2c_rate_budget_down.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5-accounting-health-evidence.md`
 
@@ -1079,7 +1083,7 @@ The packet makes the following bounded recommendations for review:
 11. **Manual replay:** later operator-authenticated replay uses a new request key and remains subject to mode,
     lease, budget, retry, and idempotency policy; it cannot fetch while disabled.
 12. **Schema/RPC boundary:** forward migration `20261010000000` owns claim/lease/attempt/page-ledger/checkpoint
-    persistence and `20261010000002` owns budget/health persistence; all writes are wrapper-owned, service-role-
+    persistence and `20261010000003` owns budget/health persistence; all writes are wrapper-owned, service-role-
     only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
     together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 
