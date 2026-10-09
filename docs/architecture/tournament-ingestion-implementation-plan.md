@@ -151,9 +151,11 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B-R2 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review. Provider, hosted, deployment, beta, device, production, and Slice 2C validation remain out of scope.
+**Status:** Slice 2B-R3 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review. Provider, hosted, deployment, beta, device, production, and Slice 2C validation remain out of scope.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
+
+R3 evidence: [`implementation/slice-2b-r3-acceptance-evidence.md`](implementation/slice-2b-r3-acceptance-evidence.md).
 
 **Proposed files:**
 

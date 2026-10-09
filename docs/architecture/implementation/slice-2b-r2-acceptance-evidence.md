@@ -11,7 +11,9 @@ data, beta, device, or production action occurred.
 
 - Service-role execution is limited to `project_structural_observation(uuid)` and
   `project_provider_result(uuid,text)`. Unchecked projectors, root projection, quarantine resolution,
-  and direct structural provenance writes are denied; the SECURITY DEFINER wrappers retain ownership of
+  and direct writes to the edition-scoped provenance table are denied; R2 did not yet revoke the
+  legacy `canonical_structural_projection_state` INSERT/UPDATE/TRUNCATE grants inherited from 00001.
+  Slice 2B-R3 closes that remaining grant gap while the SECURITY DEFINER wrappers retain ownership of
   private writes.
 - Partial observations preserve omitted URL, short-name, country, date, seed, parent, required-field,
   and metadata values across roots and edition-scoped structures. Full observations retain replacement
@@ -59,8 +61,9 @@ Final command totals from the local working tree:
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database`: pass, 21 files / 330 assertions.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning`: pass, no schema errors.
 - `git diff --check`: pass.
-- Direct `SET ROLE service_role` probe: pass; wrapper execute `true,true`, private helper execute
-  `false,false,false,false`, provenance `SELECT true`, mutation privileges `false,false,false,false`.
+- Direct `SET ROLE service_role` probe: pass for the R2 scope table; R2 left the legacy state-table
+  INSERT/UPDATE/TRUNCATE grant gap that is corrected by Slice 2B-R3. See the R3 evidence document for
+  the final two-table privilege result.
 - Direct transactional plain-SQL partial probe: pass; projected outcome preserved the prior URL and
   merged old/new metadata, then rolled back.
 

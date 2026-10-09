@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Slice 2B-R2 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review
+**Status:** Slice 2B-R3 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review
 
 **Starting commit:** `944e72df9075d0ce414768a21d256fd9aa12f132` (`test: close slice 2a acceptance coverage gaps`)
 
@@ -16,11 +16,15 @@ integration with deterministic synthetic sports and ceremony fixtures. Recorded-
 evidence remain later gates.
 
 **Acceptance-remediation baseline:** `c26db31653b227d1819da10efa755c2c2568646c`. The forward-only
-remediation migrations are `20261009000003_slice_2b_acceptance_remediation.sql` and
-`20261009000004_slice_2b_r2_acceptance.sql`; their synthetic acceptance coverage is
-`supabase/tests/database/20_slice_2b_acceptance_remediation_test.sql` and
-`supabase/tests/database/21_slice_2b_r2_acceptance_test.sql`. R2 evidence is recorded in
-[`slice-2b-r2-acceptance-evidence.md`](slice-2b-r2-acceptance-evidence.md). Slice 2C has not started.
+remediation migrations are `20261009000003_slice_2b_acceptance_remediation.sql`,
+`20261009000004_slice_2b_r2_acceptance.sql`, and `20261009000005_slice_2b_r3_provenance_grants.sql`;
+their synthetic acceptance coverage is `supabase/tests/database/20_slice_2b_acceptance_remediation_test.sql`,
+`supabase/tests/database/21_slice_2b_r2_acceptance_test.sql`, and
+`supabase/tests/database/22_slice_2b_r3_provenance_grants_test.sql`. R2 evidence is recorded in
+[`slice-2b-r2-acceptance-evidence.md`](slice-2b-r2-acceptance-evidence.md), and R3 evidence is recorded
+in [`slice-2b-r3-acceptance-evidence.md`](slice-2b-r3-acceptance-evidence.md). Slice 2C has not started.
+
+**R3 follow-up baseline:** `f96a24df3784d0a117a5b3ecbf4e3ffcd2a10355`.
 
 ## 1. Objective and operating rules
 
