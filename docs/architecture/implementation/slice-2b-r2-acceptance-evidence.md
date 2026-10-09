@@ -19,6 +19,9 @@ data, beta, device, or production action occurred.
 - `normalized_snapshot_hash` is a generated stored column. The amended 00003 migration does not issue
   an UPDATE against immutable conflict evidence. Conflicts remain append-only and deterministic on
   identical replay; same raw payload with changed normalized evidence remains distinct evidence.
+- Test 21 also replays the generated-hash DDL inside a transaction after inserting a conflict row;
+  the pre-existing immutable evidence survives. This is a disposable local upgrade rehearsal only;
+  00003 has not been hosted.
 - Existing structural provenance is copied into edition-scoped provenance during 00004, and shared
   competitors can project independently in multiple editions.
 - SQL lifecycle ordering quarantines final-to-live, final-to-scheduled, and equal-timestamp semantic
@@ -36,8 +39,8 @@ The TypeScript acceptance additions were run red first: the required JavaScript 
 failed because the expected representation did not match JavaScript's actual shortest-round-trip output.
 The expectation was corrected to the actual serialized RPC value, then the focused ingestion suite
 passed. The SQL acceptance test contains privilege, immutable-conflict, partial-merge, provenance,
-non-write, lifecycle, and result-policy assertions; it passed with 64 assertions after the migration
-and trigger fixes.
+non-write, lifecycle, result-policy, and pre-existing-conflict migration-rehearsal assertions; it
+passed with 66 assertions after the migration and trigger fixes.
 
 ## Verification ceiling
 
@@ -53,7 +56,7 @@ Final command totals from the local working tree:
 - `npm run lint`: pass, 0 errors / 10 pre-existing warnings.
 - `npm run build`: pass.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`: pass; migrations through 00004 applied.
-- `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database`: pass, 21 files / 328 assertions.
+- `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database`: pass, 21 files / 330 assertions.
 - `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning`: pass, no schema errors.
 - `git diff --check`: pass.
 - Direct `SET ROLE service_role` probe: pass; wrapper execute `true,true`, private helper execute

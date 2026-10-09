@@ -1,6 +1,6 @@
 begin;
 
-select plan(64);
+select plan(66);
 
 select ok(has_function_privilege('service_role', 'public.project_structural_observation(uuid)', 'execute'), 'service_role can execute only the structural wrapper');
 select ok(has_function_privilege('service_role', 'public.project_provider_result(uuid,text)', 'execute'), 'service_role can execute only the result wrapper');
@@ -87,6 +87,22 @@ select 'conflict-original', observation_id from record_provider_observation('b00
 select lives_ok($sql$ select * from record_provider_observation('b0000000-0000-4000-8000-000000000025','b0000000-0000-4000-8000-000000000024','result','conflict','rev-1','2026-11-01T10:00:00Z','2026-11-01T10:02:00Z',1,'{"raw":2}'::jsonb,jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','r2','adapterConfigVersion',2,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','root-edition','contestExternalId','child-contest','resultStatus','final','outcomeType','draw','resultData',jsonb_build_object('changed',true)),'semanticHash',repeat('2',64))) $sql$, 'first revision conflict is retained');
 select lives_ok($sql$ select * from record_provider_observation('b0000000-0000-4000-8000-000000000025','b0000000-0000-4000-8000-000000000024','result','conflict','rev-1','2026-11-01T10:00:00Z','2026-11-01T10:03:00Z',1,'{"raw":2}'::jsonb,jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','r2','adapterConfigVersion',2,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','root-edition','contestExternalId','child-contest','resultStatus','final','outcomeType','draw','resultData',jsonb_build_object('changed',true)),'semanticHash',repeat('2',64))) $sql$, 'identical revision conflict replay is idempotent');
 select is((select count(*) from provider_observation_conflicts where original_observation_id=(select observation_id from slice_2b_r2_observations where name='conflict-original')), 1::bigint, 'identical conflict replay does not duplicate immutable evidence');
+select lives_ok($sql$
+  alter table provider_observation_conflicts
+    drop constraint if exists provider_observation_conflicts_snapshot_hash_valid,
+    drop constraint if exists provider_observation_conflicts_identity_unique,
+    drop column if exists normalized_snapshot_hash;
+  alter table provider_observation_conflicts
+    add column normalized_snapshot_hash text generated always as (
+      encode(extensions.digest(slice_2b_canonical_json(normalized_snapshot), 'sha256'), 'hex')
+    ) stored;
+  alter table provider_observation_conflicts
+    add constraint provider_observation_conflicts_snapshot_hash_valid
+      check (normalized_snapshot_hash ~ '^[a-f0-9]{64}$'),
+    add constraint provider_observation_conflicts_identity_unique
+      unique (original_observation_id, payload_hash, normalized_snapshot_hash);
+$sql$, 'safe conflict-hash migration rehearsal tolerates a pre-existing conflict row');
+select is((select count(*) from provider_observation_conflicts where original_observation_id=(select observation_id from slice_2b_r2_observations where name='conflict-original')), 1::bigint, 'migration rehearsal preserves pre-existing immutable conflict evidence');
 
 -- Non-write bindings retain observations but have no canonical projection side effects.
 insert into slice_2b_r2_observations
