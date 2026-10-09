@@ -82,6 +82,13 @@ describe("event ingestion configuration", () => {
     })).toThrow();
   });
 
+  it("rejects staleAfterSeconds below the absolute 60-second minimum", () => {
+    expect(() => parseEventIngestionConfig({
+      ...baseConfig,
+      pollingPolicy: { ...baseConfig.pollingPolicy, liveSeconds: 30, staleAfterSeconds: 59 },
+    })).toThrow();
+  });
+
   it("rejects secret-like unknown fields through strict objects", () => {
     expect(() => parseEventIngestionConfig({ ...baseConfig, apiKey: "secret-sentinel" })).toThrow();
     expect(() => parseEventIngestionConfig({

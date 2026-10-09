@@ -67,6 +67,27 @@ const resultObservation = (
   },
 });
 
+const resultStatuses = ["provisional", "unresolved", "final", "awarded", "canceled", "void"] as const;
+const outcomeTypes = ["pending", "winner", "draw", "no_contest"] as const;
+const resultStateMatrix = resultStatuses.flatMap((resultStatus) =>
+  outcomeTypes.flatMap((outcomeType) =>
+    [false, true].map((winnerPresent) => [resultStatus, outcomeType, winnerPresent] as const),
+  ),
+);
+
+const isAllowedResultState = (
+  resultStatus: (typeof resultStatuses)[number],
+  outcomeType: (typeof outcomeTypes)[number],
+  winnerPresent: boolean,
+) =>
+  (resultStatus === "provisional" && outcomeType === "pending" && !winnerPresent) ||
+  (resultStatus === "unresolved" && outcomeType === "pending" && !winnerPresent) ||
+  (resultStatus === "final" && outcomeType === "winner" && winnerPresent) ||
+  (resultStatus === "final" && outcomeType === "draw" && !winnerPresent) ||
+  (resultStatus === "awarded" && outcomeType === "winner" && winnerPresent) ||
+  (resultStatus === "canceled" && outcomeType === "no_contest" && !winnerPresent) ||
+  (resultStatus === "void" && outcomeType === "no_contest" && !winnerPresent);
+
 describe("provider-neutral contracts", () => {
   it("accepts an organization observation", () => {
     const observation: NormalizedObservation = {
@@ -91,6 +112,26 @@ describe("provider-neutral contracts", () => {
     expect(normalizedObservationSchema.parse(contestObservation("category")).data).toMatchObject({ contestKind: "category" });
     expect(normalizedObservationSchema.parse(resultObservation("category")).data).toMatchObject({ resultStatus: "awarded" });
   });
+
+  it.each(resultStateMatrix)(
+    "applies the complete result-state matrix: %s + %s + winner=%s",
+    (resultStatus, outcomeType, winnerPresent) => {
+      const result = {
+        eventEditionExternalId: "edition",
+        contestExternalId: "contest",
+        resultStatus,
+        outcomeType,
+        resultData: {},
+        ...(winnerPresent ? { winnerEventEntryExternalId: "entry" } : {}),
+      };
+      const parse = () => normalizedResultSchema.parse(result);
+      if (isAllowedResultState(resultStatus, outcomeType, winnerPresent)) {
+        expect(parse).not.toThrow();
+      } else {
+        expect(parse).toThrow();
+      }
+    },
+  );
 
   it("rejects an observation whose entity kind does not match its data", () => {
     const mismatched = { ...contestObservation("game"), entityKind: "result" };
@@ -192,6 +233,31 @@ describe("provider-neutral contracts", () => {
     }
   });
 
+  it("rejects unexpected normalized-data and observation-envelope fields", () => {
+    const organizationObservation = {
+      entityKind: "organization" as const,
+      externalId: "org",
+      observedAt,
+      completeness: "full" as const,
+      sanitizedPayload: { providerDefinedField: { arbitrary: [1, true, null] } },
+      data: {
+        organizationKind: "other" as const,
+        name: "Synthetic organization",
+        metadata: {},
+      },
+    };
+
+    expect(normalizedObservationSchema.parse(organizationObservation)).toBeTruthy();
+    expect(() => normalizedObservationSchema.parse({
+      ...organizationObservation,
+      data: { ...organizationObservation.data, providerOnlyField: "not-normalized" },
+    })).toThrow();
+    expect(() => normalizedObservationSchema.parse({
+      ...organizationObservation,
+      unexpectedEnvelopeField: true,
+    })).toThrow();
+  });
+
   it("accepts partial observations without manufacturing optional values", () => {
     const partial = normalizedObservationSchema.parse({
       entityKind: "organization",
@@ -213,6 +279,8 @@ describe("provider-neutral contracts", () => {
       rateLimit: { limit: 10, remaining: 10 },
     };
     expect(providerBatchSchema.parse(batch)).toEqual(batch);
+    expect(() => providerBatchSchema.parse({ ...batch, rateLimit: { limit: -1 } })).toThrow();
+    expect(() => providerBatchSchema.parse({ ...batch, rateLimit: { remaining: -1 } })).toThrow();
     expect(() => providerBatchSchema.parse({ ...batch, rateLimit: { limit: 1, remaining: 2 } })).toThrow();
   });
 });
