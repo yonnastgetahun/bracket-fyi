@@ -505,4 +505,3 @@ grant select on table canonical_structural_projection_scope to service_role;
 
 comment on table canonical_structural_projection_scope is
   'Edition-scoped structural ordering provenance. Direct service_role writes are denied; SECURITY DEFINER projection wrappers own writes.';
-

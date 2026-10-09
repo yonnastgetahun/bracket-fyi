@@ -1,0 +1,4 @@
+-- Forward-repair note for Slice 2B-R3 provenance grants.
+-- Do not restore direct service_role mutation privileges during rollback.
+-- If this migration must be reversed before hosted adoption, reapply the
+-- reviewed wrapper-owned grant policy from a replacement forward migration.
