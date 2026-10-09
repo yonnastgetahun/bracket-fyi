@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Approved for local implementation; local implementation complete and verified
+**Status:** Approved for local implementation; Slice 2B-R acceptance remediation implemented and verified locally
 
 **Starting commit:** `944e72df9075d0ce414768a21d256fd9aa12f132` (`test: close slice 2a acceptance coverage gaps`)
 
@@ -14,6 +14,10 @@ projection, lifecycle completion/reopening, and production action remain out of 
 **Evidence ceiling for the planned work:** Pure TypeScript evidence and disposable-local database
 integration with deterministic synthetic sports and ceremony fixtures. Recorded-provider and live-provider
 evidence remain later gates.
+
+**Acceptance-remediation baseline:** `c26db31653b227d1819da10efa755c2c2568646c`. The forward-only
+remediation migration is `20261009000003_slice_2b_acceptance_remediation.sql`; its synthetic acceptance
+coverage is `supabase/tests/database/20_slice_2b_acceptance_remediation_test.sql`. Slice 2C has not started.
 
 ## 1. Objective and operating rules
 
@@ -344,6 +348,7 @@ export type OrderingInput = Readonly<{
   current?: ResultOrderingState;
   incoming: ResultOrderingState;
   explicitCorrection: boolean;
+  bindingAllowsTrustedCorrections?: boolean;
 }>;
 
 export type ResultOrderingState = Readonly<{
@@ -354,6 +359,7 @@ export type ResultOrderingState = Readonly<{
   observedAt: string;
   receivedAt: string;
   providerRevision?: string;
+  correctionProvenance?: string;
   semanticKey: string;
 }>;
 
