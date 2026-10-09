@@ -2,7 +2,7 @@
 
 **Prepared:** 2026-10-08
 
-**Status:** Approved for local implementation; Slice 2B-R acceptance remediation implemented and verified locally
+**Status:** Slice 2B-R2 acceptance remediation implemented and verified locally; Slice 2B acceptance remains pending independent review
 
 **Starting commit:** `944e72df9075d0ce414768a21d256fd9aa12f132` (`test: close slice 2a acceptance coverage gaps`)
 
@@ -16,8 +16,11 @@ integration with deterministic synthetic sports and ceremony fixtures. Recorded-
 evidence remain later gates.
 
 **Acceptance-remediation baseline:** `c26db31653b227d1819da10efa755c2c2568646c`. The forward-only
-remediation migration is `20261009000003_slice_2b_acceptance_remediation.sql`; its synthetic acceptance
-coverage is `supabase/tests/database/20_slice_2b_acceptance_remediation_test.sql`. Slice 2C has not started.
+remediation migrations are `20261009000003_slice_2b_acceptance_remediation.sql` and
+`20261009000004_slice_2b_r2_acceptance.sql`; their synthetic acceptance coverage is
+`supabase/tests/database/20_slice_2b_acceptance_remediation_test.sql` and
+`supabase/tests/database/21_slice_2b_r2_acceptance_test.sql`. R2 evidence is recorded in
+[`slice-2b-r2-acceptance-evidence.md`](slice-2b-r2-acceptance-evidence.md). Slice 2C has not started.
 
 ## 1. Objective and operating rules
 
