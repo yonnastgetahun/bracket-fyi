@@ -92,12 +92,46 @@ describe("separate contest lifecycle and result ordering", () => {
           correctionReason: "Synthetic correction",
         }),
         providerEffectiveAt: "2026-10-08T19:00:00Z",
+        correctionProvenance: "synthetic-operator",
         semanticKey: "corrected-terminal",
       }),
       explicitCorrection: true,
+      bindingAllowsTrustedCorrections: true,
     } as const;
     expect(compareResultOrdering(input)).toMatchObject({ decision: "project", correctionReasonRequired: false });
     expect(compareResultOrdering({ ...input, explicitCorrection: false })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+  });
+
+  it.each([
+    ["final"],
+    ["awarded"],
+    ["canceled"],
+    ["void"],
+  ] as const)("requires correction provenance and binding permission for %s -> unresolved", (terminalStatus) => {
+    const current = state({
+      normalizedResult: result({ resultStatus: terminalStatus, outcomeType: terminalStatus === "awarded" ? "winner" : terminalStatus === "final" ? "draw" : "no_contest" }),
+      providerEffectiveAt: "2026-10-08T18:00:00Z",
+      semanticKey: `${terminalStatus}-current`,
+    });
+    const incoming = state({
+      normalizedResult: result({ resultStatus: "unresolved", outcomeType: "pending", correctionReason: "operator correction" }),
+      providerEffectiveAt: "2026-10-08T19:00:00Z",
+      semanticKey: `${terminalStatus}-unresolved`,
+      correctionProvenance: "synthetic-operator",
+    });
+
+    expect(compareResultOrdering({ current, incoming, explicitCorrection: true, bindingAllowsTrustedCorrections: true })).toMatchObject({ decision: "project" });
+    expect(compareResultOrdering({ current, incoming: { ...incoming, correctionProvenance: undefined }, explicitCorrection: true })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+    expect(compareResultOrdering({ current, incoming, explicitCorrection: true, bindingAllowsTrustedCorrections: false })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+  });
+
+  it("keeps terminal-to-provisional illegal even with correction provenance", () => {
+    expect(compareResultOrdering({
+      current: state({ normalizedResult: result({ resultStatus: "final", outcomeType: "draw" }), providerEffectiveAt: "2026-10-08T18:00:00Z" }),
+      incoming: state({ normalizedResult: result({ resultStatus: "provisional", outcomeType: "pending", correctionReason: "correction" }), providerEffectiveAt: "2026-10-08T19:00:00Z", correctionProvenance: "synthetic-operator", semanticKey: "provisional" }),
+      explicitCorrection: true,
+      bindingAllowsTrustedCorrections: true,
+    })).toMatchObject({ decision: "quarantine_regression" });
   });
 
   it("separately rejects an illegal contest lifecycle regression", () => {

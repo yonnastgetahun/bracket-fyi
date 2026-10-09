@@ -7,7 +7,7 @@ export type IdentityResolutionStatus = "reviewed" | "automatic" | "unresolved" |
 
 export type IdentityCandidate = Readonly<{
   canonicalId: string;
-  source: "reviewed" | "exact_alias" | "fuzzy_advisory";
+  source: "reviewed" | "automatic" | "exact_alias" | "fuzzy_advisory";
   score?: number;
   explanation: string;
 }>;
@@ -87,7 +87,7 @@ export function resolveIdentity(input: IdentityResolutionInput): IdentityDecisio
       canonicalId: input.canonicalRef.canonicalId,
       candidates: [{
         canonicalId: input.canonicalRef.canonicalId,
-        source: "reviewed",
+        source: "automatic",
         explanation: "Existing automatic provider mapping is reused",
       }],
       reason: "Existing automatic provider mapping is reused",

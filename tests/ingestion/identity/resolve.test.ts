@@ -33,7 +33,7 @@ describe("provider-neutral identity resolution", () => {
   it("reuses an existing automatic mapping", () => {
     expect(resolveIdentity(baseInput({
       canonicalRef: { status: "automatic", canonicalId: "canonical-1" },
-    }))).toMatchObject({ status: "automatic", canonicalId: "canonical-1" });
+    }))).toMatchObject({ status: "automatic", canonicalId: "canonical-1", candidates: [{ source: "automatic" }] });
   });
 
   it("accepts exactly one exact alias candidate as automatic", () => {

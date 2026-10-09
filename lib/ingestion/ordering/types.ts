@@ -19,6 +19,7 @@ export type ResultOrderingState = Readonly<{
   observedAt: string;
   receivedAt: string;
   providerRevision?: string;
+  correctionProvenance?: string;
   semanticKey: string;
 }>;
 
@@ -26,6 +27,7 @@ export type OrderingInput = Readonly<{
   current?: ResultOrderingState;
   incoming: ResultOrderingState;
   explicitCorrection: boolean;
+  bindingAllowsTrustedCorrections?: boolean;
 }>;
 
 export type OrderingOutcome = Readonly<{

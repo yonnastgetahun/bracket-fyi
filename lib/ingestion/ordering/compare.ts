@@ -32,6 +32,8 @@ const trustedTimestamp = (state: ResultOrderingState): number | undefined => {
 
 const observedTimestamp = (state: ResultOrderingState): number => Date.parse(state.observedAt);
 
+const nonBlank = (value: string | undefined): boolean => Boolean(value?.trim());
+
 const outcome = (
   decision: OrderingOutcome["decision"],
   reason: string,
@@ -63,7 +65,21 @@ export function compareResultOrdering(input: OrderingInput): OrderingOutcome {
   const currentTerminal = resultStatusIsTerminal(input.current.normalizedResult.resultStatus);
   const incomingTerminal = resultStatusIsTerminal(input.incoming.normalizedResult.resultStatus);
   if (currentTerminal && !incomingTerminal) {
-    return outcome("quarantine_regression", "A terminal result cannot regress to a non-terminal result");
+    if (input.incoming.normalizedResult.resultStatus !== "unresolved") {
+      return outcome("quarantine_regression", "A terminal result cannot regress to a provisional result");
+    }
+    if (
+      input.explicitCorrection
+      && nonBlank(input.incoming.normalizedResult.correctionReason)
+      && nonBlank(input.incoming.correctionProvenance)
+      && input.bindingAllowsTrustedCorrections === true
+      && currentTrusted !== undefined
+      && incomingTrusted !== undefined
+      && incomingTrusted > currentTrusted
+    ) {
+      return outcome("project", "Newer attributable unresolved correction is accepted");
+    }
+    return outcome("quarantine_terminal_conflict", "Terminal-to-unresolved correction lacks approved provenance", true);
   }
 
   if (currentTerminal && !incomingTrusted) {
@@ -72,8 +88,16 @@ export function compareResultOrdering(input: OrderingInput): OrderingOutcome {
 
   if (currentTerminal && incomingTerminal) {
     const correctionReason = input.incoming.normalizedResult.correctionReason;
-    if (!input.explicitCorrection || !correctionReason) {
-      return outcome("quarantine_terminal_conflict", "Changed terminal result requires an explicit correction", true);
+    if (
+      !input.explicitCorrection
+      || !nonBlank(correctionReason)
+      || !nonBlank(input.incoming.correctionProvenance)
+      || input.bindingAllowsTrustedCorrections !== true
+      || currentTrusted === undefined
+      || incomingTrusted === undefined
+      || incomingTrusted <= currentTrusted
+    ) {
+      return outcome("quarantine_terminal_conflict", "Changed terminal result requires approved correction provenance", true);
     }
     return outcome("project", "Newer explicit terminal correction is accepted");
   }

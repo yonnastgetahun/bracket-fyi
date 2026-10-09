@@ -32,4 +32,16 @@ describe("atomic canonical structural projection", () => {
       quarantineId: "quarantine-1",
     });
   });
+
+  it("returns an explicit typed skip for non-write bindings", async () => {
+    const repository = createStructuralRepository({
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ outcome: "skipped_shadow", canonical_id: null, quarantine_id: null }],
+        error: null,
+      }),
+    });
+    await expect(projectStructuralObservation({ observationId: "shadow-observation" }, repository)).resolves.toEqual({
+      kind: "skipped_shadow",
+    });
+  });
 });

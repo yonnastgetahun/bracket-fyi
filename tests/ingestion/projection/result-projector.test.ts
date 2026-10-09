@@ -41,4 +41,16 @@ describe("atomic result, audit, and operator-outbox projection", () => {
     await expect(projectProviderResult({ observationId: "observation-1" }, repository)).resolves.toMatchObject({ outcome: "duplicate", priorOutcome: "projected", contestResultId: "result-1", outboxId: "outbox-1" });
     await expect(projectProviderResult({ observationId: "observation-2" }, repository)).resolves.toEqual({ outcome: "quarantined", quarantineId: "quarantine-1" });
   });
+
+  it("returns an explicit typed skip for disabled or shadow bindings", async () => {
+    const repository = createResultRepository({
+      rpc: vi.fn().mockResolvedValue({
+        data: [{ outcome: "skipped_shadow", contest_result_id: null, result_version: null, audit_event_id: null, outbox_id: null, quarantine_id: null, prior_outcome: null }],
+        error: null,
+      }),
+    });
+    await expect(projectProviderResult({ observationId: "disabled-observation" }, repository)).resolves.toEqual({
+      outcome: "skipped_shadow",
+    });
+  });
 });

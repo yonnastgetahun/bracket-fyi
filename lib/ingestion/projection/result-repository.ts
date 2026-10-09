@@ -4,13 +4,13 @@ export type ResultProjectionCommand = Readonly<{
 }>;
 
 export type ResultProjectionOutcome = Readonly<{
-  outcome: "projected" | "duplicate" | "quarantined" | "ignored_stale" | "no_op";
+  outcome: "projected" | "duplicate" | "quarantined" | "ignored_stale" | "no_op" | "skipped_shadow";
   contestResultId?: string;
   resultVersion?: number;
   auditEventId?: string;
   outboxId?: string;
   quarantineId?: string;
-  priorOutcome?: "projected" | "duplicate" | "quarantined" | "ignored_stale" | "no_op";
+  priorOutcome?: "projected" | "duplicate" | "quarantined" | "ignored_stale" | "no_op" | "skipped_shadow";
 }>;
 
 type RpcClient = {

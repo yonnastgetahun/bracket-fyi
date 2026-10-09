@@ -41,6 +41,18 @@ describe("deterministic Slice 2B idempotency keys", () => {
     expect(first).toMatch(/^v1:result:[a-f0-9]{64}$/);
   });
 
+  it("uses the cross-runtime numeric canonicalization vector", () => {
+    expect(canonicalJson({
+      ordinary: 42,
+      large: 1e21,
+      tiny: 1e-7,
+      threshold: 0.000001,
+      negativeZero: -0,
+      safeMin: Number.MIN_SAFE_INTEGER,
+      safeMax: Number.MAX_SAFE_INTEGER,
+    })).toBe('{"large":1e+21,"negativeZero":0,"ordinary":42,"safeMax":9007199254740991,"safeMin":-9007199254740991,"threshold":0.000001,"tiny":1e-7}');
+  });
+
   it("uses opaque provider revisions as identity inputs, never sortable values", () => {
     const base = {
       bindingId: "binding-1",
