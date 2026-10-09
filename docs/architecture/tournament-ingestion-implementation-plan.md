@@ -133,9 +133,11 @@ Rehearse against a disposable local database. Current template IDs, picks, share
 
 ### Slice 2A: contracts and validation
 
-**Status:** Ready for bounded implementation; not started. The model-independent execution packet locks the public contracts, validation dependency, test matrix, file allowlist, evidence ceiling, and stop conditions.
+**Status:** Implemented and verified locally on 2026-10-08; not deployed. Slice 2A delivers provider-neutral contracts, runtime validation, strict event configuration parsing, failure taxonomy, and a common pull seam proven with synthetic sports and ceremony adapters. The evidence ceiling remains static/local and deterministic mocked-adapter verification.
 
 Execution packet: [`implementation/slice-2a-provider-contracts-execution-packet.md`](implementation/slice-2a-provider-contracts-execution-packet.md).
+
+Evidence: [`implementation/slice-2a-provider-contracts-evidence.md`](implementation/slice-2a-provider-contracts-evidence.md).
 
 **Proposed files:**
 
