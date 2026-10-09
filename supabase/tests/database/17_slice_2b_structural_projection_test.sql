@@ -1,6 +1,6 @@
 begin;
 
-select plan(20);
+select plan(21);
 
 select has_table('public', 'canonical_structural_projection_state', 'structural projection records observation provenance');
 select is((select relrowsecurity from pg_class where oid = 'public.canonical_structural_projection_state'::regclass), true, 'structural provenance is protected by RLS');
@@ -16,7 +16,7 @@ insert into competitors (id, competitor_key, kind, canonical_name) values
 insert into event_entries (id,event_edition_id,competitor_id,role) values
   ('97000000-0000-4000-8000-000000000007','97000000-0000-4000-8000-000000000004','97000000-0000-4000-8000-000000000005','team'),
   ('97000000-0000-4000-8000-000000000008','97000000-0000-4000-8000-000000000004','97000000-0000-4000-8000-000000000006','team');
-insert into provider_bindings (id,provider_id,event_edition_id,binding_key,mode,health_status) values ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','structural-primary','shadow','healthy');
+insert into provider_bindings (id,provider_id,event_edition_id,binding_key,mode,health_status) values ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','structural-primary','write','healthy');
 insert into ingestion_runs (id,binding_id,provider_id,event_edition_id,claim_key,trigger_kind,claimed_by,lease_expires_at) values ('97000000-0000-4000-8000-000000000010','97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','structural-run','replay','structural-test',now()+interval '10 minutes');
 
 insert into provider_entity_refs (binding_id,provider_id,event_edition_id,entity_kind,external_id,canonical_id,resolution_status,reviewed_by,reviewed_at) values
@@ -55,6 +55,7 @@ select 'stage-1', observation_id from record_provider_observation(
 );
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='stage-1'))),'projected','parent stage projects after the child quarantine');
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='round-before-stage'))),'projected','replaying a quarantined child projects after its dependency arrives');
+select is((select status from ingestion_quarantine where observation_id=(select observation_id from slice_2b_structural_observations where name='round-before-stage') and issue_code='mapping_missing'),'resolved','successful dependency replay resolves the prior blocking quarantine');
 
 insert into slice_2b_structural_observations
 select 'contest-1', observation_id from record_provider_observation(

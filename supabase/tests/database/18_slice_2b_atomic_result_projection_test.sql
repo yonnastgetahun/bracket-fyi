@@ -50,7 +50,7 @@ values
   ('98000000-0000-4000-8000-000000000007', '98000000-0000-4000-8000-000000000004', '98000000-0000-4000-8000-000000000010', 'home', 1),
   ('98000000-0000-4000-8000-000000000007', '98000000-0000-4000-8000-000000000004', '98000000-0000-4000-8000-000000000011', 'away', 2);
 insert into provider_bindings (id, provider_id, event_edition_id, binding_key, mode, health_status, adapter_config)
-values ('98000000-0000-4000-8000-000000000012', '98000000-0000-4000-8000-000000000001', '98000000-0000-4000-8000-000000000004', 'result-primary', 'shadow', 'healthy', '{"allowTrustedCorrections":true}'::jsonb);
+values ('98000000-0000-4000-8000-000000000012', '98000000-0000-4000-8000-000000000001', '98000000-0000-4000-8000-000000000004', 'result-primary', 'write', 'healthy', '{"allowTrustedCorrections":true}'::jsonb);
 insert into ingestion_runs (id, binding_id, provider_id, event_edition_id, claim_key, trigger_kind, claimed_by, lease_expires_at)
 values ('98000000-0000-4000-8000-000000000013', '98000000-0000-4000-8000-000000000012', '98000000-0000-4000-8000-000000000001', '98000000-0000-4000-8000-000000000004', 'result-run', 'replay', 'result-test', now() + interval '10 minutes');
 insert into provider_entity_refs (binding_id, provider_id, event_edition_id, entity_kind, external_id, canonical_id, resolution_status, reviewed_by, reviewed_at)

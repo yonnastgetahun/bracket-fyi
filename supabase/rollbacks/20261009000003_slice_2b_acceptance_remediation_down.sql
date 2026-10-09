@@ -1,0 +1,21 @@
+-- Slice 2B-R rollback notes.
+--
+-- This migration replaces the executable definitions of the observation,
+-- structural-projection, and result-projection functions. It is intentionally
+-- forward-only in the repository: an operational rollback must restore the
+-- prior function bodies from migrations 20261009000000–20261009000002 in a
+-- reviewed maintenance migration before removing the remediation objects.
+--
+-- The safe forward-repair order is:
+--   1. stop local projection callers;
+--   2. restore the prior immutable evidence and projector function bodies;
+--   3. remove canonical_structural_projection_scope after dependent rows are
+--      archived or reconciled;
+--   4. restore the original conflict uniqueness constraint only after any
+--      distinct normalized-snapshot conflicts are dispositioned;
+--   5. re-run the complete local database suite.
+--
+-- No automatic destructive down migration is provided because dropping the
+-- remediation function definitions without restoring their prior bodies would
+-- remove the authoritative service boundary. This file is the rollback
+-- documentation required for the forward-only migration.
