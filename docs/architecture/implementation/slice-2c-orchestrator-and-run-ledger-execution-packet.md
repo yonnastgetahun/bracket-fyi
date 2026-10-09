@@ -4,7 +4,7 @@
 
 **Status:** Planning packet drafted; awaiting architecture approval; implementation not started.
 
-**Baseline:** `60735ef334086a30818fdff3140ae56587c7810` (`docs: define slice 2c execution plan`)
+**Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
 **Authorization:** This document authorizes planning only. It authorizes no application code, migration,
 database reset, provider call, credential access, deployment, hosted change, notification delivery, or
@@ -27,8 +27,9 @@ The implementation must follow these rules:
 - One run is owned by one lease token at a time. A crashed or expired worker cannot renew or finish it.
 - At-least-once delivery is intentional. Repeated pages and runs rely on Slice 2B observation and projection
   idempotency; the orchestrator never claims exactly-once provider delivery.
-- A cursor or ETag validator advances only after the current page's immutable ledger row, evidence, every
-  normalized observation, counters, and compare-and-set checkpoint have committed in one transaction.
+- A cursor or ETag validator advances only after each observation has reached a terminal disposition through
+  the independent idempotent Slice 2B evidence/projection RPCs, followed by the page ledger, counters,
+  cursor/ETag, and compare-and-set checkpoint committing in one page-commit transaction.
 - Disabled bindings do not fetch or project. Shadow bindings may fetch and retain sanitized evidence but
   never mutate canonical/result/audit/outbox state. Write bindings may project through the accepted
   service-role wrappers.
@@ -256,7 +257,10 @@ No provider adapter, scheduler, UI, legacy result table, hosted migration, or bu
 - Add `ingestion_runs.claim_request_key text`, `claim_generation bigint`, `lease_token text`,
   `retry_index integer not null default 0`, `retry_of_run_id uuid`, `next_retry_at timestamptz`, and
   `skipped_count integer not null default 0`, with bounded/nonnegative checks and indexes on
-  `(binding_id, claim_request_key)` and `(binding_id, next_retry_at)`.
+  `(binding_id, next_retry_at)`. Add `unique (claim_request_key)` for the normalized stored key. Automated
+  keys are globally unique claim-operation identities; manual keys are normalized with their binding ID
+  before storage. Add a unique partial index on `retry_of_run_id` so one terminal attempt can create at most
+  one retry child, and indexes supporting retry priority and due selection.
 - Add immutable `ingestion_page_ledger` with: `id`, `binding_id`, `run_id`, deterministic `page_key`,
   `expected_checkpoint_generation`, `expected_cursor`, `expected_etag`, `next_cursor`, `response_etag`,
   `fetched_delta`, `normalized_delta`, `projected_delta`, `unchanged_delta`, `quarantined_delta`,
@@ -402,17 +406,32 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 
 **Claim identity and lifecycle:**
 
-- The caller supplies a stable `p_claim_request_key` for one scheduler tick or operator request. SQL locks a
-  due binding with `FOR UPDATE SKIP LOCKED`, increments its monotonic `claim_generation`, and creates a
-  claim key `v1:<trigger_kind>:<binding_uuid>:g<claim_generation>`. The due-time is scheduling input only,
-  never identity.
-- Exact `(binding_id, claim_request_key)` replay returns the same run. The worker that owns the active lease
-  receives its token; a competing worker receives the row with `lease_acquired = false` and a null token.
-  It cannot renew, start, commit, or finish that run.
+- The caller supplies a stable request key for exactly one claim operation. Automated scheduler and retry keys
+  are globally unique claim-operation identities, not keys for a multi-binding dispatcher tick; a dispatcher
+  must generate a distinct key for every claim it requests. Manual/operator keys remain binding-scoped and are
+  expanded with the binding ID before storage. SQL first resolves an exact stored request-key replay, before
+  selecting any other due binding. Only when no replay exists does it lock a due binding with `FOR UPDATE
+  SKIP LOCKED`, increment its monotonic `claim_generation`, and create a claim key
+  `v1:<trigger_kind>:<binding_uuid>:g<claim_generation>`. Due time is scheduling input only, never identity.
+- Exact request-key replay returns the same run. The worker that owns the active lease receives its token; a
+  competing worker receives the row with `lease_acquired = false` and a null token. It cannot renew, start,
+  commit, or finish that run. SQL enforces nonblank global uniqueness for stored automated keys.
+- A retry-eligible terminal attempt is a `failed` or `rate_limited` run with `next_retry_at <= p_now`,
+  `retry_index < 3`, and no existing child identified by the unique `retry_of_run_id` index. Retry candidates
+  have priority over ordinary scheduled polls, ordered by `next_retry_at`, then binding UUID, then parent run
+  ID. A retry claim creates `trigger_kind = retry`, `retry_of_run_id = parent.run_id`, and
+  `retry_index = parent.retry_index + 1`; a concurrent loser returns that existing child without a lease token.
+  One parent can therefore create at most one child, and the chain has at most four total attempts.
+- `claim_due_ingestion_run` evaluates the union of eligible retry parents and ordinary due bindings in one
+  locked selection. Its ordering is retry priority first, then retry time, then ordinary `next_poll_at`, then
+  binding UUID. A binding with an eligible retry is excluded from the ordinary-poll branch, so a scheduled
+  poll cannot consume the one-active-run slot ahead of its retry.
 - Reclamation marks the old `claimed`/`running` run terminal with system class `lease_expired`, preserves its
-  cursor, records bounded retry state when allowed, and releases the one-active-run index. A later claim
-  increments `claim_generation`; its claim key is therefore distinct even when the due time is unchanged.
-  A retry attempt uses `retry_of_run_id` and `retry_index + 1`; it never reuses the old claim key.
+  cursor, records bounded retry state when allowed, and releases the one-active-run index. A later retry
+  claim increments `claim_generation`; its claim key is distinct even when the due time is unchanged. If a
+  retry is scheduled, `provider_bindings.next_poll_at` is set no later than `next_retry_at`; ordinary poll
+  selection is suppressed while an eligible retry is pending. After the retry succeeds or exhausts, the finish
+  boundary deterministically schedules the next ordinary poll.
 - A manual request key is binding-scoped. Replaying the same operator request returns the prior run; a new
   operator request must use a new key and creates a new claim generation. Manual fetch is rejected for a
   disabled binding; replaying stored evidence remains a separate Slice 2B operation.
@@ -429,29 +448,34 @@ not granted directly. Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conf
 
 **Page commit semantics:**
 
-- The function locks the run and binding, verifies the lease token, expected checkpoint generation, exact
-  expected cursor, and exact expected ETag, then recomputes and verifies `page_key` and the disposition
-  fingerprint.
-- If `(binding_id,page_key)` already exists and every submitted field is identical, return `replayed` with
-  the original ledger ID and checkpoint; do not increment counters or update the checkpoint. This is the safe
-  response-loss retry path.
-- If the key exists with a changed cursor, ETag, delta, or disposition, return `page_conflict` and mutate
-  nothing. If the expected generation/CAS precondition is stale, return `checkpoint_conflict` and mutate
-  nothing. Concurrent callers can therefore produce one ledger row and one counter/checkpoint effect.
+- The function first locks and validates the run's active lease, then recomputes `page_key` from the submitted
+  expected checkpoint and verifies the disposition fingerprint. It looks up `(binding_id,page_key)` before
+  applying the current binding checkpoint CAS.
+- If the ledger row already exists and every submitted field is identical, return `replayed` with the original
+  ledger ID, counters, and checkpoint. Do not apply the current CAS, increment counters, or update the
+  checkpoint; this remains replayable after the first commit advanced the binding generation.
+- If the same key exists with changed cursor, ETag, delta, or disposition, return `page_conflict` and mutate
+  nothing. Only when no ledger row exists does the function validate the current checkpoint generation, exact
+  cursor, and exact ETag. A stale CAS then returns `checkpoint_conflict` and mutates nothing. Concurrent
+  callers can therefore produce one ledger row and one counter/checkpoint effect.
 - If no ledger row exists and the CAS matches, insert the immutable page row and update run counters,
   `provider_bindings.provider_cursor`, `provider_bindings.provider_etag`, and `checkpoint_generation` in
   the same transaction. `normalized_delta` must equal projected + unchanged + quarantined + skipped + failed.
 - A lost lease or failed CAS aborts without cursor/ETag advancement. The immutable ledger remains the source
   of the prior committed page effect.
 
-**TDD/database matrix:** concurrent same-page commit; response-loss exact replay; same key with changed
-cursor, ETag, counts, or disposition; stale expected generation; generation increment; one ledger row and
-one counter effect; claim-call replay; competing worker receives no token; reclamation creates distinct
-claim identity; old worker cannot renew/start/commit/finish; claimed-to-running transition; lease min/default/
-max and cadence; no-sleep retry persistence; disabled/shadow/write claims; `has_table_privilege` and
-`has_function_privilege` vectors; direct `SET ROLE service_role` INSERT/UPDATE/DELETE/TRUNCATE denial for
-bindings, runs, and page ledger; wrapper claim/start/page/finish success; anonymous/authenticated/helper
-execution denial; rollback on every induced partial failure.
+**TDD/database matrix:** concurrent same-page commit; response-loss sequence of first commit advancing the
+binding generation followed by identical replay returning `replayed` before CAS; same key with changed
+cursor, ETag, counts, or disposition; stale expected generation for a new page; generation increment; one
+ledger row and one counter effect; exact automated request replay before due-binding selection; distinct
+dispatcher key per claim; competing worker receives no token; retry priority over ordinary polls; retry parent
+with `next_retry_at <= now`; one retry child under concurrent claims; exact retry replay; retry lineage capped
+at four total attempts; `next_poll_at` interaction; reclamation creates distinct claim identity; old worker
+cannot renew/start/commit/finish; claimed-to-running transition; lease min/default/max and cadence; no-sleep
+retry persistence; disabled/shadow/write claims; `has_table_privilege` and `has_function_privilege` vectors;
+direct `SET ROLE service_role` INSERT/UPDATE/DELETE/TRUNCATE denial for bindings, runs, and page ledger;
+wrapper claim/start/page/finish success; anonymous/authenticated/helper execution denial; rollback on every
+induced partial failure.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/run-ledger-repository.test.ts`; `npx tsc --noEmit`;
 `npm run lint`; `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`; `SUPABASE_TELEMETRY_DISABLED=1 supabase test db supabase/tests/database/23_slice_2c_run_ledger_test.sql`;
@@ -465,10 +489,13 @@ ledger, and nullable columns after stopping local workers. After hosted runs exi
 all runs/page ledgers/observations, and use a forward repair; never delete, rewrite, or reuse a committed
 page key.
 
-**Stop conditions:** a claim uses due time as its sole identity; a competing worker receives a lease token;
-an expired worker can renew or finish; retry sleeps while holding a lease; a response-loss replay increments
-counters; page commit lacks an expected-checkpoint CAS; direct service-role table mutation remains possible;
-a helper is directly executable; or rollback requires deleting evidence.
+**Stop conditions:** a claim uses due time as its sole identity; exact request replay is checked after due-row
+selection; automated claim keys are reusable across a dispatcher loop; a retry-eligible terminal attempt is
+not discoverable or can create multiple children; a competing worker receives a lease token; an expired worker
+can renew or finish; retry sleeps while holding a lease; a response-loss replay increments counters or returns
+checkpoint conflict after generation advancement; page commit lacks an expected-checkpoint CAS; direct
+service-role table mutation remains possible; a helper is directly executable; or rollback requires deleting
+evidence.
 
 **Next approval gate:** accept claim/retry/page-ledger concurrency and RPC-only grant evidence before
 implementing the orchestrator.
@@ -549,8 +576,9 @@ manual result replay remains outside this fetch path.
 **TDD sequence and focused matrix:** fake registry with structurally different sports and ceremony adapters;
 credential reference resolution without serializing value; disabled/shadow/write; budget denial; exact
 observation replay; structural/result dispatch; adapter error classification; retryable and terminal errors;
-sanitized run error; lease loss; no provider-name conditional; no canonical writes in shadow; rollback when a
-later observation fails.
+sanitized run error; lease loss; no provider-name conditional; no canonical writes in shadow; a later
+observation failure retains earlier immutable evidence/projection effects, does not advance the page
+checkpoint, and safely replays those effects without duplicate canonical mutations.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/observation-dispatch.test.ts`;
 `npx tsc --noEmit`; `npm run lint`; `git diff --check`. Database behavior remains proven by sub-slice 2C.2
@@ -560,8 +588,9 @@ and the final synthetic acceptance lane.
 provider, credential, or hosted evidence.
 
 **Rollback/forward repair:** Revert the orchestrator commit while bindings remain disabled. Existing
-observations and run rows remain immutable evidence; any later hosted defect is repaired through binding
-disablement and a forward migration.
+observations, projections, and run rows remain immutable evidence; a later-observation failure does not
+roll back earlier Slice 2B RPC commits, and page checkpoint advancement remains the only withheld effect.
+Any later hosted defect is repaired through binding disablement and a forward migration.
 
 **Stop conditions:** provider HTTP/client code appears; a credential value is serialized; shadow calls a
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
@@ -627,8 +656,10 @@ export const MAX_PAGES_PER_RUN = 25;
 - ETags are sent on the next request and stored separately from the JSON cursor. An ETag change does not
   itself project data; observations and Slice 2B ordering decide projection. No Last-Modified field or
   conditional-request behavior is introduced by this slice.
-- Cursor and ETag writes occur in the same transaction as the page disposition counters. A crash before the
-  commit repeats the page safely; a crash after commit resumes from the committed checkpoint.
+- Slice 2B evidence and projection RPCs commit independently and idempotently before page commit. The page
+  ledger, disposition counters, cursor/ETag, and checkpoint CAS commit atomically only after all observations
+  have terminal dispositions. A failure on a later observation retains earlier immutable evidence/projection
+  effects, does not advance the page checkpoint, and safely replays those effects on the next attempt.
 
 **TDD sequence and focused matrix:** first page/no cursor; multi-page progression; ETag unchanged page;
 ETag changed page; empty unchanged page; partial observations with quarantine; transient failure before
@@ -710,16 +741,17 @@ create table provider_rate_budget_reservations (
 );
 
 reserve_provider_budget(
-  p_provider_id uuid,
-  p_scope_key text,
+  p_run_id uuid,
+  p_lease_token text,
   p_attempt_key text,
   p_now timestamptz,
   p_cost integer
 ) returns table (outcome text, reservation_id uuid, remaining_count integer, retry_at timestamptz)
 
-record_provider_rate_headers(
-  p_provider_id uuid,
-  p_scope_key text,
+-- Private helper called only by record_ingestion_response; never granted directly.
+record_provider_rate_headers_for_run(
+  p_run_id uuid,
+  p_lease_token text,
   p_observed_limit_count integer,
   p_observed_remaining_count integer,
   p_observed_reset_at timestamptz,
@@ -727,18 +759,24 @@ record_provider_rate_headers(
 ) returns table (accepted boolean, available_count integer, trusted_reset_at timestamptz)
 ```
 
-The initial scope key is exactly `provider`. Missing configuration fails closed with
-`configuration_missing`. Each provider call, page request, retry request, and 429/Retry-After attempt
-reserves one unit before the request; the reservation key is
+The initial scope is derived inside the function and is exactly `provider`; callers cannot supply a provider
+ID or scope. Missing configuration fails closed with `configuration_missing`. Each provider call, page
+request, retry request, and 429/Retry-After attempt reserves one unit before the request; the reservation key is
 `v1:request:<run_id>:<retry_index>:<page_key>` and is unique across concurrent replays. An exact reservation
 replay returns the original reservation and remaining count without decrementing again. A changed cost or
-scope for the same attempt key is a conflict.
+scope for the same attempt key is a conflict. The reservation RPC takes the run ID and lease token, locks the
+authoritative run and binding in the fixed order, derives `provider_id` and the fixed provider scope, verifies
+the active lease, then locks the budget row.
 
 `configured_limit_count` is the hard ceiling and is never raised by a provider header. Headers can only
 reduce `available_count` (subject to nonnegative bounds) and update observed metadata. Header observations
-whose timestamp is not newer than the stored observation are ignored. A trusted, locally configured
-`trusted_reset_at` boundary can restore `available_count` to the configured ceiling; an untrusted reset
-header cannot. Reset and header handling are performed while locking the budget row.
+whose timestamp is not newer than the stored observation are ignored. Under the budget-row lock, if
+`now >= trusted_reset_at`, compute
+`elapsed_windows = floor((now - trusted_reset_at) / configured_window) + 1`, restore availability to the
+configured ceiling once, and advance `trusted_reset_at` by `elapsed_windows * configured_window` until it is
+strictly after `now`. A trusted reset header cannot advance this boundary; only local configured policy does.
+An exact reservation replay returns its stored result before reset replenishment, so replay cannot replenish
+twice. Reset and header handling are performed while locking the budget row.
 
 Both functions and the run-response RPC from 2C.2 are `SECURITY DEFINER`, schema-qualified, fixed-search-
 path, and service-role-only. RLS is enabled on both tables. `PUBLIC`, `anon`, `authenticated`, and
@@ -747,9 +785,12 @@ path, and service-role-only. RLS is enabled on both tables. `PUBLIC`, `anon`, `a
 `SET ROLE service_role` to prove direct mutation denial and wrapper success, including the budget and
 reservation tables.
 
-`record_ingestion_response(...)` from 2C.2 persists sanitized HTTP status, observed rate headers, and
-`Retry-After` timing into the existing run ledger through the lease-checked RPC. No adapter or orchestrator
-code may write `ingestion_runs` or the budget tables directly.
+`record_ingestion_response(...)` from 2C.2 is the only public response boundary. In one transaction it locks
+the authoritative run/binding, verifies the lease, persists sanitized HTTP status and `Retry-After` timing in
+the existing run ledger, and invokes the private `record_provider_rate_headers_for_run` helper for the same
+response. If either the run-ledger update or accepted budget-header update fails, both roll back; no partial
+response metadata or budget state can diverge. No adapter or orchestrator code may write `ingestion_runs` or
+the budget tables directly, and the private header helper has no direct grant.
 
 **Run count and status invariants:**
 
@@ -796,13 +837,16 @@ code may write `ingestion_runs` or the budget tables directly.
 `finish_ingestion_run` from 2C.2 is the only run state-transition writer. The 2C.5 migration may replace
 its forward function body or add a private helper, but it may not create a second competing finish path.
 
-**TDD/database matrix:** configured-ceiling reservation available/exhausted/reset; missing configuration;
-concurrent reservation and exact reservation replay; changed attempt-key conflict; headers above the ceiling;
-stale and out-of-order headers; trusted reset; 429 Retry-After; reservation before every page/retry; count
-conservation for write/shadow/quarantine; transport failure with zero normalized items; success/empty/partial/
-failure/rate-limited terminal statuses; authentication disablement; invalid-response terminality;
-degraded/stale/healthy transitions; stale recovery; bounded provider and system error fields; direct mutation
-denial for both tables; wrapper success; rollback after budget or health update failure.
+**TDD/database matrix:** run/lease-derived provider and fixed-scope reservation; configured-ceiling
+reservation available/exhausted/reset; missing configuration; concurrent reservation and exact reservation
+replay; changed attempt-key conflict; headers above the ceiling; stale and out-of-order headers; reset exactly
+at the boundary; multi-window reset advancement; concurrent reset; reset replay without double replenishment;
+atomic response metadata plus budget-header update and rollback; 429 Retry-After; reservation before every
+page/retry; count conservation for write/shadow/quarantine; transport failure with zero normalized items;
+success/empty/partial/failure/rate-limited terminal statuses; authentication disablement;
+invalid-response terminality; degraded/stale/healthy transitions; stale recovery; bounded provider and
+system error fields; direct mutation denial for both tables; wrapper success; no direct private-helper
+execution; rollback after budget or health update failure.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/accounting.test.ts tests/ingestion/orchestrator/health.test.ts tests/ingestion/rate-limit/repository.test.ts`;
 `npx tsc --noEmit`; `npm run lint`; `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local`;
@@ -816,11 +860,13 @@ No real quota, provider, hosted, or deployment evidence.
 through the reviewed down note. After hosted data, stop claims, preserve observed headers, reservations, and
 run history, and forward-repair budget/health state; never reset a provider budget by deleting evidence.
 
-**Stop conditions:** configured and observed budgets are conflated; a header raises the hard ceiling; unknown
-budget fails open; reservation is not idempotent; a request/page/retry bypasses reservation; count meanings
-overlap; a 429 is treated as an item failure; `invalid_response` retries without an approved taxonomy change;
-stale state clears without fresh accepted data; authentication failure continues automatic calls; secrets
-enter error fields; direct table writes bypass the RPC; or browser roles can mutate budget state.
+**Stop conditions:** configured and observed budgets are conflated; a header raises the hard ceiling; provider
+identity or scope is caller-supplied; response metadata and accepted header state can diverge after partial
+failure; unknown budget fails open; reservation is not idempotent; a request/page/retry bypasses reservation;
+trusted reset replenishes twice or does not advance by whole windows; count meanings overlap; a 429 is treated
+as an item failure; `invalid_response` retries without an approved taxonomy change; stale state clears without
+fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
+writes bypass the RPC; or browser roles can mutate budget state.
 
 **Next approval gate:** accept accounting, budget, health, and grant evidence before complete synthetic replay.
 
@@ -892,28 +938,30 @@ claim due binding with a monotonic generation and lease
   -> renew before every provider call/page when below the safety threshold
   -> reserve provider-wide budget for this request/page/retry
   -> pull one page under lease
-  -> record sanitized response headers through the response RPC
-  -> evidence insertion/replay boundary
-  -> identity/order/structural-or-result projection boundary
+  -> record sanitized response headers and accepted budget state atomically through the response RPC
+  -> independent evidence insertion/replay RPC
+  -> independent identity/order/structural-or-result projection RPC
   -> commit immutable page ledger + cursor/ETag + counters by CAS atomically
   -> finish the attempt, persist retry state, or claim the next retry later
   -> update health through the finish boundary
 ```
 
-The binding row is the lock root for claims, budget state is the lock root for provider-wide reservation,
-and the run row is the lock root for lease renewal/finish/page commit. Claim locks are acquired in binding
-UUID order; budget locks are acquired by `(provider_id, scope_key)`; run locks are acquired by `run_id`.
-The page ledger is inserted while holding the run lock and its unique page key. No transaction locks a
-provider observation or canonical contest before its binding/run lock is established. This fixed order
-prevents a scheduler worker and an in-flight page worker from deadlocking.
+The binding row is the lock root for claims and run-scoped operations. Run-scoped RPCs acquire locks in the
+fixed order binding UUID, run ID, then budget `(derived provider ID, fixed scope)`; claims acquire binding
+locks in UUID order. The page ledger is inserted while holding the binding/run locks and its unique page key.
+No transaction locks a provider observation or canonical contest before its binding/run lock is established.
+This fixed order prevents a scheduler worker, response recorder, budget reservation, and page worker from
+deadlocking.
 
-A page is at-least-once: evidence and projection may be replayed after a crash, but Slice 2B deterministic
-keys and SQL uniqueness return prior outcomes. The immutable page key and ledger return the prior page outcome
-without incrementing counters on response-loss replay. Cursor/ETag checkpoint and page counters commit only
-after all page observations reach a terminal disposition and the expected checkpoint still matches. A lease
-loss aborts the current transaction; a later worker reclaims the run with a new claim generation and repeats
-from the last committed checkpoint. Backoff and `Retry-After` sleep occur after the attempt is finished, not
-while a lease is held.
+A page is at-least-once: Slice 2B evidence and projection may commit independently and may be replayed after a
+crash, but deterministic keys and SQL uniqueness return prior outcomes. A failure on a later observation
+retains earlier immutable evidence/projection effects, does not advance the page checkpoint, and safely
+replays those effects. The immutable page key and ledger return the prior page outcome without incrementing
+counters on response-loss replay. Cursor/ETag checkpoint and page counters commit atomically only after all
+page observations reach a terminal disposition and the expected checkpoint still matches. A lease loss aborts
+the current page transaction; a later worker reclaims the run with a new claim generation and repeats from the
+last committed checkpoint. Backoff and `Retry-After` sleep occur after the attempt is finished, not while a
+lease is held.
 
 No notification is delivered by Slice 2C. Slice 2B may create an operator-audience outbox intent for an
 accepted result, but the outbox worker and delivery semantics remain outside this slice.
@@ -958,23 +1006,27 @@ The packet makes the following bounded recommendations for review:
 1. **Lease model:** SQL-generated opaque lease token, one active run per binding, minimum/default/maximum
    lease durations of 60/300/900 seconds, renewal at least every `min(lease/3, 60)` seconds and before a
    call/page commit inside the 60-second safety threshold, and no cursor advancement after lease loss.
-2. **Claim identity:** a monotonic binding claim generation forms the claim key; an exact binding-scoped
-   request-key replay returns the prior run and token only to its owner, a competing worker receives no token,
-   and reclamation creates a distinct generation. Manual replay uses a new request key.
+2. **Claim identity:** a monotonic binding claim generation forms the claim key; automated and retry request
+   keys identify one global claim operation and are unique in SQL, while manual keys are binding-scoped. Exact
+   request replay resolves before selecting another binding, returns the prior run/token only to its owner,
+   and a competing worker receives no token. Manual replay uses a new request key.
 3. **Attempt lifecycle:** `claimed -> running -> terminal` requires `start_ingestion_run`; expired attempts
-   finish as `lease_expired`, cannot renew/commit/finish afterward, and a later claim creates the bounded next
-   retry attempt.
-4. **At-least-once delivery:** repeat pages after crash; rely on the immutable page ledger plus accepted Slice
-   2B idempotency and return prior outcomes without a second counter/checkpoint effect.
-5. **Checkpoint rule:** advance only after every emitted observation has a terminal disposition and the page
-   ledger CAS matches the expected generation/cursor/ETag; 25-page maximum per run; repeated cursor is terminal
-   `invalid_response`.
-6. **Budget rule:** provider-wide scope, configured hard ceiling separate from observed headers, one idempotent
-   reservation per request/page/retry, fail closed when unknown, stale headers ignored, and only a trusted reset
-   boundary can restore allowance.
+   finish as `lease_expired`, cannot renew/commit/finish afterward, and a later claim creates one bounded
+   retry child with `trigger_kind = retry`, parent ID, and incremented retry index.
+4. **At-least-once delivery:** repeat pages after crash; evidence/projection RPCs commit independently, while
+   the immutable page ledger plus accepted Slice 2B idempotency return prior outcomes without a second
+   counter/checkpoint effect.
+5. **Checkpoint rule:** look up an existing page ledger row before current-checkpoint CAS; identical replay
+   returns `replayed` even after generation advancement, changed content quarantines as `page_conflict`, and a
+   new page advances only after every emitted observation has a terminal disposition and CAS matches. Maximum
+   25 pages per run; repeated cursor is terminal `invalid_response`.
+6. **Budget rule:** provider-wide scope is derived from the leased run/binding, configured hard ceiling is
+   separate from observed headers, one lease-scoped idempotent reservation occurs per request/page/retry,
+   unknown configuration fails closed, stale headers are ignored, and a trusted reset advances by whole windows
+   under lock without double replenishment.
 7. **Retry rule:** three retries after the initial attempt, 30-second exponential base, 15-minute cap,
-   deterministic full jitter, persisted next retry/index, no lease held during sleep, and no automatic retries
-   for auth/configuration or `invalid_response` failures.
+   deterministic full jitter, persisted next retry/index discovered before ordinary polls, no lease held during
+   sleep, and no automatic retries for auth/configuration or `invalid_response` failures.
 8. **Mode rule:** disabled does not fetch, shadow retains evidence and may still yield a successful run while
    skipping canonical projection, and write invokes Slice 2B wrappers. No mode automatically enables another.
 9. **Health/accounting rule:** shadow skip is not by itself `partial`; `partial` means continuation, quarantine,
@@ -986,7 +1038,8 @@ The packet makes the following bounded recommendations for review:
     lease, budget, retry, and idempotency policy; it cannot fetch while disabled.
 12. **Schema/RPC boundary:** forward migration `20261010000000` owns claim/lease/attempt/page-ledger/checkpoint
     persistence and `20261010000001` owns budget/health persistence; all writes are wrapper-owned, service-role-
-    only SQL boundaries with direct table mutation denied.
+    only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
+    together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 
 Architecture approval must explicitly accept or reject these constants and boundaries before 2C.1 begins.
 Rejection of any item returns this packet for revision; implementation must not silently choose a variant.
@@ -1016,8 +1069,8 @@ For this planning change, run only:
 
 ```sh
 git diff --check
-git diff --check 60735ef334086a30818fdff3140ae56587c7810...HEAD
-git diff --name-only 60735ef334086a30818fdff3140ae56587c7810...HEAD
+git diff --check 60735ef334086a30818addff3140ae56587c7810...HEAD
+git diff --name-only 60735ef334086a30818addff3140ae56587c7810...HEAD
 ```
 
 Review the packet against:
