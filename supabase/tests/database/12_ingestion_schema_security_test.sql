@@ -1,6 +1,6 @@
 begin;
 
-select plan(8);
+select plan(35);
 
 select is(
   (
@@ -70,78 +70,37 @@ select is(
   'public client roles receive no direct grants on Slice 1B operator tables'
 );
 
-select is(
-  (
-    select count(*)
-    from (
-      values
-        ('provider_bindings'),
-        ('provider_entity_refs'),
-        ('ingestion_runs'),
-        ('provider_observations'),
-        ('ingestion_quarantine'),
-        ('contest_results'),
-        ('result_audit_events'),
-        ('notification_outbox'),
-        ('notification_attempts'),
-        ('league_completion_holds')
-    ) as target(table_name)
-    where has_table_privilege(
-      'service_role',
-      format('public.%I', table_name),
-      'select'
-    )
-      and has_table_privilege(
-        'service_role',
-        format('public.%I', table_name),
-        'insert'
-      )
-  ),
-  10::bigint,
-  'the server-side service role can read and insert every Slice 1B record type'
-);
+select ok(has_table_privilege('service_role', 'public.provider_bindings', 'select'), 'service_role can read provider bindings');
+select ok(not has_table_privilege('service_role', 'public.provider_bindings', 'insert'), 'RPC-only boundary denies direct provider-binding inserts');
+select ok(not has_table_privilege('service_role', 'public.provider_bindings', 'update'), 'RPC-only boundary denies direct provider-binding updates');
+select ok(has_table_privilege('service_role', 'public.ingestion_runs', 'select'), 'service_role can read ingestion runs');
+select ok(not has_table_privilege('service_role', 'public.ingestion_runs', 'insert'), 'RPC-only boundary denies direct ingestion-run inserts');
+select ok(not has_table_privilege('service_role', 'public.ingestion_runs', 'update'), 'RPC-only boundary denies direct ingestion-run updates');
 
-select is(
-  (
-    select count(*)
-    from (
-      values
-        ('provider_bindings'),
-        ('provider_entity_refs'),
-        ('ingestion_runs'),
-        ('ingestion_quarantine'),
-        ('notification_outbox'),
-        ('notification_attempts'),
-        ('league_completion_holds')
-    ) as target(table_name)
-    where has_table_privilege(
-      'service_role',
-      format('public.%I', table_name),
-      'update'
-    )
-  ),
-  7::bigint,
-  'the service role can update only mutable operational tables'
-);
-
-select is(
-  (
-    select count(*)
-    from (
-      values
-        ('provider_observations'),
-        ('contest_results'),
-        ('result_audit_events')
-    ) as target(table_name)
-    where has_table_privilege(
-      'service_role',
-      format('public.%I', table_name),
-      'update'
-    )
-  ),
-  0::bigint,
-  'the service role has no update grant on immutable evidence ledgers'
-);
+select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'select'), 'service_role can read provider entity references');
+select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'insert'), 'provider entity reference inserts retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'update'), 'provider entity reference updates retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.provider_observations', 'select'), 'service_role can read provider observations');
+select ok(has_table_privilege('service_role', 'public.provider_observations', 'insert'), 'provider observation inserts retain the Slice 1B grant');
+select ok(not has_table_privilege('service_role', 'public.provider_observations', 'update'), 'provider observations remain immutable');
+select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'select'), 'service_role can read ingestion quarantine');
+select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'insert'), 'ingestion quarantine inserts retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'update'), 'ingestion quarantine updates retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.contest_results', 'select'), 'service_role can read contest results');
+select ok(has_table_privilege('service_role', 'public.contest_results', 'insert'), 'contest result inserts retain the Slice 1B grant');
+select ok(not has_table_privilege('service_role', 'public.contest_results', 'update'), 'contest results remain immutable');
+select ok(has_table_privilege('service_role', 'public.result_audit_events', 'select'), 'service_role can read result audit events');
+select ok(has_table_privilege('service_role', 'public.result_audit_events', 'insert'), 'result audit inserts retain the Slice 1B grant');
+select ok(not has_table_privilege('service_role', 'public.result_audit_events', 'update'), 'result audit events remain immutable');
+select ok(has_table_privilege('service_role', 'public.notification_outbox', 'select'), 'service_role can read notification outbox');
+select ok(has_table_privilege('service_role', 'public.notification_outbox', 'insert'), 'notification outbox inserts retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.notification_outbox', 'update'), 'notification outbox updates retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.notification_attempts', 'select'), 'service_role can read notification attempts');
+select ok(has_table_privilege('service_role', 'public.notification_attempts', 'insert'), 'notification attempt inserts retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.notification_attempts', 'update'), 'notification attempt updates retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.league_completion_holds', 'select'), 'service_role can read completion holds');
+select ok(has_table_privilege('service_role', 'public.league_completion_holds', 'insert'), 'completion hold inserts retain the Slice 1B grant');
+select ok(has_table_privilege('service_role', 'public.league_completion_holds', 'update'), 'completion hold updates retain the Slice 1B grant');
 
 select is(
   (
