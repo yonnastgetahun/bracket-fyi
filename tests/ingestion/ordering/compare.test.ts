@@ -1,0 +1,109 @@
+import { describe, expect, it } from "vitest";
+
+import {
+  compareContestLifecycleOrdering,
+  compareResultOrdering,
+  type ResultOrderingState,
+} from "@/lib/ingestion/ordering/compare";
+
+const result = (overrides: Partial<ResultOrderingState["normalizedResult"]> = {}) => ({
+  eventEditionExternalId: "edition-1",
+  contestExternalId: "contest-1",
+  resultStatus: "provisional" as const,
+  outcomeType: "pending" as const,
+  resultData: { score: 0 },
+  ...overrides,
+});
+
+const state = (overrides: Partial<ResultOrderingState> = {}): ResultOrderingState => ({
+  normalizedResult: result(),
+  sourceObservationId: "observation-1",
+  observedAt: "2026-10-08T17:00:00Z",
+  receivedAt: "2026-10-08T17:01:00Z",
+  semanticKey: "semantic-1",
+  ...overrides,
+});
+
+describe("separate contest lifecycle and result ordering", () => {
+  it("projects an initial result and valid newer lifecycle states", () => {
+    expect(compareResultOrdering({ incoming: state(), explicitCorrection: false })).toMatchObject({ decision: "project" });
+    expect(compareContestLifecycleOrdering({
+      current: { status: "scheduled", observedAt: "2026-10-08T17:00:00Z" },
+      incoming: { status: "live", observedAt: "2026-10-08T18:00:00Z" },
+    })).toMatchObject({ decision: "project" });
+  });
+
+  it("returns no-op for exact semantic replay and ignores older updates", () => {
+    expect(compareResultOrdering({ current: state(), incoming: state(), explicitCorrection: false })).toMatchObject({ decision: "no_op_duplicate" });
+    expect(compareResultOrdering({
+      current: state({ providerUpdatedAt: "2026-10-08T18:00:00Z" }),
+      incoming: state({ providerUpdatedAt: "2026-10-08T17:00:00Z", semanticKey: "older" }),
+      explicitCorrection: false,
+    })).toMatchObject({ decision: "ignore_older" });
+  });
+
+  it("rejects missing timestamp replacement of a terminal result", () => {
+    expect(compareResultOrdering({
+      current: state({
+        normalizedResult: result({ resultStatus: "final", outcomeType: "draw", resultData: { score: 2 } }),
+        providerEffectiveAt: "2026-10-08T18:00:00Z",
+        semanticKey: "terminal",
+      }),
+      incoming: state({
+        normalizedResult: result({ resultStatus: "final", outcomeType: "draw", resultData: { score: 3 } }),
+        providerEffectiveAt: undefined,
+        providerUpdatedAt: undefined,
+        semanticKey: "changed",
+      }),
+      explicitCorrection: false,
+    })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+  });
+
+  it("quarantines equal-timestamp terminal changes and does not lexically order revisions", () => {
+    expect(compareResultOrdering({
+      current: state({
+        normalizedResult: result({ resultStatus: "final", outcomeType: "draw" }),
+        providerUpdatedAt: "2026-10-08T18:00:00Z",
+        providerRevision: "10",
+        semanticKey: "terminal-a",
+      }),
+      incoming: state({
+        normalizedResult: result({ resultStatus: "final", outcomeType: "draw", resultData: { score: 1 } }),
+        providerUpdatedAt: "2026-10-08T18:00:00Z",
+        providerRevision: "2",
+        semanticKey: "terminal-b",
+      }),
+      explicitCorrection: false,
+    })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+  });
+
+  it("accepts only a newer explicit terminal correction", () => {
+    const input = {
+      current: state({
+        normalizedResult: result({ resultStatus: "final", outcomeType: "winner", winnerEventEntryExternalId: "entry-1" }),
+        providerEffectiveAt: "2026-10-08T18:00:00Z",
+        semanticKey: "old-terminal",
+      }),
+      incoming: state({
+        normalizedResult: result({
+          resultStatus: "final",
+          outcomeType: "winner",
+          winnerEventEntryExternalId: "entry-2",
+          correctionReason: "Synthetic correction",
+        }),
+        providerEffectiveAt: "2026-10-08T19:00:00Z",
+        semanticKey: "corrected-terminal",
+      }),
+      explicitCorrection: true,
+    } as const;
+    expect(compareResultOrdering(input)).toMatchObject({ decision: "project", correctionReasonRequired: false });
+    expect(compareResultOrdering({ ...input, explicitCorrection: false })).toMatchObject({ decision: "quarantine_terminal_conflict" });
+  });
+
+  it("separately rejects an illegal contest lifecycle regression", () => {
+    expect(compareContestLifecycleOrdering({
+      current: { status: "final", observedAt: "2026-10-08T19:00:00Z" },
+      incoming: { status: "live", observedAt: "2026-10-08T20:00:00Z" },
+    })).toMatchObject({ decision: "quarantine_regression" });
+  });
+});
