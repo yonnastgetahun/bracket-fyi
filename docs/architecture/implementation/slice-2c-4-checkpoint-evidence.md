@@ -13,9 +13,15 @@ committed as `8b2d76d7028b21a94a8de18929a0637b58e5c923`
 R1 baseline: `3c2433901c3fa8a7c72c403074e4aa8a92c61a1b`. The R1 code remediation is committed as
 `9291ea84e62732905be69f86370808259712ef4e`
 (`fix: harden slice 2c.4a policy boundaries`). The R1 documentation commit is
-`docs: record slice 2c.4a-r1 evidence`.
+`faf01edf4e5adf9aa18031b502dbb231281417dc`
+(`docs: record slice 2c.4a-r1 evidence`).
 
-Slice 2C.4A is implemented through R1 pending independent acceptance review. Slice 2C.4B is separately
+R2 baseline: `faf01edf4e5adf9aa18031b502dbb231281417dc`. The R2 code remediation is committed as
+`f3da6e0430c2024d3dda8251d4593c6dd0c6b30c`
+(`fix: enforce raw etag length boundary`). The R2 documentation commit is
+`docs: record slice 2c.4a-r2 evidence`.
+
+Slice 2C.4A is implemented through R2 pending independent acceptance review. Slice 2C.4B is separately
 gated and unstarted. The runtime orchestrator remains one-batch; no pagination integration was
 implemented.
 
