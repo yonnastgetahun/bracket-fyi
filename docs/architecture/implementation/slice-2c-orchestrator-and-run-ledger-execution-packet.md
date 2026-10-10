@@ -8,6 +8,8 @@ mocked, and synthetic TypeScript evidence. Slice 2C.4A is independently accepted
 synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the local mocked/synthetic
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
+Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
+Slice 2C.5B is the next separately gated slice and remains unstarted, and Slice 2C.5C remains unstarted.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
@@ -883,8 +885,9 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 **Objective:** Make request budgets, run counts, sanitized failure persistence, and binding health transitions
 authoritative and observable without adding a scheduler or notification worker.
 
-**Status:** Planning only. No 2C.5A, 2C.5B, or 2C.5C behavior is implemented or approved. The next
-implementation gate is 2C.5A.
+**Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
+2C.5B is the next separately gated slice and remains unstarted; 2C.5C also remains unstarted. Provider,
+database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
 **Shared scheduling decision:** `provider_bindings.next_poll_at IS NULL` means unscheduled/not due. Ordinary
 automated claims require `next_poll_at IS NOT NULL AND next_poll_at <= scheduler_time`; retry claims use their
@@ -1202,7 +1205,7 @@ all health `failureCode`/`runOutcome` cross-field combinations; terminal failure
 and retryable failures missing a backoff timestamp. Pure TypeScript/synthetic evidence only.
 
 **Rollback/stop/gate:** delete only uncommitted pure artifacts on failure; stop if a policy requires database
-state or silently treats NULL as due. 2C.5B requires separate approval after 2C.5A review.
+state or silently treats NULL as due. 2C.5B requires separate approval after the accepted 2C.5A contract review.
 
 ### 2C.5B — Budget persistence and security
 
@@ -1478,8 +1481,8 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** approve and implement 2C.5A first; 2C.5B and 2C.5C require their own subsequent
-approval gates before complete synthetic replay.
+**Next approval gate:** approve and implement 2C.5B; 2C.5C requires its own subsequent approval gate before
+complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
 
@@ -1655,9 +1658,10 @@ The packet makes the following bounded recommendations for review:
     only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
     together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 
-Architecture approval must explicitly accept or reject the 2C.5A constants and boundaries before 2C.5A
-implementation begins. Rejection of any item returns this packet for revision; implementation must not
-silently choose a variant.
+Architecture approval must explicitly accept or reject the 2C.5B persistence constants and boundaries before
+2C.5B implementation begins. The 2C.5A pure contracts are accepted through R2 at the local
+pure-TypeScript/synthetic evidence ceiling. Rejection of any 2C.5B item returns this packet for revision;
+implementation must not silently choose a variant.
 
 ## 8. Exclusions and later gates
 

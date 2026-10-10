@@ -1,12 +1,13 @@
 # Slice 2C.5A policy evidence
 
-Status: implemented through R2 locally; pending independent acceptance review.
+Status: independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
 
 R1 baseline: `df7c7620807605713f9704f9adb9ae20455dbe32`
 R2 baseline: `1e272e02778b0871da11e28e8fadd382f2ed8ed3`
 
 Implementation commit: `7276a9bc929ab1b8cc5afaf47c6609eb4cc30766` — `fix: harden slice 2c.5a policy acceptance`
 R2 test commit: `9f9fb65c9e14bce7b2dcffc98f9271ce1a1b65d2` — `test: close slice 2c.5a health matrix gaps`
+Acceptance closure: independent orchestrator review found zero Standards findings and zero Spec findings.
 
 ## Files changed
 
@@ -58,5 +59,7 @@ Evidence is static/local pure-TypeScript and synthetic test evidence only. No pr
 network access, database or hosted activity, deployment, notifications, beta/device testing, or production
 activity occurred. No dependencies changed.
 
-No production-code defect was exposed by the R2 coverage additions. Slice 2C.5B and Slice 2C.5C remain
-unstarted and separately gated. Independent acceptance review is pending; no independent acceptance is claimed.
+No production-code defect was exposed by the R2 coverage additions. Provider, database, hosted, deployment,
+beta, device, and production acceptance remain unverified. Slice 2C.5B is the next separately gated slice and
+remains unstarted; Slice 2C.5C also remains unstarted. No successful subagent review is claimed; acceptance is
+based on independent orchestrator review.
