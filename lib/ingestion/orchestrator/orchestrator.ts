@@ -3,10 +3,12 @@ import { z } from "zod";
 import {
   providerBatchSchema,
   isoDateTimeSchema,
+  jsonObjectSchema,
   type ProviderBatch,
   type JsonObject,
   type JsonValue,
 } from "@/lib/ingestion/contracts";
+import { canonicalJson } from "@/lib/ingestion/idempotency/canonical-json";
 import {
   providerFailureSchema,
   type ProviderFailure,
@@ -59,6 +61,16 @@ const observationDispatchResultSchema = z
   .object({
     disposition: z.enum(["projected", "unchanged", "quarantined", "skipped"]),
     dataChanged: z.boolean(),
+  })
+  .strict();
+const pageCommitOutcomeSchema = z
+  .object({
+    outcome: z.enum(["committed", "replayed"]),
+    pageLedgerId: z.string().trim().min(1),
+    runId: z.string().trim().min(1),
+    checkpointGeneration: z.number().int().safe().nonnegative(),
+    cursorAfter: jsonObjectSchema,
+    providerEtag: providerEtagSchema.nullable(),
   })
   .strict();
 const pollPolicySchema = z
@@ -157,10 +169,14 @@ const hasConservedCounts = (counts: ExecutionCounts): boolean =>
   counts.projectedCount + counts.unchangedCount + counts.quarantinedCount + counts.skippedCount + counts.failedCount;
 
 const hasRawSafeEtag = (candidate: unknown): boolean => {
-  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return true;
-  if (!Object.prototype.hasOwnProperty.call(candidate, "etag")) return true;
-  const rawEtag = (candidate as { etag?: unknown }).etag;
-  return rawEtag === undefined || providerEtagSchema.safeParse(rawEtag).success;
+  try {
+    if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return true;
+    if (!Object.prototype.hasOwnProperty.call(candidate, "etag")) return true;
+    const rawEtag = (candidate as { etag?: unknown }).etag;
+    return rawEtag === undefined || providerEtagSchema.safeParse(rawEtag).success;
+  } catch {
+    return false;
+  }
 };
 
 const pollAtFor = (
@@ -582,7 +598,7 @@ export function createIngestionOrchestrator(
         const beforePage = await safeRenew(run, leaseExpiresAt, aggregate);
         if (beforePage.failure) return beforePage.failure;
         leaseExpiresAt = beforePage.leaseExpiresAt;
-        let committed;
+        let committed: unknown;
         try {
           committed = await dependencies.ledger.commitPage({
             runId: run.runId,
@@ -611,11 +627,48 @@ export function createIngestionOrchestrator(
           return finishFailure(run, code, aggregate, failureDetails("page_commit"));
         }
 
-        checkpointGeneration = committed.checkpointGeneration;
-        currentCursor = committed.cursorAfter;
-        currentEtag = committed.providerEtag;
+        let validatedCommit;
+        let committedCursorFingerprint = "";
+        try {
+          validatedCommit = pageCommitOutcomeSchema.parse(committed);
+          const expectedGeneration = checkpointGeneration + 1;
+          const expectedCursor = checkpoint.cursorAfter ?? currentCursor;
+          const expectedEtag = checkpoint.etag ?? null;
+          const continuation = pagination.action === "continue" || pagination.action === "yield";
+
+          if (!Number.isSafeInteger(expectedGeneration) || validatedCommit.runId !== run.runId) {
+            throw new Error("Page commit outcome identity is inconsistent");
+          }
+          if (validatedCommit.checkpointGeneration !== expectedGeneration) {
+            throw new Error("Page commit outcome generation is inconsistent");
+          }
+          if (canonicalJson(validatedCommit.cursorAfter) !== canonicalJson(expectedCursor)) {
+            throw new Error("Page commit outcome cursor is inconsistent");
+          }
+          if (validatedCommit.providerEtag !== expectedEtag) {
+            throw new Error("Page commit outcome ETag is inconsistent");
+          }
+          if (continuation && isRepeatedCursor({
+            currentCursor,
+            nextCursor: validatedCommit.cursorAfter,
+            seenCursorFingerprints,
+          })) {
+            throw new Error("Page commit outcome cursor repeats prior state");
+          }
+          committedCursorFingerprint = cursorFingerprint(validatedCommit.cursorAfter);
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          return finishFailure(run, "system:page_commit_failed", aggregate, failureDetails("page_commit_outcome"));
+        }
+        if (committedCursorFingerprint.length === 0) {
+          return finishFailure(run, "system:page_commit_failed", aggregate, failureDetails("page_commit_outcome"));
+        }
+
+        checkpointGeneration = validatedCommit.checkpointGeneration;
+        currentCursor = validatedCommit.cursorAfter;
+        currentEtag = validatedCommit.providerEtag;
         pagesProcessed = pagination.pagesProcessed;
-        seenCursorFingerprints.add(cursorFingerprint(currentCursor));
+        seenCursorFingerprints.add(committedCursorFingerprint);
 
         if (pagination.action === "continue") continue;
 
