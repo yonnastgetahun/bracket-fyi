@@ -4,13 +4,17 @@
 
 **R1 code commit:** `7cc2188c5d88a40faf80bee3b376b6a7cd1c7765` (`fix: harden slice 2c.3 orchestration boundaries`)
 
+**R2 remediation baseline:** `685cedadd80ca1a06d50aa698ef37015e0e77bfb`
+
+**R2 code commit:** `16e7ab2cc6137cd148d40b7e7be14cc841534827` (`fix: close slice 2c.3 acceptance gaps`)
+
 **Documentation commit:** `docs: record slice 2c.3 remediation evidence`
 
-**Status:** Slice 2C.3 is implemented and accepted only for local, mocked, and synthetic TypeScript
-evidence through R1. Slice 2C.4 was not started. Provider, hosted, deployment, beta, device, and production
-acceptance remain unverified.
+**Status:** Slice 2C.3 is implemented through R2 for local, mocked, and synthetic TypeScript evidence and is
+pending independent acceptance review. Slice 2C.4 was not started. Provider, hosted, deployment, beta,
+device, and production acceptance remain unverified.
 
-## Files changed by R1
+## Files changed by R1/R2 remediation
 
 Code/test commit:
 
@@ -25,6 +29,9 @@ Documentation commit:
 
 The previously delivered provider-neutral ports and evidence dispatcher remain unchanged in R1.
 Historical Slice 2C.2 evidence and all database files remain unchanged.
+
+R2 changed only the same two approved code/test files listed above. No ports, dispatcher, database,
+dependency, or historical evidence file changed.
 
 ## R1 findings closed
 
@@ -50,26 +57,40 @@ Historical Slice 2C.2 evidence and all database files remain unchanged.
 - Crash replay and mixed-disposition tests prove earlier evidence/projection effects replay idempotently,
   page commit is withheld after a later failure, and committed counts conserve normalized observations.
 
+## R2 findings closed
+
+- Every caught boundary checks for confirmed `lease_lost` before converting errors to a controlled system
+  outcome. Lease loss rethrows without finish, page commit, provider, or evidence activity.
+- `unknown_budget` and `invalid_budget` cannot carry `retryAt`; exhausted budgets may omit it or provide a
+  valid ISO timestamp. Strict object validation and requested-cost equality remain enforced.
+- Dispatcher results are runtime-validated with a strict provider-neutral schema. A failure or malformed
+  disposition accounts for the current and all remaining unprocessed observations as failed, with page commit
+  withheld and count conservation preserved.
+- Sports and ceremony tests use genuinely different private raw payloads and adapter-local transformations
+  into normalized observations before entering the shared orchestration/dispatch path.
+- Crash replay uses stateful evidence and projector fakes keyed by deterministic observation identity. The
+  second attempt naturally returns exact replay/unchanged outcomes and mutates each canonical identity once.
+
 ## Test-first evidence
 
-Tests were added before the corresponding orchestration changes in red/green increments. R1 coverage
-includes malformed claimed/current modes, strict budget contradictions and extra fields, controlled port
-failures, renewal ordering, generic secret-free failure persistence, thrown 429 metadata, terminal holds,
-distinct synthetic adapters, crash replay, and mixed-disposition count conservation.
+Tests were added before the corresponding orchestration changes in red/green increments. R2 coverage
+includes lease-loss propagation across mode, registry, budget, and credential ports; strict budget semantic
+combinations; first- and second-observation dispatch failures; malformed dispositions; adapter-local sports
+and ceremony normalization; and stateful crash replay.
 
 ## Verification
 
 | Command | Result |
 |---|---|
-| `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/observation-dispatch.test.ts` | 2 files, 62 passed |
+| `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/observation-dispatch.test.ts` | 2 files, 71 passed |
 | `npx tsc --noEmit` | passed |
-| `npm test` | 28 files, 276 passed |
+| `npm test` | 28 files, 285 passed |
 | `npm run lint` | passed; 0 errors, 10 pre-existing unrelated warnings |
 | `npm run build` | passed; serial Next.js production build completed |
 | `git diff --check` | passed |
 | `git diff --check ea0d67ee5ca63277d702715e8116507d323c9845..HEAD` | passed after documentation commit |
 
-No Supabase tests were run because R1 changes no database files and the approved prompt made database
+No Supabase tests were run because R2 changes no database files and the approved prompt made database
 verification conditional on an unexpected repository-contract problem. No dependency changes were made.
 
 ## Security and evidence ceiling
@@ -86,9 +107,9 @@ deployment, beta, device, or production behavior. Independent reviewer evidence 
 
 ## Residual and deferred work
 
-The complete-phase `nextPollAt = null` versus SQL null-means-due behavior remains a cross-slice scheduling
-decision and must be resolved before scheduler deployment. Pagination loops, repeated-cursor detection, the
-25-page limit, and generalized checkpoint policy remain Slice 2C.4. Concrete rate-budget persistence remains
-Slice 2C.5. This implementation processes one batch, does not sleep, and does not retry within a run.
+The complete-phase `nextPollAt = null` versus SQL null-means-due behavior remains explicitly unresolved and
+must be resolved before scheduler deployment. Pagination loops, repeated-cursor detection, the 25-page limit,
+and generalized checkpoint policy remain Slice 2C.4. Concrete rate-budget persistence remains Slice 2C.5.
+This implementation processes one batch, does not sleep, and does not retry within a run.
 
 Slice 2C.4 was not started.
