@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import {
   providerBatchSchema,
+  isoDateTimeSchema,
   type ProviderBatch,
   type JsonObject,
   type JsonValue,
@@ -24,7 +25,6 @@ import {
 import type {
   CurrentBindingMode,
   IngestionOrchestrator,
-  OrchestrationErrorCode,
   OrchestratorDependencies,
   ObservationDispatcherPort,
   RunExecutionOutcome,
@@ -33,6 +33,23 @@ import type { ProviderCredential } from "@/lib/ingestion/providers/provider-adap
 import { providerPullRequestSchema, type ProviderPullRequest } from "@/lib/ingestion/providers/provider-adapter";
 
 const pollPhaseSchema = z.enum(["distant", "pregame", "live", "postgame", "complete"]);
+const bindingModeSchema = z.enum(["disabled", "shadow", "write"]);
+const budgetDecisionSchema = z
+  .object({
+    allowed: z.boolean(),
+    cost: z.number().int().safe().positive(),
+    reason: z.enum(["available", "exhausted", "unknown_budget", "invalid_budget"]),
+    retryAt: isoDateTimeSchema.optional(),
+  })
+  .strict()
+  .superRefine((decision, context) => {
+    if (decision.allowed && (decision.reason !== "available" || decision.retryAt !== undefined)) {
+      context.addIssue({ code: "custom", path: ["reason"], message: "Allowed budget must be available without retryAt" });
+    }
+    if (!decision.allowed && decision.reason === "available") {
+      context.addIssue({ code: "custom", path: ["reason"], message: "Denied budget cannot be available" });
+    }
+  });
 const pollPolicySchema = z
   .object({
     idleSeconds: z.number().int().min(300),
@@ -99,15 +116,14 @@ const emptyCounts = (): Omit<RunExecutionOutcome, "runId" | "status"> => ({
   failedCount: 0,
 });
 
-const safeErrorMessage = (code: OrchestrationErrorCode): string => {
-  switch (code) {
-    case "invalid_request": return "Provider pull request failed validation";
-    case "invalid_batch": return "Provider batch failed validation";
-    case "adapter_mismatch": return "No adapter matches the claimed adapter key";
-    case "missing_credential": return "A credential reference is required for this binding";
-    case "unowned_run": return "The run is not owned by an active lease";
-  }
-};
+const terminalHoldAt = (finishedAt: string): string =>
+  new Date(Date.parse(finishedAt) + 300_000).toISOString();
+
+const systemFailureMessage = (code: string): string => `Ingestion execution failed: ${code.replace(/^system:/u, "")}`;
+
+const providerFailureMessage = (code: ProviderFailure["code"]): string => `Provider execution failed: ${code}`;
+
+const namespacedProviderCode = (code: ProviderFailure["code"]): string => `provider:${code}`;
 
 const failureDetails = (stage: string): JsonObject => ({ stage });
 
@@ -138,14 +154,16 @@ export function createIngestionOrchestrator(
       failureCode?: string;
       errorMessage?: string;
       metadata?: JsonObject;
+      finishedAt?: string;
     }> = {},
   ): Promise<RunExecutionOutcome> => {
     if (!run.leaseToken) throw new RunLedgerRepositoryError("lease_lost", "Run has no lease token");
+    const finishedAt = options.finishedAt ?? nowIso(dependencies.clock);
     await dependencies.ledger.finish({
       runId: run.runId,
       leaseToken: run.leaseToken,
       outcome: status,
-      finishedAt: nowIso(dependencies.clock),
+      finishedAt,
       ...(options.nextPollAt ? { nextPollAt: options.nextPollAt } : {}),
       ...(options.nextRetryAt ? { nextRetryAt: options.nextRetryAt } : {}),
       dataChanged: options.dataChanged ?? counts.projectedCount > 0,
@@ -158,15 +176,20 @@ export function createIngestionOrchestrator(
 
   const finishFailure = async (
     run: ClaimedIngestionRun,
-    code: "invalid_response" | "permanent",
-    message: string,
+    code: string,
     counts: Omit<RunExecutionOutcome, "runId" | "status"> = emptyCounts(),
     metadata: JsonObject = {},
-  ): Promise<RunExecutionOutcome> => finish(run, "failed", counts, {
-    failureCode: code,
-    errorMessage: message,
-    metadata,
-  });
+    nextPollAt?: string,
+  ): Promise<RunExecutionOutcome> => {
+    const finishedAt = nowIso(dependencies.clock);
+    return finish(run, "failed", counts, {
+      finishedAt,
+      failureCode: code,
+      errorMessage: systemFailureMessage(code),
+      nextPollAt: nextPollAt ?? terminalHoldAt(finishedAt),
+      metadata,
+    });
+  };
 
   const renewIfNeeded = async (
     run: ClaimedIngestionRun,
@@ -192,6 +215,22 @@ export function createIngestionOrchestrator(
     }
   };
 
+  const safeRenew = async (
+    run: ClaimedIngestionRun,
+    leaseExpiresAt: string | null,
+    counts: Omit<RunExecutionOutcome, "runId" | "status"> = emptyCounts(),
+  ): Promise<{ leaseExpiresAt: string | null; failure?: RunExecutionOutcome }> => {
+    try {
+      return { leaseExpiresAt: await renewIfNeeded(run, leaseExpiresAt) };
+    } catch (error) {
+      if (isLeaseLostError(error)) throw error;
+      return {
+        leaseExpiresAt,
+        failure: await finishFailure(run, "system:lease_renewal_failed", counts, failureDetails("lease_renewal")),
+      };
+    }
+  };
+
   return {
     async execute(run): Promise<RunExecutionOutcome> {
       if (!run.leaseAcquired || !run.leaseToken) {
@@ -199,11 +238,30 @@ export function createIngestionOrchestrator(
       }
 
       await dependencies.ledger.start({ runId: run.runId, leaseToken: run.leaseToken, now: nowIso(dependencies.clock) });
-      const currentMode = await dependencies.modeReader.read(run.bindingId);
-      const mode = effectiveBindingMode(run.mode, currentMode);
+      const claimedMode = bindingModeSchema.safeParse(run.mode);
+      if (!claimedMode.success) {
+        return finishFailure(run, "system:invalid_binding_mode", emptyCounts(), failureDetails("claimed_mode"));
+      }
+
+      let currentModeValue: unknown;
+      try {
+        currentModeValue = await dependencies.modeReader.read(run.bindingId);
+      } catch {
+        return finishFailure(run, "system:binding_mode_read_failed", emptyCounts(), failureDetails("current_mode"));
+      }
+      const currentMode = bindingModeSchema.safeParse(currentModeValue);
+      if (!currentMode.success) {
+        return finishFailure(run, "system:invalid_binding_mode", emptyCounts(), failureDetails("current_mode"));
+      }
+      const mode = effectiveBindingMode(claimedMode.data, currentMode.data);
 
       if (mode === "disabled") {
-        return finish(run, "canceled", emptyCounts(), { dataChanged: false });
+        const finishedAt = nowIso(dependencies.clock);
+        return finish(run, "canceled", emptyCounts(), {
+          finishedAt,
+          nextPollAt: terminalHoldAt(finishedAt),
+          dataChanged: false,
+        });
       }
 
       let phase: PollPhase;
@@ -212,7 +270,7 @@ export function createIngestionOrchestrator(
         phase = pollPhaseSchema.parse(dependencies.phaseResolver.resolve({ run, evaluatedAt: nowIso(dependencies.clock) }));
         policy = pollPolicySchema.parse(run.pollPolicy);
       } catch {
-        return finishFailure(run, "invalid_response", "Polling policy failed validation", emptyCounts(), failureDetails("poll_policy"));
+        return finishFailure(run, "system:invalid_poll_policy", emptyCounts(), failureDetails("poll_policy"));
       }
 
       let request: ProviderPullRequest;
@@ -233,23 +291,54 @@ export function createIngestionOrchestrator(
           ...(run.providerEtag ? { etag: run.providerEtag } : {}),
         });
       } catch {
-        return finishFailure(run, "invalid_response", safeErrorMessage("invalid_request"), emptyCounts(), failureDetails("pull_request"));
+        return finishFailure(run, "system:invalid_request", emptyCounts(), failureDetails("pull_request"));
       }
 
-      const adapter = dependencies.adapters.get(run.adapterKey);
+      let adapter: ReturnType<OrchestratorDependencies["adapters"]["get"]>;
+      try {
+        adapter = dependencies.adapters.get(run.adapterKey);
+      } catch {
+        return finishFailure(run, "system:adapter_registry_failed", emptyCounts(), failureDetails("adapter_registry"));
+      }
       if (!adapter || adapter.key !== run.adapterKey) {
-        return finishFailure(run, "permanent", safeErrorMessage("adapter_mismatch"), emptyCounts(), failureDetails("adapter_registry"));
+        return finishFailure(run, "system:adapter_mismatch", emptyCounts(), failureDetails("adapter_registry"));
       }
 
-      const budget = await dependencies.budget.reserve({
-        runId: run.runId,
-        leaseToken: run.leaseToken,
-        requestedAt: request.requestedAt,
-        cost: 1,
-      });
-      if (!budget.allowed) {
-        const scheduledAt = budget.retryAt ?? pollAtFor(mode, phase, policy, request.requestedAt);
+      let leaseExpiresAt = run.leaseExpiresAt;
+      const beforeBudget = await safeRenew(run, leaseExpiresAt);
+      if (beforeBudget.failure) return beforeBudget.failure;
+      leaseExpiresAt = beforeBudget.leaseExpiresAt;
+
+      let rawBudget: unknown;
+      try {
+        rawBudget = await dependencies.budget.reserve({
+          runId: run.runId,
+          leaseToken: run.leaseToken,
+          requestedAt: request.requestedAt,
+          cost: 1,
+        });
+      } catch {
+        return finishFailure(run, "system:budget_reservation_failed", emptyCounts(), failureDetails("budget"));
+      }
+      const budgetResult = budgetDecisionSchema.safeParse(rawBudget);
+      if (!budgetResult.success || budgetResult.data.cost !== 1) {
+        const finishedAt = nowIso(dependencies.clock);
         return finish(run, "rate_limited", emptyCounts(), {
+          finishedAt,
+          nextPollAt: terminalHoldAt(finishedAt),
+          dataChanged: false,
+          failureCode: "system:invalid_budget_decision",
+          errorMessage: systemFailureMessage("system:invalid_budget_decision"),
+          metadata: failureDetails("budget"),
+        });
+      }
+
+      const budget = budgetResult.data;
+      if (!budget.allowed) {
+        const finishedAt = nowIso(dependencies.clock);
+        const scheduledAt = budget.retryAt ?? pollAtFor(mode, phase, policy, request.requestedAt) ?? terminalHoldAt(finishedAt);
+        return finish(run, "rate_limited", emptyCounts(), {
+          finishedAt,
           nextPollAt: scheduledAt,
           ...(budget.retryAt ? { nextRetryAt: budget.retryAt } : {}),
           dataChanged: false,
@@ -257,17 +346,19 @@ export function createIngestionOrchestrator(
       }
 
       if (!run.credentialRef) {
-        return finishFailure(run, "permanent", safeErrorMessage("missing_credential"), emptyCounts(), failureDetails("credential"));
+        return finishFailure(run, "system:missing_credential", emptyCounts(), failureDetails("credential"));
       }
 
       let credential: ProviderCredential;
       try {
         credential = await dependencies.credentials.resolve(run.credentialRef);
       } catch {
-        return finishFailure(run, "permanent", "Credential resolution failed", emptyCounts(), failureDetails("credential"));
+        return finishFailure(run, "system:credential_resolution_failed", emptyCounts(), failureDetails("credential"));
       }
 
-      const leaseExpiresAt = await renewIfNeeded(run, run.leaseExpiresAt);
+      const beforeProvider = await safeRenew(run, leaseExpiresAt);
+      if (beforeProvider.failure) return beforeProvider.failure;
+      leaseExpiresAt = beforeProvider.leaseExpiresAt;
       let batch: ProviderBatch;
       let candidate: unknown;
       try {
@@ -275,8 +366,22 @@ export function createIngestionOrchestrator(
       } catch (error) {
         if (isLeaseLostError(error)) throw error;
         const failure = validateFailure(adapter, error);
-        if (!failure) return finishFailure(run, "invalid_response", "Adapter failure classification failed validation", emptyCounts(), failureDetails("adapter"));
+        if (!failure) return finishFailure(run, "system:invalid_provider_failure", emptyCounts(), failureDetails("adapter"));
         const safe = safeFailure(failure);
+        if (failure.httpStatus !== undefined || failure.retryAt !== undefined) {
+          try {
+            await dependencies.ledger.recordResponse({
+              runId: run.runId,
+              leaseToken: run.leaseToken,
+              ...(failure.httpStatus === undefined ? {} : { httpStatus: failure.httpStatus }),
+              ...(failure.retryAt === undefined ? {} : { retryAfterAt: failure.retryAt }),
+              observedAt: nowIso(dependencies.clock),
+            });
+          } catch (recordError) {
+            if (isLeaseLostError(recordError)) throw recordError;
+            return finishFailure(run, "system:response_recording_failed", emptyCounts(), failureDetails("response"));
+          }
+        }
         const classification = classifyFailure(failure);
         const retry = decideRetry({
           failure,
@@ -284,20 +389,28 @@ export function createIngestionOrchestrator(
           now: nowIso(dependencies.clock),
           claimKey: run.claimKey,
         });
-        const nextPoll = retry.retryAt ?? pollAtFor(mode, phase, policy, nowIso(dependencies.clock));
+        const finishedAt = nowIso(dependencies.clock);
+        const nextPoll = retry.retryAt ?? pollAtFor(mode, phase, policy, finishedAt) ?? terminalHoldAt(finishedAt);
         return finish(run, failure.code === "rate_limited" ? "rate_limited" : "failed", emptyCounts(), {
+          finishedAt,
           nextPollAt: nextPoll,
           ...(retry.retryAt ? { nextRetryAt: retry.retryAt } : {}),
           dataChanged: false,
-          failureCode: classification.code,
-          errorMessage: safe.message,
+          failureCode: namespacedProviderCode(classification.code),
+          errorMessage: providerFailureMessage(classification.code),
           metadata: safe.details,
         });
       }
       try {
         batch = providerBatchSchema.parse(candidate);
       } catch {
-        return finishFailure(run, "invalid_response", "Provider batch failed validation", emptyCounts(), failureDetails("provider_batch"));
+        return finish(run, "failed", emptyCounts(), {
+          nextPollAt: terminalHoldAt(nowIso(dependencies.clock)),
+          failureCode: "provider:invalid_response",
+          errorMessage: providerFailureMessage("invalid_response"),
+          metadata: failureDetails("provider_batch"),
+          dataChanged: false,
+        });
       }
 
       try {
@@ -312,7 +425,7 @@ export function createIngestionOrchestrator(
         });
       } catch (error) {
         if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "permanent", "Response metadata recording failed", emptyCounts(), failureDetails("response"));
+        return finishFailure(run, "system:response_recording_failed", emptyCounts(), failureDetails("response"));
       }
 
       const counts = {
@@ -340,11 +453,13 @@ export function createIngestionOrchestrator(
         } catch (error) {
           if (isLeaseLostError(error)) throw error;
           counts.failedCount += 1;
-          return finishFailure(run, "permanent", "Observation processing failed", counts, failureDetails("observation_dispatch"));
+          return finishFailure(run, "system:observation_dispatch_failed", counts, failureDetails("observation_dispatch"));
         }
       }
 
-      await renewIfNeeded(run, leaseExpiresAt);
+      const beforePage = await safeRenew(run, leaseExpiresAt, counts);
+      if (beforePage.failure) return beforePage.failure;
+      leaseExpiresAt = beforePage.leaseExpiresAt;
       try {
         await dependencies.ledger.commitPage({
           runId: run.runId,
@@ -365,7 +480,12 @@ export function createIngestionOrchestrator(
         });
       } catch (error) {
         if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "permanent", "Page checkpoint commit failed", counts, failureDetails("page_commit"));
+        const code = error instanceof RunLedgerRepositoryError && error.kind === "checkpoint_conflict"
+          ? "system:checkpoint_conflict"
+          : error instanceof RunLedgerRepositoryError && error.kind === "page_conflict"
+            ? "system:page_conflict"
+            : "system:page_commit_failed";
+        return finishFailure(run, code, counts, failureDetails("page_commit"));
       }
 
       const finishedAt = nowIso(dependencies.clock);
@@ -373,8 +493,10 @@ export function createIngestionOrchestrator(
       const status = hasContinuation || counts.quarantinedCount > 0 ? "partial" : "succeeded";
       const scheduledAt = hasContinuation
         ? finishedAt
-        : pollAtFor(mode, phase, policy, finishedAt);
+        : pollAtFor(mode, phase, policy, finishedAt)
+          ?? (status === "partial" ? terminalHoldAt(finishedAt) : null);
       return finish(run, status, counts, {
+        finishedAt,
         nextPollAt: scheduledAt,
         dataChanged: counts.projectedCount > 0,
       });

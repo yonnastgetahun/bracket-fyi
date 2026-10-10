@@ -221,7 +221,7 @@ describe("provider-neutral ingestion orchestration", () => {
     const result = await execute(dependencies, { ...runDefaults, credentialRef: null });
 
     expect(result.status).toBe("failed");
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed", failureCode: "permanent" }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed", failureCode: "system:missing_credential", nextPollAt: expect.any(String) }));
     expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
     expect(adapter.pull).not.toHaveBeenCalled();
   });
@@ -234,7 +234,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result.status).toBe("failed");
     expect(dependencies.budget.reserve).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "invalid_response" }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:invalid_request", nextPollAt: expect.any(String) }));
   });
 
   it("requires the registry adapter key to match the claimed key", async () => {
@@ -245,7 +245,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result.status).toBe("failed");
     expect(dependencies.budget.reserve).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "permanent" }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:adapter_mismatch", nextPollAt: expect.any(String) }));
   });
 
   it.each([
@@ -253,11 +253,24 @@ describe("provider-neutral ingestion orchestration", () => {
     ["ceremony", "synthetic-ceremony", ceremonyObservation, "projected"],
   ] as const)("runs a %s adapter through the same provider-neutral path", async (_name, adapterKey, observation, expected) => {
     const { dependencies, adapter } = makeDependencies();
-    const ceremonyAdapter: ProviderAdapter = { ...adapter, key: adapterKey, pull: vi.fn().mockResolvedValue(batchFor([observation])) };
-    (dependencies.adapters.get as ReturnType<typeof vi.fn>).mockReturnValue(ceremonyAdapter);
+    const sportsRaw = { teams: [{ home: "North", away: "South" }], match: { score: [2, 1], state: "final" } };
+    const ceremonyRaw = { category_name: "Best Picture", nominee_codes: ["film-a", "film-b"], state: "awarded" };
+    const sportsAdapter: ProviderAdapter = {
+      ...adapter,
+      key: "synthetic-sports",
+      pull: vi.fn().mockImplementation(async () => batchFor([{ ...sportsObservation, sanitizedPayload: sportsRaw }])),
+    };
+    const ceremonyAdapter: ProviderAdapter = {
+      key: "synthetic-ceremony",
+      capabilities: new Set(),
+      pull: vi.fn().mockImplementation(async () => batchFor([{ ...ceremonyObservation, sanitizedPayload: ceremonyRaw }])),
+      classifyError: vi.fn<ProviderAdapter["classifyError"]>(() => ({ code: "permanent", retry: "never", message: "ceremony failure", details: {} })),
+    };
+    (dependencies.adapters.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => key === "synthetic-sports" ? sportsAdapter : ceremonyAdapter);
     const result = await execute(dependencies, { ...runDefaults, runId: `${adapterKey}-run`, adapterKey });
     expect(result.status).toBe(expected === "projected" ? "succeeded" : "failed");
-    expect(ceremonyAdapter.pull).toHaveBeenCalledTimes(1);
+    expect((adapterKey === "synthetic-sports" ? sportsAdapter : ceremonyAdapter).pull).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(adapterKey === "synthetic-sports" ? sportsRaw : ceremonyRaw)).not.toBe(JSON.stringify(adapterKey === "synthetic-sports" ? ceremonyRaw : sportsRaw));
   });
 
   it("invokes one adapter pull with a validated request and never serializes the credential", async () => {
@@ -285,7 +298,7 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(result.status).toBe("failed");
     expect(dependencies.ledger.recordResponse).not.toHaveBeenCalled();
     expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "invalid_response" }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response", nextPollAt: expect.any(String) }));
     expect(adapter.classifyError).not.toHaveBeenCalled();
   });
 
@@ -299,7 +312,7 @@ describe("provider-neutral ingestion orchestration", () => {
     const result = await execute(dependencies, nearExpiry);
 
     expect(result.status).toBe("succeeded");
-    expect(ledger.renew).toHaveBeenCalledTimes(2);
+    expect(ledger.renew).toHaveBeenCalledTimes(3);
     expect(dependencies.ledger.recordResponse).toHaveBeenCalledWith(expect.objectContaining({
       observedAt: "2026-10-10T18:00:00.000Z",
       rateLimitLimit: 10,
@@ -361,7 +374,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
     const result = await execute(dependencies);
     expect(result.status).toBe(status);
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: status, failureCode: code }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: status, failureCode: `provider:${code}`, nextPollAt: expect.any(String) }));
     if (status === "rate_limited" || retry === "backoff") expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ nextRetryAt: expect.any(String) }));
   });
 
@@ -398,5 +411,213 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(dependencies.evidence.record).toHaveBeenCalledTimes(2);
     expect(dependencies.structural.projectObservation).toHaveBeenCalledTimes(1);
     expect(ledger.commitPage).not.toHaveBeenCalled();
+  });
+
+  it("fails closed for malformed claimed and current binding modes", async () => {
+    for (const [run, currentMode] of [
+      [{ ...runDefaults, mode: "unexpected" as never }, "write"],
+      [runDefaults, "unexpected" as never],
+    ] as const) {
+      const { dependencies, ledger } = makeDependencies({
+        modeReader: { read: vi.fn().mockResolvedValue(currentMode) as never },
+      });
+      const result = await execute(dependencies, run);
+      expect(result.status).toBe("failed");
+      expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+        failureCode: "system:invalid_binding_mode",
+        nextPollAt: expect.any(String),
+      }));
+      expect(dependencies.budget.reserve).not.toHaveBeenCalled();
+      expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
+      expect(dependencies.evidence.record).not.toHaveBeenCalled();
+    }
+  });
+
+  it.each([
+    { allowed: "false", cost: 1, reason: "available" },
+    { allowed: true, cost: 1, reason: "exhausted" },
+    { allowed: true, cost: 0, reason: "available" },
+    { allowed: true, cost: 2, reason: "available" },
+    { allowed: false, cost: 1, reason: "available" },
+    { allowed: false, cost: 1, reason: "exhausted", retryAt: "not-a-date" },
+    { allowed: true, cost: 1, reason: "available", unexpected: true },
+  ] as const)("fails closed for malformed budget decision %#", async (decision) => {
+    const { dependencies, ledger, adapter } = makeDependencies({
+      budget: { reserve: vi.fn().mockResolvedValue(decision as never) },
+    });
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("rate_limited");
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: "system:invalid_budget_decision",
+      nextPollAt: expect.any(String),
+    }));
+    expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
+    expect(adapter.pull).not.toHaveBeenCalled();
+  });
+
+  it("renews before reserving budget and again before the provider call when needed", async () => {
+    const { dependencies, adapter, ledger } = makeDependencies();
+    const order: string[] = [];
+    (ledger.renew as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("renew");
+      return { run_id: runDefaults.runId, lease_expires_at: "2026-10-10T18:00:30.000Z" };
+    });
+    (dependencies.budget.reserve as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("budget");
+      return { allowed: true, cost: 1, reason: "available" };
+    });
+    (dependencies.credentials.resolve as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("credential");
+      return { reference: "credential://synthetic", getValue: () => "secret" };
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      order.push("pull");
+      return batchFor([]);
+    });
+
+    await execute(dependencies, { ...runDefaults, leaseExpiresAt: "2026-10-10T18:00:30.000Z" });
+
+    expect(order.slice(0, 4)).toEqual(["renew", "budget", "credential", "renew"]);
+    expect(order.indexOf("renew")).toBeLessThan(order.indexOf("budget"));
+    expect(order.indexOf("pull")).toBeGreaterThan(order.indexOf("credential"));
+    expect(order.indexOf("pull")).toBeGreaterThan(order.lastIndexOf("renew", order.indexOf("pull")));
+  });
+
+  it("uses a fixed namespaced message and omits adapter-controlled failure content", async () => {
+    const { dependencies, adapter, ledger } = makeDependencies();
+    const sentinel = "credential-token-secret-sentinel";
+    (adapter.classifyError as ReturnType<typeof vi.fn>).mockReturnValue({
+      code: "provider_server",
+      retry: "backoff",
+      message: sentinel,
+      details: { visible: true, token: sentinel, nested: { body: sentinel } },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockRejectedValue(new Error(sentinel));
+
+    await execute(dependencies);
+
+    const finishInput = (ledger.finish as ReturnType<typeof vi.fn>).mock.calls[0][0] as Record<string, unknown>;
+    expect(finishInput.failureCode).toBe("provider:provider_server");
+    expect(finishInput.errorMessage).toBe("Provider execution failed: provider_server");
+    expect(JSON.stringify(finishInput)).not.toContain(sentinel);
+  });
+
+  it("records validated thrown 429 metadata before the namespaced finish", async () => {
+    const { dependencies, adapter, ledger } = makeDependencies();
+    const retryAt = "2026-10-10T18:05:00.000Z";
+    (adapter.classifyError as ReturnType<typeof vi.fn>).mockReturnValue({
+      code: "rate_limited",
+      retry: "provider_reset",
+      message: "secret response message",
+      httpStatus: 429,
+      retryAt,
+      details: { safe: true },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("secret raw error"));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("rate_limited");
+    expect(ledger.recordResponse).toHaveBeenCalledWith(expect.objectContaining({
+      observedAt: "2026-10-10T18:00:00.000Z",
+      httpStatus: 429,
+      retryAfterAt: retryAt,
+    }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: "provider:rate_limited",
+      nextPollAt: retryAt,
+      nextRetryAt: retryAt,
+    }));
+    expect((ledger.recordResponse as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0])
+      .toBeLessThan((ledger.finish as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]);
+  });
+
+  it.each([
+    ["mode reader", { modeReader: { read: vi.fn().mockRejectedValue(new Error("mode port")) } }, "system:binding_mode_read_failed"],
+    ["adapter registry", { adapters: { get: vi.fn().mockImplementation(() => { throw new Error("registry port"); }) } }, "system:adapter_registry_failed"],
+    ["budget repository", { budget: { reserve: vi.fn().mockRejectedValue(new Error("budget port")) } }, "system:budget_reservation_failed"],
+    ["credential resolver", { credentials: { resolve: vi.fn().mockRejectedValue(new Error("credential port")) } }, "system:credential_resolution_failed"],
+    ["response repository", { ledger: makeLedger({ recordResponse: vi.fn().mockRejectedValue(new Error("response port")) }) }, "system:response_recording_failed"],
+    ["lease renewal", { ledger: makeLedger({ renew: vi.fn().mockRejectedValue(new Error("renew port")) }) }, "system:lease_renewal_failed"],
+  ] as const)("fails safely when the %s fails", async (_name, overrides, expectedCode) => {
+    const { dependencies, adapter } = makeDependencies(overrides as Partial<OrchestratorDependencies>);
+    const ledger = dependencies.ledger;
+    const nearExpiry = { ...runDefaults, leaseExpiresAt: "2026-10-10T18:00:30.000Z" };
+    const result = await execute(dependencies, nearExpiry);
+
+    expect(result.status).toBe("failed");
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: expectedCode, nextPollAt: expect.any(String) }));
+    if (_name === "response repository") expect(adapter.pull).toHaveBeenCalledTimes(1);
+    else expect(adapter.pull).not.toHaveBeenCalled();
+    expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
+  });
+
+  it("finishes controlled terminal outcomes with a non-null terminal hold", async () => {
+    const cases: Array<[
+      string,
+      Partial<OrchestratorDependencies>,
+      Partial<ClaimedIngestionRun>,
+    ]> = [
+      ["missing credential", {}, { credentialRef: null }],
+      ["invalid request", { pullWindowResolver: { resolve: vi.fn().mockReturnValue({ windowStart: "bad", windowEnd: "bad" }) } }, {}],
+      ["adapter mismatch", { adapters: { get: vi.fn().mockReturnValue({ key: "wrong", capabilities: new Set(), pull: vi.fn(), classifyError: vi.fn() }) } }, {}],
+      ["terminal provider failure", {}, {}],
+    ];
+    for (const [name, overrides, runOverride] of cases) {
+      const { dependencies, adapter, ledger } = makeDependencies(overrides);
+      if (name === "terminal provider failure") {
+        (adapter.pull as ReturnType<typeof vi.fn>).mockRejectedValue(new Error("terminal"));
+        (adapter.classifyError as ReturnType<typeof vi.fn>).mockReturnValue({ code: "permanent", retry: "never", message: "secret", details: {} });
+      }
+      await execute(dependencies, { ...runDefaults, ...runOverride });
+      expect(ledger.finish, name).toHaveBeenCalledWith(expect.objectContaining({ nextPollAt: expect.any(String) }));
+    }
+  });
+
+  it("replays prior evidence and projection effects before committing a recovered page", async () => {
+    const { dependencies, ledger } = makeDependencies();
+    const secondObservation = { ...sportsObservation, externalId: "match-2" };
+    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValue(batchFor([sportsObservation, secondObservation]));
+    const evidenceRecord = dependencies.evidence.record as ReturnType<typeof vi.fn>;
+    evidenceRecord
+      .mockResolvedValueOnce({ outcome: "inserted", observationId: "observation-1" })
+      .mockRejectedValueOnce(new Error("later observation failed"))
+      .mockResolvedValueOnce({ outcome: "exact_replay", observationId: "observation-1" })
+      .mockResolvedValueOnce({ outcome: "inserted", observationId: "observation-2" });
+    const structuralProject = dependencies.structural.projectObservation as ReturnType<typeof vi.fn>;
+    structuralProject
+      .mockResolvedValueOnce({ kind: "projected", canonicalId: "canonical-1" })
+      .mockResolvedValueOnce({ kind: "unchanged", canonicalId: "canonical-1" })
+      .mockResolvedValueOnce({ kind: "projected", canonicalId: "canonical-2" });
+
+    const firstAttempt = await execute(dependencies);
+    expect(firstAttempt.status).toBe("failed");
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    const recovered = await execute(dependencies);
+
+    expect(recovered).toMatchObject({ normalizedCount: 2, projectedCount: 1, unchangedCount: 1, failedCount: 0 });
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(evidenceRecord).toHaveBeenCalledTimes(4);
+    const counts = recovered.projectedCount + recovered.unchangedCount + recovered.quarantinedCount + recovered.skippedCount + recovered.failedCount;
+    expect(counts).toBe(recovered.normalizedCount);
+  });
+
+  it("commits mixed dispositions only after count conservation holds", async () => {
+    const { dependencies, ledger } = makeDependencies();
+    const secondObservation = { ...sportsObservation, externalId: "match-2" };
+    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValue(batchFor([sportsObservation, secondObservation]));
+    (dependencies.structural.projectObservation as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ kind: "projected", canonicalId: "canonical-1" })
+      .mockResolvedValueOnce({ kind: "quarantined", quarantineId: "quarantine-1" });
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "partial", normalizedCount: 2, projectedCount: 1, quarantinedCount: 1 });
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
+      .toBe(result.normalizedCount);
   });
 });
