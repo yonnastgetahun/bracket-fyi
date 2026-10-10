@@ -151,7 +151,7 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, Slice 2C.4A is implemented through R2 pending independent acceptance review, and Slice 2C.4B remains separately gated and unstarted.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2, and Slice 2C.4B remains separately gated and unstarted.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
 
@@ -171,7 +171,8 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence. Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence; Slice 2C.4A is implemented through R2 pending independent acceptance review,
+mocked, and synthetic TypeScript evidence; Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic
+evidence ceiling through R2,
 and Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
 deployment, beta, device, production, and external scheduler validation remain unverified.
 
@@ -189,7 +190,8 @@ pending independent acceptance review.
 Its exact local TypeScript allowlist is `lib/ingestion/orchestrator/checkpoint.ts`,
 `lib/ingestion/orchestrator/pagination.ts`, their focused tests, and
 `docs/architecture/implementation/slice-2c-4-checkpoint-evidence.md`. It does not wire pagination into the
-runtime orchestrator. Slice 2C.4B is the later runtime integration gate and remains unstarted.
+runtime orchestrator. The complete-phase `nextPollAt = null` versus SQL `NULL`-means-due scheduling decision
+remains unresolved before scheduler deployment. Slice 2C.4B is the later runtime integration gate and remains unstarted.
 
 Implement due-binding claims, one active run per binding, provider budgets, retry classification, cursors, ETags where supported, shadow/write modes, and complete run accounting. Use fake clocks and deterministic jitter in tests.
 

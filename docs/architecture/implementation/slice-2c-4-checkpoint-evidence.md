@@ -19,11 +19,13 @@ R1 baseline: `3c2433901c3fa8a7c72c403074e4aa8a92c61a1b`. The R1 code remediation
 R2 baseline: `faf01edf4e5adf9aa18031b502dbb231281417dc`. The R2 code remediation is committed as
 `f3da6e0430c2024d3dda8251d4593c6dd0c6b30c`
 (`fix: enforce raw etag length boundary`). The R2 documentation commit is
-`docs: record slice 2c.4a-r2 evidence`.
+`009a9ed3fa89bbf51d8c1dea302bf4183fdfa1e4`
+(`docs: record slice 2c.4a-r2 evidence`).
 
-Slice 2C.4A is implemented through R2 pending independent acceptance review. Slice 2C.4B is separately
-gated and unstarted. The runtime orchestrator remains one-batch; no pagination integration was
-implemented.
+Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2.
+Independent review reported Standards: no findings. Spec: one Low stale-status finding, resolved by this
+documentation closure. Slice 2C.4B is separately gated and unstarted. The runtime orchestrator remains
+one-batch; no pagination integration was implemented.
 
 ## Delivered policies
 
