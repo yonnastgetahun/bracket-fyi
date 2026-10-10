@@ -4,16 +4,17 @@
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence. Slice 2C.4 has not started. Provider, hosted,
+mocked, and synthetic TypeScript evidence. Slice 2C.4A is approved for pure-policy implementation; Slice
+2C.4A implementation has not started, and Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
 **Authorization record:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification,
 and Slice 2C.3 local mocked/synthetic implementation through R2 are accepted at their stated evidence
-ceiling. No provider call, credential access, deployment, hosted
-change, notification delivery, or production action was authorized or performed. Slice 2C.4 implementation
-requires a separate approval. Provider,
+ceiling. Slice 2C.4A pure-policy implementation is approved locally; Slice 2C.4B runtime integration
+requires separate approval. No provider call, credential access, deployment, hosted change, notification
+delivery, or production action was authorized or performed. Provider,
 recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
 
 **Evidence ceiling for the planned local work:** Pure TypeScript policy evidence, deterministic synthetic
@@ -713,13 +714,14 @@ Any later hosted defect is repaired through binding disablement and a forward mi
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
 or an orchestrator branch names a provider.
 
-**Next approval gate:** separately approve Slice 2C.4 pagination, repeated-cursor, 25-page, and generalized
-checkpoint implementation. Slice 2C.4 has not started.
+**Next approval gate:** separately approve Slice 2C.4A implementation evidence before authorizing Slice 2C.4B
+runtime integration. Slice 2C.4B remains unstarted.
 
-### 2C.4 — Cursor, ETag, pagination, partial-batch, and checkpoint policy
+### 2C.4A — Pure cursor, ETag, checkpoint, and bounded-pagination policies
 
-**Objective:** Make page progression restartable and bounded without losing observations, skipping pages, or
-advancing past unprocessed data.
+**Objective:** Define strict, provider-neutral checkpoint, cursor repetition, ETag, and bounded-pagination
+decisions as pure functions. This sub-slice does not wire pagination into the runtime orchestrator; the
+existing orchestrator remains one-batch until separately approved Slice 2C.4B.
 
 **Exact allowlist:**
 
@@ -729,9 +731,9 @@ advancing past unprocessed data.
 - `tests/ingestion/orchestrator/checkpoint.test.ts`
 - `docs/architecture/implementation/slice-2c-4-checkpoint-evidence.md`
 
-The sub-slice uses the `commit_ingestion_page(...)` boundary from 2C.2 and adds no migration unless a test
-proves the existing boundary cannot preserve the required state. Any required migration must be a new
-forward migration and stop for review before implementation.
+This sub-slice consumes no database or repository boundary and adds no migration. The later integration
+sub-slice may use the existing `commit_ingestion_page(...)` boundary; any incompatibility must stop before
+database-file changes or allowlist expansion.
 
 **Public interfaces:**
 
@@ -743,24 +745,58 @@ export type CheckpointDecision = Readonly<{
   reason: "page_consumed" | "not_modified" | "partial_page" | "retryable_failure" | "invalid_page" | "repeated_cursor";
 }>;
 
-export function decideCheckpoint(input: Readonly<{
+export type CheckpointInput = Readonly<{
   currentCursor?: JsonObject;
   currentEtag?: string;
   nextCursor?: JsonObject;
   responseEtag?: string;
-  observationsTerminal: boolean;
   transportSucceeded: boolean;
+  pageValid: boolean;
+  observationsTerminal: boolean;
   pageWasNotModified: boolean;
+  validPartialPage: boolean;
   repeatedCursor: boolean;
-}>): CheckpointDecision;
+}>;
+
+export function decideCheckpoint(input: CheckpointInput): CheckpointDecision;
+
+export function cursorFingerprint(cursor: JsonObject): string;
+
+export function isRepeatedCursor(input: Readonly<{
+  currentCursor?: JsonObject;
+  nextCursor?: JsonObject;
+  seenCursorFingerprints: ReadonlySet<string>;
+}>): boolean;
 
 export const MAX_PAGES_PER_RUN = 25;
+
+export type PaginationDecision = Readonly<{
+  action: "complete" | "continue" | "yield" | "hold" | "invalid";
+  pagesProcessed: number;
+  scheduleImmediately: boolean;
+  reason: "page_consumed" | "partial_page" | "retryable_failure" | "invalid_page" | "repeated_cursor" | "page_limit";
+}>;
+
+export function decidePagination(input: Readonly<{
+  pagesProcessed: number;
+  checkpoint: CheckpointDecision;
+  nextCursor?: JsonObject;
+}>): PaginationDecision;
 ```
 
 **Checkpoint decisions:**
 
-- A successful page advances `cursor_after` only when transport succeeded, the page cursor is valid, every
-  normalized observation has a terminal disposition, and the next cursor is not a previously seen cursor.
+- Runtime validation is strict: unknown keys, Last-Modified fields, malformed cursor JSON, unsafe ETags, and
+  contradictory flags fail closed as `invalid_page`. ETag is the only validator; no Last-Modified behavior is
+  added.
+- Transport failure advances nothing and returns `retryable_failure`; invalid pages advance nothing and return
+  `invalid_page`; nonterminal observations return `retryable_failure`; repeated cursors return
+  `repeated_cursor` without advancing.
+- A successful not-modified page advances while retaining the current cursor and replacing the ETag only when
+  a response ETag is supplied. A successful complete page uses `nextCursor` when supplied and otherwise
+  retains the cursor. A valid partial page with terminal observations follows the same cursor/ETag rules.
+- Not-modified plus partial-page state and a repeated-cursor flag without a next cursor are rejected as
+  contradictory.
 - An empty `ProviderBatch` is a successful unchanged/no-data page. Persist a returned ETag, retain the
   cursor, update `last_success_at`, and do not update `last_data_at`. Last-Modified is explicitly deferred
   until a separately approved provider-neutral contract extension adds its schema and RPC surface.
@@ -797,8 +833,24 @@ provider page by deleting evidence.
 partial data deletes unseen state; a repeated cursor loops; max pages is unbounded; or a checkpoint cannot
 be replayed idempotently.
 
-**Next approval gate:** accept checkpoint/replay evidence before operational accounting and provider-budget
-persistence.
+**Next approval gate:** accept the pure 2C.4A evidence before separately approving 2C.4B runtime integration.
+
+### 2C.4B — Runtime orchestrator integration
+
+**Objective:** Wire the accepted 2C.4A decisions into the existing provider-neutral orchestrator, including
+bounded page loops, repeated-cursor handling, checkpoint commits, immediate continuation, and the 25-page
+yield boundary. This sub-slice is separately gated and is not part of 2C.4A.
+
+**Planned allowlist:** `lib/ingestion/orchestrator/orchestrator.ts`,
+`tests/ingestion/orchestrator/orchestrator.test.ts`, and
+`docs/architecture/implementation/slice-2c-4b-integration-evidence.md`, subject to separate approval.
+
+**Required boundary:** 2C.4B must use the pure 2C.4A policies without duplicating cursor, ETag, repetition,
+or page-limit decisions. It may not add provider-specific branches, provider calls, credentials, database
+migrations, or budget persistence. The existing runtime remains one-batch until this gate is approved.
+
+**Acceptance gate:** separate authorization is required after 2C.4A independent review. Slice 2C.4B is
+unstarted.
 
 ### 2C.5 — Run accounting, provider budget, health, and staleness
 
