@@ -5,8 +5,8 @@
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 and accepted for local,
 mocked, and synthetic TypeScript evidence. Slice 2C.4A is independently accepted at the local pure-TypeScript/
-synthetic evidence ceiling through R2;
-Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
+synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the local mocked/synthetic
+TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
@@ -14,8 +14,8 @@ deployment, beta, device, and production acceptance remain unverified.
 **Authorization record:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification,
 and Slice 2C.3 local mocked/synthetic implementation through R2 are accepted at their stated evidence
 ceiling. Slice 2C.4A pure-policy implementation is independently accepted at the local pure-TypeScript/synthetic
-evidence ceiling through R2; Slice 2C.4B runtime integration
-requires separate approval. No provider call, credential access, deployment, hosted change, notification
+evidence ceiling through R2; Slice 2C.4B runtime integration was implemented and accepted through R2 under its
+separate implementation gate. No provider call, credential access, deployment, hosted change, notification
 delivery, or production action was authorized or performed. Provider,
 recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
 
@@ -716,16 +716,17 @@ Any later hosted defect is repaired through binding disablement and a forward mi
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
 or an orchestrator branch names a provider.
 
-**Next approval gate:** separately approve Slice 2C.4B runtime integration. Slice 2C.4B remains unstarted.
+**Next approval gate:** separately approve Slice 2C.5. Slice 2C.4B is accepted through R2 at the local
+mocked/synthetic TypeScript evidence ceiling.
 
 ### 2C.4A — Pure cursor, ETag, checkpoint, and bounded-pagination policies
 
 **Objective:** Define strict, provider-neutral checkpoint, cursor repetition, ETag, and bounded-pagination
-decisions as pure functions. This sub-slice does not wire pagination into the runtime orchestrator; the
-existing orchestrator remains one-batch until separately approved Slice 2C.4B.
+decisions as pure functions. This sub-slice does not itself wire pagination into the runtime orchestrator;
+that integration was delivered by the subsequent 2C.4B slice.
 
 **Status:** Independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2. The pure
-policies are local TypeScript artifacts only; Slice 2C.4B runtime integration remains separately gated and unstarted.
+policies are local TypeScript artifacts only; runtime integration is recorded in the separate 2C.4B evidence.
 
 R2 commits: `f3da6e0430c2024d3dda8251d4593c6dd0c6b30c` (`fix: enforce raw etag length boundary`) and
 `009a9ed3fa89bbf51d8c1dea302bf4183fdfa1e4` (`docs: record slice 2c.4a-r2 evidence`). Independent review
@@ -846,25 +847,28 @@ provider page by deleting evidence.
 partial data deletes unseen state; a repeated cursor loops; max pages is unbounded; or a checkpoint cannot
 be replayed idempotently.
 
-**Next approval gate:** separately approve 2C.4B runtime integration. No runtime pagination integration is
-included in 2C.4A.
+**Next approval gate:** separately approve Slice 2C.5. No runtime pagination integration is included in 2C.4A;
+that work is recorded as accepted 2C.4B integration.
 
 ### 2C.4B — Runtime orchestrator integration
 
 **Objective:** Wire the accepted 2C.4A decisions into the existing provider-neutral orchestrator, including
 bounded page loops, repeated-cursor handling, checkpoint commits, immediate continuation, and the 25-page
-yield boundary. This sub-slice is separately gated and is not part of 2C.4A.
+yield boundary. This sub-slice is complete through R2.
 
-**Planned allowlist:** `lib/ingestion/orchestrator/orchestrator.ts`,
+**Allowlist used:** `lib/ingestion/orchestrator/orchestrator.ts`,
 `tests/ingestion/orchestrator/orchestrator.test.ts`, and
 `docs/architecture/implementation/slice-2c-4b-integration-evidence.md`, subject to separate approval.
 
-**Required boundary:** 2C.4B must use the pure 2C.4A policies without duplicating cursor, ETag, repetition,
-or page-limit decisions. It may not add provider-specific branches, provider calls, credentials, database
-migrations, or budget persistence. The existing runtime remains one-batch until this gate is approved.
+**Required boundary:** 2C.4B uses the pure 2C.4A policies without duplicating cursor, ETag, repetition,
+or page-limit decisions. It added no provider-specific branches, provider calls, credentials, database
+migrations, or budget persistence.
 
-**Acceptance gate:** separate authorization is required after 2C.4A independent review. Slice 2C.4B is
-unstarted.
+**Status and evidence:** Accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling.
+R2 commits are `fc18d24e444d15dfeb0470c640532e742a4871b9` and
+`257bb0e3d98e693960812fd0857ed5a1dc836208`. System Engineer acceptance found no surviving Standards or Spec
+findings. Provider, database, hosted, deployment, beta, device, scheduler, and production evidence remain
+unverified. The complete-phase `nextPollAt = null` versus SQL `NULL`-means-due decision remains unresolved.
 
 ### 2C.5 — Run accounting, provider budget, health, and staleness
 
