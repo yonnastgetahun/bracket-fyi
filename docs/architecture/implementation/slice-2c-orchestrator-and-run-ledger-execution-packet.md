@@ -4,7 +4,7 @@
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence. Slice 2C.4A is implemented pending independent acceptance review;
+mocked, and synthetic TypeScript evidence. Slice 2C.4A is implemented through R1 pending independent acceptance review;
 Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 
@@ -790,8 +790,9 @@ export function decidePagination(input: Readonly<{
 **Checkpoint decisions:**
 
 - Runtime validation is strict: unknown keys, Last-Modified fields, malformed cursor JSON, unsafe ETags, and
-  contradictory flags fail closed as `invalid_page`. ETag is the only validator; no Last-Modified behavior is
-  added.
+  contradictory flags fail closed as `invalid_page`. ETags are nonblank after normalization, at most 1024
+  characters, and reject C0 controls and DELETE before trimming. ETag is the only validator; no Last-Modified
+  behavior is added.
 - Transport failure advances nothing and returns `retryable_failure`; invalid pages advance nothing and return
   `invalid_page`; nonterminal observations return `retryable_failure`; repeated cursors return
   `repeated_cursor` without advancing.
@@ -809,6 +810,10 @@ export function decidePagination(input: Readonly<{
 - A repeated cursor is `invalid_response`, quarantines the run-level failure, does not advance, and stops the
   run. A run processes at most 25 pages; a valid next cursor at the cap finishes `partial` after committing
   the last safe checkpoint and schedules immediate continuation.
+- Invalid pagination counts fail closed with `pagesProcessed = 0`; malformed non-count fields preserve a
+  valid count. `isRepeatedCursor` strictly validates its complete input and conservatively returns `true`
+  for malformed cursors, fingerprint sets, or unknown fields without throwing. Slice 2C.4B must classify
+  malformed cursor data as `invalid_page` before calling it.
 - ETags are sent on the next request and stored separately from the JSON cursor. An ETag change does not
   itself project data; observations and Slice 2B ordering decide projection. No Last-Modified field or
   conditional-request behavior is introduced by this slice.

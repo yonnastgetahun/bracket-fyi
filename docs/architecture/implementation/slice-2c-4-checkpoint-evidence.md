@@ -10,7 +10,12 @@ committed as `8b2d76d7028b21a94a8de18929a0637b58e5c923`
 (`feat: add slice 2c.4a checkpoint policies`). The final documentation commit is
 `docs: record slice 2c.4a local evidence`.
 
-Slice 2C.4A is implemented pending independent acceptance review. Slice 2C.4B is separately
+R1 baseline: `3c2433901c3fa8a7c72c403074e4aa8a92c61a1b`. The R1 code remediation is committed as
+`9291ea84e62732905be69f86370808259712ef4e`
+(`fix: harden slice 2c.4a policy boundaries`). The R1 documentation commit is
+`docs: record slice 2c.4a-r1 evidence`.
+
+Slice 2C.4A is implemented through R1 pending independent acceptance review. Slice 2C.4B is separately
 gated and unstarted. The runtime orchestrator remains one-batch; no pagination integration was
 implemented.
 
@@ -25,12 +30,19 @@ implemented.
 - `isRepeatedCursor` detects current and historical cursor repetition without mutating inputs.
 - `decidePagination` enforces `MAX_PAGES_PER_RUN = 25`, distinguishing complete, continue, yield,
   hold, and invalid outcomes without attempting runtime looping.
+- Invalid page counts fail closed with `pagesProcessed = 0`; a valid count is preserved when another
+  pagination field is malformed.
+- The shared ETag schema accepts ordinary quoted/weak values, normalizes surrounding whitespace only
+  after validation, caps values at 1024 characters, and rejects C0/DELETE controls.
+- `isRepeatedCursor` validates plain JSON cursors, lowercase SHA-256 fingerprint sets, and strict keys;
+  malformed runtime input returns conservative `true` without throwing. Slice 2C.4B must classify
+  malformed cursor input as `invalid_page` before calling this final loop-prevention boundary.
 
 ## Verification
 
-- Focused: `npm test -- tests/ingestion/orchestrator/checkpoint.test.ts tests/ingestion/orchestrator/pagination.test.ts` — 2 files, 18 tests passed.
+- Focused: `npm test -- tests/ingestion/orchestrator/checkpoint.test.ts tests/ingestion/orchestrator/pagination.test.ts` — 2 files, 21 tests passed.
 - TypeScript: `npx tsc --noEmit` — passed.
-- Full application suite: `npm test` — 30 files, 303 tests passed.
+- Full application suite: `npm test` — 30 files, 306 tests passed.
 - Lint: `npm run lint` — 0 errors, 10 pre-existing warnings.
 - Build: `npm run build` — passed.
 - Formatting: `git diff --check` — passed.
