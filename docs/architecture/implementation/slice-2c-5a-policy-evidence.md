@@ -1,10 +1,10 @@
 # Slice 2C.5A policy evidence
 
-Status: implemented locally; pending independent acceptance review.
+Status: implemented through R1 locally; pending independent acceptance review.
 
-Baseline: `f2034edc64ee1fb39ec152a207b1105daf932be0`
+R1 baseline: `df7c7620807605713f9704f9adb9ae20455dbe32`
 
-Implementation commit: `d89c285f4e1bf66af739bfca00e14ba04e00f938` — `feat: add slice 2c.5a policy contracts`
+Implementation commit: `7276a9bc929ab1b8cc5afaf47c6609eb4cc30766` — `fix: harden slice 2c.5a policy acceptance`
 
 ## Files changed
 
@@ -27,15 +27,24 @@ Implementation commit: `d89c285f4e1bf66af739bfca00e14ba04e00f938` — `feat: add
   committed-data freshness across later failures.
 - NULL/undefined polling is unscheduled; disabled, complete, malformed, and invalid inputs fail closed.
 - Deterministic UUID/retry-index/page-key attempt identities with fixed validation errors.
+- Stale branches now calculate counters independently: successes and continuation-only partials reset,
+  quarantines preserve, item failures and failed/rate-limited runs increment, and disabled/canceled runs
+  preserve. Unsafe increments reject as `invalid_input`.
+- Class instances, throwing getters, reflective traps, revoked proxies, malformed UUIDs, and date/interval
+  overflow fail closed without exposing arbitrary exceptions.
+- Coverage includes all eight partial-flag combinations, complete provider/system scheduling matrices,
+  exact stale boundaries, maximum-safe counters, hostile runtime objects, and nullable optional timestamps.
 
 ## Verification
 
-- Focused policy suite: 4 files, 93 tests passed.
-- Full application suite: 33 files, 427 tests passed.
+- Focused policy suite: 4 files, 117 tests passed.
+- Full application suite: 33 files, 451 tests passed.
 - `npx tsc --noEmit`: passed.
 - `npm run lint`: passed with 0 errors and 10 pre-existing warnings.
 - `npm run build`: passed.
 - `git diff --check`: passed.
+- `git diff --check df7c7620807605713f9704f9adb9ae20455dbe32...HEAD`: passed for the implementation
+  commit before this evidence update.
 
 No Supabase or database tests were run because no database files changed.
 
@@ -45,4 +54,5 @@ Evidence is static/local pure-TypeScript and synthetic test evidence only. No pr
 network access, database or hosted activity, deployment, notifications, beta/device testing, or production
 activity occurred. No dependencies changed.
 
-Slice 2C.5B and Slice 2C.5C remain unstarted and separately gated. Independent acceptance review is pending.
+Slice 2C.5B and Slice 2C.5C remain unstarted and separately gated. Independent acceptance review is pending;
+no independent acceptance is claimed.
