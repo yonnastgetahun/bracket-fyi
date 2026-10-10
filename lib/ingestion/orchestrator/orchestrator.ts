@@ -49,7 +49,16 @@ const budgetDecisionSchema = z
     if (!decision.allowed && decision.reason === "available") {
       context.addIssue({ code: "custom", path: ["reason"], message: "Denied budget cannot be available" });
     }
+    if (!decision.allowed && decision.reason !== "exhausted" && decision.retryAt !== undefined) {
+      context.addIssue({ code: "custom", path: ["retryAt"], message: "Only exhausted budgets may provide retryAt" });
+    }
   });
+const observationDispatchResultSchema = z
+  .object({
+    disposition: z.enum(["projected", "unchanged", "quarantined", "skipped"]),
+    dataChanged: z.boolean(),
+  })
+  .strict();
 const pollPolicySchema = z
   .object({
     idleSeconds: z.number().int().min(300),
@@ -210,7 +219,8 @@ export function createIngestionOrchestrator(
   const validateFailure = (adapter: { classifyError(error: unknown): unknown }, error: unknown): ProviderFailure | null => {
     try {
       return providerFailureSchema.parse(adapter.classifyError(error));
-    } catch {
+    } catch (classificationError) {
+      if (isLeaseLostError(classificationError)) throw classificationError;
       return null;
     }
   };
@@ -246,7 +256,8 @@ export function createIngestionOrchestrator(
       let currentModeValue: unknown;
       try {
         currentModeValue = await dependencies.modeReader.read(run.bindingId);
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:binding_mode_read_failed", emptyCounts(), failureDetails("current_mode"));
       }
       const currentMode = bindingModeSchema.safeParse(currentModeValue);
@@ -269,7 +280,8 @@ export function createIngestionOrchestrator(
       try {
         phase = pollPhaseSchema.parse(dependencies.phaseResolver.resolve({ run, evaluatedAt: nowIso(dependencies.clock) }));
         policy = pollPolicySchema.parse(run.pollPolicy);
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:invalid_poll_policy", emptyCounts(), failureDetails("poll_policy"));
       }
 
@@ -290,14 +302,16 @@ export function createIngestionOrchestrator(
           cursor: run.providerCursor,
           ...(run.providerEtag ? { etag: run.providerEtag } : {}),
         });
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:invalid_request", emptyCounts(), failureDetails("pull_request"));
       }
 
       let adapter: ReturnType<OrchestratorDependencies["adapters"]["get"]>;
       try {
         adapter = dependencies.adapters.get(run.adapterKey);
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:adapter_registry_failed", emptyCounts(), failureDetails("adapter_registry"));
       }
       if (!adapter || adapter.key !== run.adapterKey) {
@@ -317,7 +331,8 @@ export function createIngestionOrchestrator(
           requestedAt: request.requestedAt,
           cost: 1,
         });
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:budget_reservation_failed", emptyCounts(), failureDetails("budget"));
       }
       const budgetResult = budgetDecisionSchema.safeParse(rawBudget);
@@ -352,7 +367,8 @@ export function createIngestionOrchestrator(
       let credential: ProviderCredential;
       try {
         credential = await dependencies.credentials.resolve(run.credentialRef);
-      } catch {
+      } catch (error) {
+        if (isLeaseLostError(error)) throw error;
         return finishFailure(run, "system:credential_resolution_failed", emptyCounts(), failureDetails("credential"));
       }
 
@@ -438,21 +454,21 @@ export function createIngestionOrchestrator(
         failedCount: 0,
       };
 
-      for (const observation of batch.observations) {
+      for (const [observationIndex, observation] of batch.observations.entries()) {
         try {
-          const dispatched = await dispatcher.dispatch({
+          const dispatched = observationDispatchResultSchema.parse(await dispatcher.dispatch({
             run,
             observation,
             receivedAt: batch.receivedAt,
             mode,
-          });
+          }));
           if (dispatched.disposition === "projected") counts.projectedCount += 1;
           if (dispatched.disposition === "unchanged") counts.unchangedCount += 1;
           if (dispatched.disposition === "quarantined") counts.quarantinedCount += 1;
           if (dispatched.disposition === "skipped") counts.skippedCount += 1;
         } catch (error) {
           if (isLeaseLostError(error)) throw error;
-          counts.failedCount += 1;
+          counts.failedCount += batch.observations.length - observationIndex;
           return finishFailure(run, "system:observation_dispatch_failed", counts, failureDetails("observation_dispatch"));
         }
       }

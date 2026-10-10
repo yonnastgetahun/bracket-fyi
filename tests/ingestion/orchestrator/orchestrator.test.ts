@@ -251,26 +251,58 @@ describe("provider-neutral ingestion orchestration", () => {
   it.each([
     ["sports", "synthetic-sports", sportsObservation, "projected"],
     ["ceremony", "synthetic-ceremony", ceremonyObservation, "projected"],
-  ] as const)("runs a %s adapter through the same provider-neutral path", async (_name, adapterKey, observation, expected) => {
-    const { dependencies, adapter } = makeDependencies();
-    const sportsRaw = { teams: [{ home: "North", away: "South" }], match: { score: [2, 1], state: "final" } };
-    const ceremonyRaw = { category_name: "Best Picture", nominee_codes: ["film-a", "film-b"], state: "awarded" };
+  ] as const)("runs a %s adapter through the same provider-neutral path", async (_name, adapterKey, _observation, expected) => {
+    const seen: NormalizedObservation[] = [];
+    const { dependencies } = makeDependencies({
+      dispatcher: {
+        dispatch: vi.fn().mockImplementation(async ({ observation: normalized }: { observation: NormalizedObservation }) => {
+          seen.push(normalized);
+          return { disposition: "projected", dataChanged: true };
+        }),
+      },
+    });
+    const sportsRaw = { match_id: "match-1", home_team: "North", away_team: "South", home_score: 2, away_score: 1, state: "final" };
+    const ceremonyRaw = { category_code: "category-best-picture", label: "Best Picture", nominee_codes: ["film-a", "film-b"], winner_code: "film-a", state: "awarded" };
     const sportsAdapter: ProviderAdapter = {
-      ...adapter,
       key: "synthetic-sports",
-      pull: vi.fn().mockImplementation(async () => batchFor([{ ...sportsObservation, sanitizedPayload: sportsRaw }])),
+      capabilities: new Set(),
+      pull: vi.fn().mockImplementation(async () => {
+        const normalized: NormalizedObservation = {
+          ...sportsObservation,
+          externalId: sportsRaw.match_id,
+          sanitizedPayload: sportsRaw,
+          data: { ...sportsObservation.data, contestKey: sportsRaw.match_id, name: `${sportsRaw.home_team} v ${sportsRaw.away_team}` },
+        };
+        return batchFor([normalized]);
+      }),
+      classifyError: vi.fn<ProviderAdapter["classifyError"]>(() => ({ code: "permanent", retry: "never", message: "sports failure", details: {} })),
     };
     const ceremonyAdapter: ProviderAdapter = {
       key: "synthetic-ceremony",
       capabilities: new Set(),
-      pull: vi.fn().mockImplementation(async () => batchFor([{ ...ceremonyObservation, sanitizedPayload: ceremonyRaw }])),
+      pull: vi.fn().mockImplementation(async () => {
+        const normalized: NormalizedObservation = {
+          ...ceremonyObservation,
+          externalId: ceremonyRaw.category_code,
+          sanitizedPayload: ceremonyRaw,
+          data: { ...ceremonyObservation.data, contestExternalId: ceremonyRaw.category_code, resultData: { winner: ceremonyRaw.winner_code } },
+        };
+        return batchFor([normalized]);
+      }),
       classifyError: vi.fn<ProviderAdapter["classifyError"]>(() => ({ code: "permanent", retry: "never", message: "ceremony failure", details: {} })),
     };
     (dependencies.adapters.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => key === "synthetic-sports" ? sportsAdapter : ceremonyAdapter);
     const result = await execute(dependencies, { ...runDefaults, runId: `${adapterKey}-run`, adapterKey });
     expect(result.status).toBe(expected === "projected" ? "succeeded" : "failed");
     expect((adapterKey === "synthetic-sports" ? sportsAdapter : ceremonyAdapter).pull).toHaveBeenCalledTimes(1);
-    expect(JSON.stringify(adapterKey === "synthetic-sports" ? sportsRaw : ceremonyRaw)).not.toBe(JSON.stringify(adapterKey === "synthetic-sports" ? ceremonyRaw : sportsRaw));
+    expect(seen).toHaveLength(1);
+    if (adapterKey === "synthetic-sports") {
+      expect(seen[0].data).toMatchObject({ contestKey: "match-1", name: "North v South" });
+      expect(seen[0].sanitizedPayload).toMatchObject({ home_team: "North", home_score: 2 });
+    } else {
+      expect(seen[0].data).toMatchObject({ contestExternalId: "category-best-picture", resultData: { winner: "film-a" } });
+      expect(seen[0].sanitizedPayload).toMatchObject({ category_code: "category-best-picture", winner_code: "film-a" });
+    }
   });
 
   it("invokes one adapter pull with a validated request and never serializes the credential", async () => {
@@ -440,6 +472,8 @@ describe("provider-neutral ingestion orchestration", () => {
     { allowed: true, cost: 2, reason: "available" },
     { allowed: false, cost: 1, reason: "available" },
     { allowed: false, cost: 1, reason: "exhausted", retryAt: "not-a-date" },
+    { allowed: false, cost: 1, reason: "unknown_budget", retryAt: "2026-10-10T18:05:00.000Z" },
+    { allowed: false, cost: 1, reason: "invalid_budget", retryAt: "2026-10-10T18:05:00.000Z" },
     { allowed: true, cost: 1, reason: "available", unexpected: true },
   ] as const)("fails closed for malformed budget decision %#", async (decision) => {
     const { dependencies, ledger, adapter } = makeDependencies({
@@ -553,6 +587,21 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
   });
 
+  it.each([
+    ["binding mode reader", { modeReader: { read: vi.fn().mockRejectedValue(new RunLedgerRepositoryError("lease_lost", "mode lease lost")) } }],
+    ["adapter registry", { adapters: { get: vi.fn().mockImplementation(() => { throw new RunLedgerRepositoryError("lease_lost", "registry lease lost"); }) } }],
+    ["budget reservation", { budget: { reserve: vi.fn().mockRejectedValue(new RunLedgerRepositoryError("lease_lost", "budget lease lost")) } }],
+    ["credential resolver", { credentials: { resolve: vi.fn().mockRejectedValue(new RunLedgerRepositoryError("lease_lost", "credential lease lost")) } }],
+  ] as const)("rethrows lease loss from the %s without finishing", async (_name, overrides) => {
+    const { dependencies, adapter } = makeDependencies(overrides as Partial<OrchestratorDependencies>);
+
+    await expect(execute(dependencies)).rejects.toMatchObject({ kind: "lease_lost" });
+    expect(dependencies.ledger.finish).not.toHaveBeenCalled();
+    expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
+    expect(adapter.pull).not.toHaveBeenCalled();
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
+  });
+
   it("finishes controlled terminal outcomes with a non-null terminal hold", async () => {
     const cases: Array<[
       string,
@@ -576,30 +625,50 @@ describe("provider-neutral ingestion orchestration", () => {
   });
 
   it("replays prior evidence and projection effects before committing a recovered page", async () => {
-    const { dependencies, ledger } = makeDependencies();
+    const evidenceByKey = new Map<string, string>();
+    const projectedObservationIds = new Set<string>();
+    const canonicalMutations = new Map<string, number>();
+    let failLaterObservationOnce = true;
+    const { dependencies, ledger } = makeDependencies({
+      evidence: {
+        record: vi.fn().mockImplementation(async (input: { externalObjectKind: string; externalObjectId: string; providerRevision?: string }) => {
+          const key = `${input.externalObjectKind}:${input.externalObjectId}:${input.providerRevision ?? ""}`;
+          const existing = evidenceByKey.get(key);
+          if (existing) return { outcome: "exact_replay", observationId: existing };
+          if (input.externalObjectId === "match-2" && failLaterObservationOnce) {
+            failLaterObservationOnce = false;
+            throw new Error("later observation failed");
+          }
+          const observationId = `observation-${evidenceByKey.size + 1}`;
+          evidenceByKey.set(key, observationId);
+          return { outcome: "inserted", observationId };
+        }),
+      },
+      structural: {
+        projectObservation: vi.fn().mockImplementation(async ({ observationId }: { observationId: string }) => {
+          if (projectedObservationIds.has(observationId)) return { kind: "unchanged", canonicalId: `canonical-${observationId}` };
+          projectedObservationIds.add(observationId);
+          canonicalMutations.set(observationId, (canonicalMutations.get(observationId) ?? 0) + 1);
+          return { kind: "projected", canonicalId: `canonical-${observationId}` };
+        }),
+      },
+    });
     const secondObservation = { ...sportsObservation, externalId: "match-2" };
     ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
       .mockResolvedValue(batchFor([sportsObservation, secondObservation]));
-    const evidenceRecord = dependencies.evidence.record as ReturnType<typeof vi.fn>;
-    evidenceRecord
-      .mockResolvedValueOnce({ outcome: "inserted", observationId: "observation-1" })
-      .mockRejectedValueOnce(new Error("later observation failed"))
-      .mockResolvedValueOnce({ outcome: "exact_replay", observationId: "observation-1" })
-      .mockResolvedValueOnce({ outcome: "inserted", observationId: "observation-2" });
-    const structuralProject = dependencies.structural.projectObservation as ReturnType<typeof vi.fn>;
-    structuralProject
-      .mockResolvedValueOnce({ kind: "projected", canonicalId: "canonical-1" })
-      .mockResolvedValueOnce({ kind: "unchanged", canonicalId: "canonical-1" })
-      .mockResolvedValueOnce({ kind: "projected", canonicalId: "canonical-2" });
 
     const firstAttempt = await execute(dependencies);
-    expect(firstAttempt.status).toBe("failed");
+    expect(firstAttempt).toMatchObject({ normalizedCount: 2, projectedCount: 1, failedCount: 1, status: "failed" });
+    expect(firstAttempt.projectedCount + firstAttempt.unchangedCount + firstAttempt.quarantinedCount + firstAttempt.skippedCount + firstAttempt.failedCount)
+      .toBe(firstAttempt.normalizedCount);
     expect(ledger.commitPage).not.toHaveBeenCalled();
     const recovered = await execute(dependencies);
 
     expect(recovered).toMatchObject({ normalizedCount: 2, projectedCount: 1, unchangedCount: 1, failedCount: 0 });
     expect(ledger.commitPage).toHaveBeenCalledTimes(1);
-    expect(evidenceRecord).toHaveBeenCalledTimes(4);
+    expect(dependencies.evidence.record).toHaveBeenCalledTimes(4);
+    expect(dependencies.structural.projectObservation).toHaveBeenCalledTimes(3);
+    expect([...canonicalMutations.values()]).toEqual([1, 1]);
     const counts = recovered.projectedCount + recovered.unchangedCount + recovered.quarantinedCount + recovered.skippedCount + recovered.failedCount;
     expect(counts).toBe(recovered.normalizedCount);
   });
@@ -619,5 +688,51 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(ledger.commitPage).toHaveBeenCalledTimes(1);
     expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
       .toBe(result.normalizedCount);
+  });
+
+  it.each([0, 1])("accounts for the failed and remaining observations when dispatch fails at index %d", async (failureIndex) => {
+    const { dependencies, ledger } = makeDependencies({
+      dispatcher: {
+        dispatch: vi.fn().mockImplementation(async ({ observation }: { observation: NormalizedObservation }) => {
+          const index = observation.externalId === "match-1" ? 0 : observation.externalId === "match-2" ? 1 : 2;
+          if (index === failureIndex) throw new Error("dispatch failure");
+          return { disposition: "projected", dataChanged: true };
+        }),
+      },
+    });
+    const observations = [
+      sportsObservation,
+      { ...sportsObservation, externalId: "match-2" },
+      { ...sportsObservation, externalId: "match-3" },
+    ];
+    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValue(batchFor(observations));
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ normalizedCount: 3, projectedCount: failureIndex, failedCount: 3 - failureIndex, status: "failed" });
+    expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
+      .toBe(result.normalizedCount);
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:observation_dispatch_failed" }));
+  });
+
+  it("treats a malformed dispatcher disposition as a failed current and unprocessed batch", async () => {
+    const { dependencies, ledger } = makeDependencies({
+      dispatcher: {
+        dispatch: vi.fn().mockResolvedValue({ disposition: "mystery", dataChanged: false } as never),
+      },
+    });
+    const observations = [sportsObservation, { ...sportsObservation, externalId: "match-2" }, { ...sportsObservation, externalId: "match-3" }];
+    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValue(batchFor(observations));
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ normalizedCount: 3, failedCount: 3, status: "failed" });
+    expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
+      .toBe(result.normalizedCount);
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:observation_dispatch_failed" }));
   });
 });
