@@ -28,19 +28,34 @@ const countsSchema = z
   })
   .strict();
 
-export function validateAccountingCounts(input: unknown): AccountingDecision {
-  const parsed = countsSchema.safeParse(input);
-  if (!parsed.success) return { accepted: false, counts: null, reason: "invalid_counts" };
-
-  const counts = parsed.data;
-  const classifiedTotal =
-    BigInt(counts.projectedCount) +
-    BigInt(counts.unchangedCount) +
-    BigInt(counts.quarantinedCount) +
-    BigInt(counts.skippedCount) +
-    BigInt(counts.failedCount);
-  if (BigInt(counts.normalizedCount) !== classifiedTotal) {
-    return { accepted: false, counts, reason: "not_conserved" };
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  try {
+    if (typeof value !== "object" || value === null) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
   }
-  return { accepted: true, counts, reason: "accepted" };
+};
+
+export function validateAccountingCounts(input: unknown): AccountingDecision {
+  try {
+    if (!isPlainObject(input)) return { accepted: false, counts: null, reason: "invalid_counts" };
+    const parsed = countsSchema.safeParse(input);
+    if (!parsed.success) return { accepted: false, counts: null, reason: "invalid_counts" };
+
+    const counts = parsed.data;
+    const classifiedTotal =
+      BigInt(counts.projectedCount) +
+      BigInt(counts.unchangedCount) +
+      BigInt(counts.quarantinedCount) +
+      BigInt(counts.skippedCount) +
+      BigInt(counts.failedCount);
+    if (BigInt(counts.normalizedCount) !== classifiedTotal) {
+      return { accepted: false, counts, reason: "not_conserved" };
+    }
+    return { accepted: true, counts, reason: "accepted" };
+  } catch {
+    return { accepted: false, counts: null, reason: "invalid_counts" };
+  }
 }

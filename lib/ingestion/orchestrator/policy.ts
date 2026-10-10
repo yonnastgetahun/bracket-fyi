@@ -18,9 +18,13 @@ const phaseIntervals: Readonly<Record<Exclude<PollPhase, "complete">, PollingInt
 };
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== "object" || value === null) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  try {
+    if (typeof value !== "object" || value === null) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
 };
 
 const pollingPolicySchema = z.object({
@@ -35,30 +39,51 @@ const pollingPolicySchema = z.object({
 }).strict();
 
 const parseInput = (input: unknown): PollingPolicyInput | null => {
-  if (!isPlainObject(input)) return null;
-  const parsed = pollingPolicySchema.safeParse(input);
-  return parsed.success ? parsed.data : null;
+  try {
+    if (!isPlainObject(input)) return null;
+    const parsed = pollingPolicySchema.safeParse(input);
+    return parsed.success ? parsed.data : null;
+  } catch {
+    return null;
+  }
 };
 
 const parseNow = (now: unknown): number | null => {
-  if (typeof now !== "string" || !isoDateTimeSchema.safeParse(now).success) return null;
-  const timestamp = Date.parse(now);
-  return Number.isFinite(timestamp) ? timestamp : null;
+  try {
+    if (typeof now !== "string" || !isoDateTimeSchema.safeParse(now).success) return null;
+    const timestamp = Date.parse(now);
+    return Number.isFinite(timestamp) ? timestamp : null;
+  } catch {
+    return null;
+  }
 };
 
 export function isBindingDue(input: PollingPolicyInput, now: string): boolean {
-  const parsed = parseInput(input);
-  const nowTimestamp = parseNow(now);
-  if (parsed === null || nowTimestamp === null) return false;
-  if (parsed.mode === "disabled" || parsed.phase === "complete") return false;
-  if (parsed.nextPollAt === undefined || parsed.nextPollAt === null) return false;
-  return Date.parse(parsed.nextPollAt) <= nowTimestamp;
+  try {
+    const parsed = parseInput(input);
+    const nowTimestamp = parseNow(now);
+    if (parsed === null || nowTimestamp === null) return false;
+    if (parsed.mode === "disabled" || parsed.phase === "complete") return false;
+    if (parsed.nextPollAt === undefined || parsed.nextPollAt === null) return false;
+    const nextTimestamp = Date.parse(parsed.nextPollAt);
+    return Number.isFinite(nextTimestamp) && nextTimestamp <= nowTimestamp;
+  } catch {
+    return false;
+  }
 }
 
 export function nextPollAt(input: PollingPolicyInput, now: string): string | null {
-  const parsed = parseInput(input);
-  const nowTimestamp = parseNow(now);
-  if (parsed === null || nowTimestamp === null || parsed.mode === "disabled" || parsed.phase === "complete") return null;
-  const seconds = parsed[phaseIntervals[parsed.phase]];
-  return new Date(nowTimestamp + seconds * 1000).toISOString();
+  try {
+    const parsed = parseInput(input);
+    const nowTimestamp = parseNow(now);
+    if (parsed === null || nowTimestamp === null || parsed.mode === "disabled" || parsed.phase === "complete") return null;
+    const seconds = parsed[phaseIntervals[parsed.phase]];
+    const intervalMilliseconds = seconds * 1000;
+    if (!Number.isSafeInteger(intervalMilliseconds)) return null;
+    const targetTimestamp = nowTimestamp + intervalMilliseconds;
+    if (!Number.isFinite(targetTimestamp) || Math.abs(targetTimestamp) > 8_640_000_000_000_000) return null;
+    return new Date(targetTimestamp).toISOString();
+  } catch {
+    return null;
+  }
 }

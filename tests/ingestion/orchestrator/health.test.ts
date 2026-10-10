@@ -71,6 +71,16 @@ describe("failure scheduling policy", () => {
     expect(decision).toMatchObject({ accepted: true, retryAt: "2026-10-10T12:00:30.000Z" });
   });
 
+  it("treats nullable optional timestamps as absent", () => {
+    expect(decideFailureScheduling({
+      failureCode: "timeout",
+      now: baseFailure.now,
+      deterministicBackoffAt: baseFailure.deterministicBackoffAt,
+      providerRetryAt: null,
+      providerResetAt: null,
+    })).toMatchObject({ accepted: true, retryAt: "2026-10-10T12:00:30.000Z" });
+  });
+
   it.each([
     { failureCode: "timeout", deterministicBackoffAt: undefined },
     { failureCode: "network", deterministicBackoffAt: "not-a-time" },
@@ -102,6 +112,48 @@ describe("failure scheduling policy", () => {
       accepted: false,
       reason: "invalid_input",
     });
+  });
+
+  it("returns complete decisions for every provider code", () => {
+    const decisions = Object.fromEntries(providerFailureCodes.map((code) => [
+      code,
+      decideFailureScheduling({ ...baseFailure, failureCode: code }),
+    ]));
+    expect(decisions.authentication).toMatchObject({ outcome: "failed", disposition: "disable", retryAt: null, reason: "terminal_provider" });
+    expect(decisions.authorization).toMatchObject({ outcome: "failed", disposition: "disable", retryAt: null, reason: "terminal_provider" });
+    for (const code of ["not_found", "invalid_response", "unsupported_shape", "permanent"] as const) {
+      expect(decisions[code]).toMatchObject({ outcome: "failed", disposition: "unschedule", retryAt: null, reason: "terminal_provider" });
+    }
+    for (const code of ["timeout", "network", "provider_server"] as const) {
+      expect(decisions[code]).toMatchObject({ outcome: "failed", disposition: "retry", reason: "retryable_provider", retryAt: "2026-10-10T12:02:00.000Z" });
+    }
+    expect(decisions.rate_limited).toMatchObject({ outcome: "rate_limited", disposition: "retry", reason: "rate_limited_provider", retryAt: "2026-10-10T12:02:00.000Z" });
+  });
+
+  it("returns complete decisions for every system code", () => {
+    for (const failureCode of systemFailureCodes) {
+      expect(decideFailureScheduling({ ...baseFailure, failureCode })).toMatchObject({
+        accepted: true,
+        failureCode,
+        outcome: "failed",
+        disposition: "unschedule",
+        retryAt: null,
+        incrementConsecutiveFailures: failureCode !== "system:lease_expired",
+        itemFailedCountDelta: 0,
+        reason: failureCode === "system:lease_expired" ? "lease_expired" : "terminal_system",
+      });
+    }
+  });
+
+  it("fails closed for hostile scheduling objects", () => {
+    const throwingGet = new Proxy({ ...baseFailure, failureCode: "timeout" }, { get: () => { throw new Error("secret"); } });
+    const throwingKeys = new Proxy({ ...baseFailure, failureCode: "timeout" }, { ownKeys: () => { throw new Error("secret"); } });
+    const revoked = Proxy.revocable({ ...baseFailure, failureCode: "timeout" }, {});
+    revoked.revoke();
+    for (const input of [throwingGet, throwingKeys, revoked.proxy]) {
+      expect(() => decideFailureScheduling(input)).not.toThrow();
+      expect(decideFailureScheduling(input)).toMatchObject({ accepted: false, reason: "invalid_input" });
+    }
   });
 });
 
@@ -149,6 +201,17 @@ describe("health transition policy", () => {
     expect(decideHealthTransition({ ...baseHealth, runOutcome: "failed", failureCode: "provider:authorization", dataChanged: false })).toMatchObject({ mode: "disabled", healthStatus: "disabled", reason: "authorization_disabled" });
   });
 
+  it("preserves disabled-mode failure counters without authentication", () => {
+    expect(decideHealthTransition({
+      ...baseHealth,
+      mode: "disabled",
+      consecutiveFailures: 4,
+      runOutcome: "failed",
+      failureCode: "system:page_commit_failed",
+      dataChanged: false,
+    })).toMatchObject({ mode: "disabled", healthStatus: "disabled", consecutiveFailures: 4, reason: "disabled_mode" });
+  });
+
   it("cancels before stale evaluation and preserves health", () => {
     expect(decideHealthTransition({
       ...baseHealth,
@@ -182,5 +245,59 @@ describe("health transition policy", () => {
   it("rejects malformed and unknown fields", () => {
     expect(decideHealthTransition({ ...baseHealth, unexpected: true })).toEqual({ accepted: false, reason: "invalid_input" });
     expect(decideHealthTransition({ ...baseHealth, staleAfterSeconds: 59 })).toEqual({ accepted: false, reason: "invalid_input" });
+  });
+
+  it.each([
+    { input: { hasContinuation: false, hasQuarantine: false, hasItemFailure: false }, expected: { accepted: false } },
+    { input: { hasContinuation: true, hasQuarantine: false, hasItemFailure: false }, expected: { reason: "partial_continuation", healthStatus: "healthy", consecutiveFailures: 0, updateLastSuccessAt: true } },
+    { input: { hasContinuation: false, hasQuarantine: true, hasItemFailure: false }, expected: { reason: "partial_quarantine", healthStatus: "degraded", consecutiveFailures: 2, updateLastSuccessAt: false } },
+    { input: { hasContinuation: false, hasQuarantine: false, hasItemFailure: true }, expected: { reason: "partial_item_failure", healthStatus: "degraded", consecutiveFailures: 3, updateLastSuccessAt: false } },
+    { input: { hasContinuation: true, hasQuarantine: true, hasItemFailure: false }, expected: { reason: "partial_quarantine", healthStatus: "degraded", consecutiveFailures: 2, updateLastSuccessAt: false } },
+    { input: { hasContinuation: true, hasQuarantine: false, hasItemFailure: true }, expected: { reason: "partial_item_failure", healthStatus: "degraded", consecutiveFailures: 3, updateLastSuccessAt: false } },
+    { input: { hasContinuation: false, hasQuarantine: true, hasItemFailure: true }, expected: { reason: "partial_item_failure", healthStatus: "degraded", consecutiveFailures: 3, updateLastSuccessAt: false } },
+    { input: { hasContinuation: true, hasQuarantine: true, hasItemFailure: true }, expected: { reason: "partial_item_failure", healthStatus: "degraded", consecutiveFailures: 3, updateLastSuccessAt: false } },
+  ])("handles all partial flag combinations: %j", (flags) => {
+    const decision = decideHealthTransition({
+      ...baseHealth,
+      consecutiveFailures: 2,
+      runOutcome: "partial",
+      dataChanged: false,
+      ...flags.input,
+    } as HealthTransitionInput);
+    if (flags.expected.accepted === false) {
+      expect(decision).toEqual({ accepted: false, reason: "invalid_input" });
+    } else {
+      expect(decision).toMatchObject({
+        accepted: true,
+        ...flags.expected,
+        updateLastDataAt: false,
+      });
+    }
+  });
+
+  it("separates stale status selection from counter calculation", () => {
+    expect(decideHealthTransition({ ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", dataChanged: false, consecutiveFailures: 4 })).toMatchObject({ reason: "stale_input_no_fresh_data", healthStatus: "stale", consecutiveFailures: 0, updateLastSuccessAt: true });
+    expect(decideHealthTransition({ ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", runOutcome: "partial", hasContinuation: true, dataChanged: false, consecutiveFailures: 4 })).toMatchObject({ reason: "stale_input_no_fresh_data", healthStatus: "stale", consecutiveFailures: 0, updateLastSuccessAt: true });
+    expect(decideHealthTransition({ ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", runOutcome: "partial", hasQuarantine: true, dataChanged: true, consecutiveFailures: 4 })).toMatchObject({ reason: "stale_input_fresh_data", healthStatus: "degraded", consecutiveFailures: 4, updateLastSuccessAt: false, updateLastDataAt: true });
+    expect(decideHealthTransition({ ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", runOutcome: "partial", hasItemFailure: true, dataChanged: true, consecutiveFailures: 4 })).toMatchObject({ reason: "stale_input_fresh_data", healthStatus: "degraded", consecutiveFailures: 5, updateLastSuccessAt: false, updateLastDataAt: true });
+    expect(decideHealthTransition({ ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", runOutcome: "rate_limited", failureCode: "provider:rate_limited", dataChanged: true, consecutiveFailures: 4 })).toMatchObject({ reason: "stale_input_fresh_data", healthStatus: "degraded", consecutiveFailures: 5, updateLastSuccessAt: false, updateLastDataAt: true });
+    expect(decideHealthTransition({ ...baseHealth, lastDataAt: "2026-10-10T11:59:00Z", runOutcome: "partial", hasQuarantine: true, dataChanged: false, consecutiveFailures: 4 })).toMatchObject({ reason: "partial_quarantine", healthStatus: "degraded", consecutiveFailures: 4 });
+  });
+
+  it("rejects an unsafe failure increment while allowing maximum-safe resets and preserves", () => {
+    expect(decideHealthTransition({ ...baseHealth, consecutiveFailures: Number.MAX_SAFE_INTEGER, runOutcome: "failed", failureCode: "system:page_commit_failed", dataChanged: false })).toEqual({ accepted: false, reason: "invalid_input" });
+    expect(decideHealthTransition({ ...baseHealth, consecutiveFailures: Number.MAX_SAFE_INTEGER, dataChanged: false })).toMatchObject({ accepted: true, consecutiveFailures: 0 });
+    expect(decideHealthTransition({ ...baseHealth, consecutiveFailures: Number.MAX_SAFE_INTEGER, runOutcome: "partial", hasQuarantine: true, dataChanged: false })).toMatchObject({ accepted: true, consecutiveFailures: Number.MAX_SAFE_INTEGER });
+  });
+
+  it("fails closed for hostile health objects", () => {
+    const throwingGet = new Proxy(baseHealth, { get: () => { throw new Error("blocked"); } });
+    const throwingKeys = new Proxy(baseHealth, { ownKeys: () => { throw new Error("blocked"); } });
+    const revoked = Proxy.revocable({ ...baseHealth }, {});
+    revoked.revoke();
+    for (const input of [throwingGet, throwingKeys, revoked.proxy]) {
+      expect(() => decideHealthTransition(input)).not.toThrow();
+      expect(decideHealthTransition(input)).toEqual({ accepted: false, reason: "invalid_input" });
+    }
   });
 });

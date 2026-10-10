@@ -77,4 +77,23 @@ describe("phase-based polling policy", () => {
       "2026-10-08T17:01:00.000Z",
     );
   });
+
+  it("fails closed for hostile policy objects", () => {
+    const throwingGet = new Proxy(binding(), { get: () => { throw new Error("blocked"); } });
+    const throwingKeys = new Proxy(binding(), { ownKeys: () => { throw new Error("blocked"); } });
+    const revoked = Proxy.revocable(binding(), {});
+    revoked.revoke();
+
+    for (const input of [throwingGet, throwingKeys, revoked.proxy]) {
+      expect(() => isBindingDue(input, "2026-10-08T17:00:00Z")).not.toThrow();
+      expect(() => nextPollAt(input, "2026-10-08T17:00:00Z")).not.toThrow();
+      expect(isBindingDue(input, "2026-10-08T17:00:00Z")).toBe(false);
+      expect(nextPollAt(input, "2026-10-08T17:00:00Z")).toBeNull();
+    }
+  });
+
+  it("fails closed when interval arithmetic exceeds safe or Date bounds", () => {
+    expect(nextPollAt(binding({ liveSeconds: Number.MAX_SAFE_INTEGER }), "2026-10-08T17:00:00Z")).toBeNull();
+    expect(nextPollAt(binding({ liveSeconds: 1 }), "+275760-09-12T23:59:59.999Z")).toBeNull();
+  });
 });

@@ -75,4 +75,49 @@ describe("accounting policy", () => {
     validateAccountingCounts(input);
     expect(input).toEqual(before);
   });
+
+  it("rejects class instances while accepting null-prototype objects", () => {
+    class Counts {
+      fetchedCount = validCounts.fetchedCount;
+      normalizedCount = validCounts.normalizedCount;
+      projectedCount = validCounts.projectedCount;
+      unchangedCount = validCounts.unchangedCount;
+      quarantinedCount = validCounts.quarantinedCount;
+      skippedCount = validCounts.skippedCount;
+      failedCount = validCounts.failedCount;
+    }
+
+    expect(validateAccountingCounts(new Counts())).toEqual({
+      accepted: false,
+      counts: null,
+      reason: "invalid_counts",
+    });
+    expect(validateAccountingCounts(Object.assign(Object.create(null), validCounts))).toEqual({
+      accepted: true,
+      counts: validCounts,
+      reason: "accepted",
+    });
+  });
+
+  it.each([
+    new Proxy(validCounts, { get: () => { throw new Error("blocked"); } }),
+    new Proxy(validCounts, { ownKeys: () => { throw new Error("blocked"); } }),
+  ])("fails closed for hostile count objects", (input) => {
+    expect(() => validateAccountingCounts(input)).not.toThrow();
+    expect(validateAccountingCounts(input)).toEqual({
+      accepted: false,
+      counts: null,
+      reason: "invalid_counts",
+    });
+  });
+
+  it("fails closed for a revoked proxy", () => {
+    const revocable = Proxy.revocable({ ...validCounts }, {});
+    revocable.revoke();
+    expect(validateAccountingCounts(revocable.proxy)).toEqual({
+      accepted: false,
+      counts: null,
+      reason: "invalid_counts",
+    });
+  });
 });

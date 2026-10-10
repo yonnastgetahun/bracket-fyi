@@ -59,7 +59,6 @@ const systemFailureCodes = [
 ] as const satisfies readonly SystemFailureCode[];
 export { systemFailureCodes };
 
-const timestampFields = ["now", "deterministicBackoffAt", "providerRetryAt", "providerResetAt"] as const;
 const failureInputSchema = z.object({
   failureCode: z.string(),
   now: isoDateTimeSchema,
@@ -80,71 +79,75 @@ const rejected = (reason: "invalid_input" | "unknown_failure_code"): FailureSche
 });
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> => {
-  if (typeof value !== "object" || value === null) return false;
-  const prototype = Object.getPrototypeOf(value);
-  return prototype === Object.prototype || prototype === null;
+  try {
+    if (typeof value !== "object" || value === null) return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+  } catch {
+    return false;
+  }
 };
 
 const canonicalIso = (value: string): string => new Date(Date.parse(value)).toISOString();
 
 export function decideFailureScheduling(input: unknown): FailureSchedulingDecision {
-  if (!isPlainObject(input)) return rejected("invalid_input");
-  const parsed = failureInputSchema.safeParse(input);
-  if (!parsed.success) return rejected("invalid_input");
-  const value = parsed.data;
-  if (timestampFields.some((field) => field !== "now" && field in value && value[field] === null)) {
-    return rejected("invalid_input");
-  }
+  try {
+    if (!isPlainObject(input)) return rejected("invalid_input");
+    const parsed = failureInputSchema.safeParse(input);
+    if (!parsed.success) return rejected("invalid_input");
+    const value = parsed.data;
+    const isProvider = (providerFailureCodes as readonly string[]).includes(value.failureCode);
+    const isSystem = (systemFailureCodes as readonly string[]).includes(value.failureCode);
+    if (!isProvider && !isSystem) return rejected("unknown_failure_code");
 
-  const isProvider = (providerFailureCodes as readonly string[]).includes(value.failureCode);
-  const isSystem = (systemFailureCodes as readonly string[]).includes(value.failureCode);
-  if (!isProvider && !isSystem) return rejected("unknown_failure_code");
+    const code = value.failureCode as IngestionFailureCode;
+    const canonicalCode = isProvider ? `provider:${code}` as PersistedFailureCode : code as SystemFailureCode;
+    if (isProvider && retryableProviderCodes.has(code as ProviderFailureCode)) {
+      if (value.deterministicBackoffAt === undefined || value.deterministicBackoffAt === null) return rejected("invalid_input");
+      const retryAt = [value.now, value.deterministicBackoffAt, value.providerRetryAt, value.providerResetAt]
+        .filter((timestamp): timestamp is string => timestamp !== undefined && timestamp !== null)
+        .map(canonicalIso)
+        .sort()
+        .at(-1);
+      if (retryAt === undefined) return rejected("invalid_input");
+      return {
+        accepted: true,
+        failureCode: canonicalCode,
+        outcome: code === "rate_limited" ? "rate_limited" : "failed",
+        disposition: "retry",
+        retryAt,
+        incrementConsecutiveFailures: true,
+        itemFailedCountDelta: 0,
+        reason: code === "rate_limited" ? "rate_limited_provider" : "retryable_provider",
+      };
+    }
 
-  const code = value.failureCode as IngestionFailureCode;
-  const canonicalCode = isProvider ? `provider:${code}` as PersistedFailureCode : code as SystemFailureCode;
-  if (isProvider && retryableProviderCodes.has(code as ProviderFailureCode)) {
-    if (value.deterministicBackoffAt === undefined || value.deterministicBackoffAt === null) return rejected("invalid_input");
-    const retryAt = [value.now, value.deterministicBackoffAt, value.providerRetryAt, value.providerResetAt]
-      .filter((timestamp): timestamp is string => timestamp !== undefined && timestamp !== null)
-      .map(canonicalIso)
-      .sort()
-      .at(-1);
-    if (retryAt === undefined) return rejected("invalid_input");
-    return {
-      accepted: true,
-      failureCode: canonicalCode,
-      outcome: code === "rate_limited" ? "rate_limited" : "failed",
-      disposition: "retry",
-      retryAt,
-      incrementConsecutiveFailures: true,
-      itemFailedCountDelta: 0,
-      reason: code === "rate_limited" ? "rate_limited_provider" : "retryable_provider",
-    };
-  }
+    if (isProvider && (code === "authentication" || code === "authorization")) {
+      return {
+        accepted: true,
+        failureCode: canonicalCode,
+        outcome: "failed",
+        disposition: "disable",
+        retryAt: null,
+        incrementConsecutiveFailures: true,
+        itemFailedCountDelta: 0,
+        reason: "terminal_provider",
+      };
+    }
 
-  if (isProvider && (code === "authentication" || code === "authorization")) {
     return {
       accepted: true,
       failureCode: canonicalCode,
       outcome: "failed",
-      disposition: "disable",
+      disposition: "unschedule",
       retryAt: null,
-      incrementConsecutiveFailures: true,
+      incrementConsecutiveFailures: code !== "system:lease_expired",
       itemFailedCountDelta: 0,
-      reason: "terminal_provider",
+      reason: code === "system:lease_expired" ? "lease_expired" : isProvider ? "terminal_provider" : "terminal_system",
     };
+  } catch {
+    return rejected("invalid_input");
   }
-
-  return {
-    accepted: true,
-    failureCode: canonicalCode,
-    outcome: "failed",
-    disposition: "unschedule",
-    retryAt: null,
-    incrementConsecutiveFailures: code !== "system:lease_expired",
-    itemFailedCountDelta: 0,
-    reason: code === "system:lease_expired" ? "lease_expired" : isProvider ? "terminal_provider" : "terminal_system",
-  };
 }
 
 export type HealthTransitionInput = Readonly<{
@@ -205,51 +208,78 @@ const healthRejected: HealthTransitionDecision = { accepted: false, reason: "inv
 export const DEGRADED_AFTER_FAILURES = 1;
 
 export function decideHealthTransition(input: unknown): HealthTransitionDecision {
-  if (!isPlainObject(input)) return healthRejected;
-  const parsed = healthInputSchema.safeParse(input);
-  if (!parsed.success) return healthRejected;
-  const value = parsed.data;
-  const failureCode = value.failureCode;
-  if (failureCode !== null && !isPersistedFailureCode(failureCode)) return healthRejected;
+  try {
+    if (!isPlainObject(input)) return healthRejected;
+    const parsed = healthInputSchema.safeParse(input);
+    if (!parsed.success) return healthRejected;
+    const value = parsed.data;
+    const failureCode = value.failureCode;
+    if (failureCode !== null && !isPersistedFailureCode(failureCode)) return healthRejected;
 
-  const partialFlags = [value.hasContinuation, value.hasQuarantine, value.hasItemFailure].filter(Boolean).length;
-  if (value.runOutcome === "succeeded" && (failureCode !== null || partialFlags !== 0)) return healthRejected;
-  if (value.runOutcome === "partial" && (failureCode !== null || partialFlags === 0)) return healthRejected;
-  if (value.runOutcome === "canceled" && (failureCode !== null || value.dataChanged || partialFlags !== 0)) return healthRejected;
-  if (value.runOutcome === "failed" && (failureCode === null || failureCode === "provider:rate_limited")) return healthRejected;
-  if (value.runOutcome === "rate_limited" && failureCode !== null && failureCode !== "provider:rate_limited") return healthRejected;
+    const partialFlags = [value.hasContinuation, value.hasQuarantine, value.hasItemFailure].filter(Boolean).length;
+    if (value.runOutcome === "succeeded" && (failureCode !== null || partialFlags !== 0)) return healthRejected;
+    if (value.runOutcome === "partial" && (failureCode !== null || partialFlags === 0)) return healthRejected;
+    if (value.runOutcome === "canceled" && (failureCode !== null || value.dataChanged || partialFlags !== 0)) return healthRejected;
+    if (value.runOutcome === "failed" && (failureCode === null || failureCode === "provider:rate_limited")) return healthRejected;
+    if (value.runOutcome === "rate_limited" && failureCode !== null && failureCode !== "provider:rate_limited") return healthRejected;
 
-  const now = Date.parse(value.now);
-  const lastData = value.lastDataAt === null ? null : Date.parse(value.lastDataAt);
-  const staleByAge = lastData === null || now - lastData > value.staleAfterSeconds * 1000;
-  const staleInput = value.currentHealthStatus === "stale" || staleByAge;
-  const output = (healthStatus: AcceptedHealthTransition["healthStatus"], consecutiveFailures: number, updateLastSuccessAt: boolean, reason: AcceptedHealthTransition["reason"]): AcceptedHealthTransition => ({
-    accepted: true,
-    mode: value.mode,
-    healthStatus,
-    consecutiveFailures,
-    updateLastSuccessAt,
-    updateLastDataAt: value.dataChanged,
-    reason,
-  });
+    const now = Date.parse(value.now);
+    const lastData = value.lastDataAt === null ? null : Date.parse(value.lastDataAt);
+    if (!Number.isFinite(now) || (lastData !== null && !Number.isFinite(lastData))) return healthRejected;
+    const staleByAge = lastData === null || now - lastData > value.staleAfterSeconds * 1000;
+    const staleInput = value.currentHealthStatus === "stale" || staleByAge;
+    const output = (healthStatus: AcceptedHealthTransition["healthStatus"], consecutiveFailures: number, updateLastSuccessAt: boolean, reason: AcceptedHealthTransition["reason"]): AcceptedHealthTransition => ({
+      accepted: true,
+      mode: value.mode,
+      healthStatus,
+      consecutiveFailures,
+      updateLastSuccessAt,
+      updateLastDataAt: value.runOutcome === "canceled" ? false : value.dataChanged,
+      reason,
+    });
+    const incrementedFailures = (): number | null =>
+      value.consecutiveFailures === Number.MAX_SAFE_INTEGER ? null : value.consecutiveFailures + 1;
 
-  if (failureCode === "provider:authentication") return { ...output("disabled", value.consecutiveFailures + 1, false, "authentication_disabled"), mode: "disabled" };
-  if (failureCode === "provider:authorization") return { ...output("disabled", value.consecutiveFailures + 1, false, "authorization_disabled"), mode: "disabled" };
-  if (value.mode === "disabled") return output("disabled", value.consecutiveFailures, false, "disabled_mode");
-  if (value.runOutcome === "canceled") return output(value.currentHealthStatus, value.consecutiveFailures, false, "canceled");
-  if (staleInput && value.dataChanged) {
-    const healthStatus = value.runOutcome === "succeeded" || (value.runOutcome === "partial" && value.hasContinuation && !value.hasQuarantine && !value.hasItemFailure) ? "healthy" : "degraded";
-    return output(healthStatus, value.runOutcome === "partial" && value.hasItemFailure ? value.consecutiveFailures + 1 : value.runOutcome === "failed" || value.runOutcome === "rate_limited" ? value.consecutiveFailures + 1 : 0, value.runOutcome === "succeeded" || (value.runOutcome === "partial" && value.hasContinuation && !value.hasQuarantine && !value.hasItemFailure), "stale_input_fresh_data");
+    const authentication = failureCode === "provider:authentication";
+    const authorization = failureCode === "provider:authorization";
+    const continuationOnly = value.runOutcome === "partial" && value.hasContinuation && !value.hasQuarantine && !value.hasItemFailure;
+    const itemFailure = value.runOutcome === "partial" && value.hasItemFailure;
+    const quarantine = value.runOutcome === "partial" && value.hasQuarantine && !value.hasItemFailure;
+    let consecutiveFailures: number | null;
+    if (authentication || authorization) {
+      consecutiveFailures = incrementedFailures();
+    } else if (value.mode === "disabled" || value.runOutcome === "canceled" || quarantine) {
+      consecutiveFailures = value.consecutiveFailures;
+    } else if (itemFailure || value.runOutcome === "failed" || value.runOutcome === "rate_limited") {
+      consecutiveFailures = incrementedFailures();
+    } else if (value.runOutcome === "succeeded" || continuationOnly) {
+      consecutiveFailures = 0;
+    } else {
+      consecutiveFailures = value.consecutiveFailures;
+    }
+    if (consecutiveFailures === null) return healthRejected;
+
+    if (authentication) return { ...output("disabled", consecutiveFailures, false, "authentication_disabled"), mode: "disabled" };
+    if (authorization) return { ...output("disabled", consecutiveFailures, false, "authorization_disabled"), mode: "disabled" };
+    if (value.mode === "disabled") return output("disabled", consecutiveFailures, false, "disabled_mode");
+    if (value.runOutcome === "canceled") return output(value.currentHealthStatus, consecutiveFailures, false, "canceled");
+
+    if (staleInput && value.dataChanged) {
+      const healthStatus = value.runOutcome === "succeeded" || continuationOnly ? "healthy" : "degraded";
+      return output(healthStatus, consecutiveFailures, value.runOutcome === "succeeded" || continuationOnly, "stale_input_fresh_data");
+    }
+    if (staleInput) {
+      return output("stale", consecutiveFailures, value.runOutcome === "succeeded" || continuationOnly, "stale_input_no_fresh_data");
+    }
+    if (value.runOutcome === "succeeded") return output("healthy", consecutiveFailures, true, value.dataChanged ? "success_changed" : "success_unchanged");
+    if (value.runOutcome === "partial") {
+      if (itemFailure) return output("degraded", consecutiveFailures, false, "partial_item_failure");
+      if (quarantine) return output("degraded", consecutiveFailures, false, "partial_quarantine");
+      return output("healthy", consecutiveFailures, true, "partial_continuation");
+    }
+    if (value.runOutcome === "failed") return output("degraded", consecutiveFailures, false, "failed");
+    return output("degraded", consecutiveFailures, false, "rate_limited");
+  } catch {
+    return healthRejected;
   }
-  if (staleInput) {
-    return output("stale", value.runOutcome === "partial" && value.hasItemFailure ? value.consecutiveFailures + 1 : value.runOutcome === "failed" || value.runOutcome === "rate_limited" ? value.consecutiveFailures + 1 : value.consecutiveFailures, value.runOutcome === "partial" && value.hasContinuation && !value.hasQuarantine && !value.hasItemFailure, "stale_input_no_fresh_data");
-  }
-  if (value.runOutcome === "succeeded") return output("healthy", 0, true, value.dataChanged ? "success_changed" : "success_unchanged");
-  if (value.runOutcome === "partial") {
-    if (value.hasItemFailure) return output("degraded", value.consecutiveFailures + 1, false, "partial_item_failure");
-    if (value.hasQuarantine) return output("degraded", value.consecutiveFailures, false, "partial_quarantine");
-    return output("healthy", 0, true, "partial_continuation");
-  }
-  if (value.runOutcome === "failed") return output("degraded", value.consecutiveFailures + 1, false, "failed");
-  return output("degraded", value.consecutiveFailures + 1, false, "rate_limited");
 }
