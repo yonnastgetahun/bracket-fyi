@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { jsonObjectSchema, type JsonObject } from "@/lib/ingestion/contracts";
 import { canonicalJson } from "@/lib/ingestion/idempotency/canonical-json";
-import type { CheckpointDecision } from "@/lib/ingestion/orchestrator/checkpoint";
+import { providerEtagSchema, type CheckpointDecision } from "@/lib/ingestion/orchestrator/checkpoint";
 
 export const MAX_PAGES_PER_RUN = 25;
 
@@ -24,7 +24,7 @@ const checkpointDecisionSchema = z
   .object({
     advance: z.boolean(),
     cursorAfter: jsonObjectSchema.optional(),
-    etag: z.string().trim().min(1).optional(),
+    etag: providerEtagSchema.optional(),
     reason: z.enum([
       "page_consumed",
       "not_modified",
@@ -44,6 +44,9 @@ const paginationInputSchema = z
   })
   .strict();
 
+const isSafePageCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= MAX_PAGES_PER_RUN;
+
 const invalidDecision = (pagesProcessed: number): PaginationDecision => ({
   action: "invalid",
   pagesProcessed,
@@ -61,13 +64,29 @@ export function isRepeatedCursor(input: Readonly<{
   nextCursor?: JsonObject;
   seenCursorFingerprints: ReadonlySet<string>;
 }>): boolean {
-  if (input.nextCursor === undefined) return false;
+  const repetitionInputSchema = z
+    .object({
+      currentCursor: jsonObjectSchema.optional(),
+      nextCursor: jsonObjectSchema.optional(),
+      seenCursorFingerprints: z.custom<ReadonlySet<string>>(
+        (value) =>
+          value instanceof Set &&
+          [...value].every((fingerprint) => typeof fingerprint === "string" && /^[0-9a-f]{64}$/.test(fingerprint)),
+      ),
+    })
+    .strict();
+  const parsed = repetitionInputSchema.safeParse(input);
+  if (!parsed.success) return true;
+  if (parsed.data.nextCursor === undefined) return false;
 
-  const nextFingerprint = cursorFingerprint(input.nextCursor);
-  if (input.currentCursor !== undefined && cursorFingerprint(input.currentCursor) === nextFingerprint) {
+  const nextFingerprint = cursorFingerprint(parsed.data.nextCursor);
+  if (
+    parsed.data.currentCursor !== undefined &&
+    cursorFingerprint(parsed.data.currentCursor) === nextFingerprint
+  ) {
     return true;
   }
-  return input.seenCursorFingerprints.has(nextFingerprint);
+  return parsed.data.seenCursorFingerprints.has(nextFingerprint);
 }
 
 export function decidePagination(input: Readonly<{
@@ -76,7 +95,7 @@ export function decidePagination(input: Readonly<{
   nextCursor?: JsonObject;
 }>): PaginationDecision {
   const parsed = paginationInputSchema.safeParse(input);
-  const requestedPages = typeof input?.pagesProcessed === "number" ? input.pagesProcessed : 0;
+  const requestedPages = isSafePageCount(input?.pagesProcessed) ? input.pagesProcessed : 0;
   if (!parsed.success) return invalidDecision(requestedPages);
 
   const { pagesProcessed, checkpoint, nextCursor } = parsed.data;

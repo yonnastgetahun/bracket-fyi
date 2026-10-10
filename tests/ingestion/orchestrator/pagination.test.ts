@@ -33,6 +33,20 @@ describe("cursor pagination policies", () => {
     expect(isRepeatedCursor({ currentCursor: current, seenCursorFingerprints: new Set() })).toBe(false);
   });
 
+  it("returns true for malformed repetition input and false only for valid missing next cursors", () => {
+    const malformedInputs = [
+      { currentCursor: [], nextCursor: { page: 2 }, seenCursorFingerprints: new Set<string>() },
+      { currentCursor: null, nextCursor: { page: 2 }, seenCursorFingerprints: new Set<string>() },
+      { currentCursor: { page: 1 }, nextCursor: [], seenCursorFingerprints: new Set<string>() },
+      { currentCursor: { page: 1 }, nextCursor: null, seenCursorFingerprints: new Set<string>() },
+      { currentCursor: { page: 1 }, nextCursor: { page: 2 }, seenCursorFingerprints: new Set(["not-a-hash"]) },
+      { currentCursor: { page: 1 }, nextCursor: { page: 2 }, seenCursorFingerprints: ["not-a-set"] },
+      { currentCursor: { page: 1 }, nextCursor: { page: 2 }, seenCursorFingerprints: new Set<string>(), extra: true },
+    ];
+    for (const input of malformedInputs) expect(isRepeatedCursor(input as never)).toBe(true);
+    expect(isRepeatedCursor({ currentCursor: { page: 1 }, seenCursorFingerprints: new Set() })).toBe(false);
+  });
+
   it("continues and completes according to the next cursor", () => {
     expect(decidePagination({ pagesProcessed: 0, checkpoint: consumed, nextCursor: { page: 2 } })).toEqual({
       action: "continue",
@@ -101,14 +115,35 @@ describe("cursor pagination policies", () => {
   });
 
   it("rejects negative, fractional, unsafe, and over-limit page counts", () => {
-    for (const pagesProcessed of [-1, 1.5, Number.MAX_SAFE_INTEGER + 1, MAX_PAGES_PER_RUN + 1]) {
-      expect(decidePagination({ pagesProcessed, checkpoint: consumed })).toEqual({
+    for (const pagesProcessed of [Number.NaN, Number.POSITIVE_INFINITY, Number.NEGATIVE_INFINITY, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, MAX_PAGES_PER_RUN + 1]) {
+      const decision = decidePagination({ pagesProcessed, checkpoint: consumed });
+      expect(decision).toEqual({
         action: "invalid",
-        pagesProcessed,
+        pagesProcessed: 0,
         scheduleImmediately: false,
         reason: "invalid_page",
       });
+      expect(Number.isSafeInteger(decision.pagesProcessed)).toBe(true);
+      expect(decision.pagesProcessed).toBeGreaterThanOrEqual(0);
+      expect(decision.pagesProcessed).toBeLessThanOrEqual(MAX_PAGES_PER_RUN);
     }
+    const malformedCheckpoint = decidePagination({ pagesProcessed: 7, checkpoint: { advance: true, reason: "unknown" } as never });
+    expect(malformedCheckpoint).toEqual({ action: "invalid", pagesProcessed: 7, scheduleImmediately: false, reason: "invalid_page" });
+  });
+
+  it("rejects malformed ETags inside checkpoint decisions", () => {
+    expect(
+      decidePagination({
+        pagesProcessed: 1,
+        checkpoint: { ...consumed, etag: "etag\nvalue" },
+      }),
+    ).toEqual({ action: "invalid", pagesProcessed: 1, scheduleImmediately: false, reason: "invalid_page" });
+    expect(
+      decidePagination({
+        pagesProcessed: 1,
+        checkpoint: { ...consumed, etag: "e".repeat(1025) },
+      }),
+    ).toEqual({ action: "invalid", pagesProcessed: 1, scheduleImmediately: false, reason: "invalid_page" });
   });
 
   it("is deterministic and does not mutate its input", () => {

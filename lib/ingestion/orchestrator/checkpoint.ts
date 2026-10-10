@@ -2,6 +2,14 @@ import { z } from "zod";
 
 import { jsonObjectSchema, type JsonObject } from "@/lib/ingestion/contracts";
 
+export const providerEtagSchema = z
+  .string()
+  .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), {
+    message: "ETag contains a control character",
+  })
+  .transform((value) => value.trim())
+  .pipe(z.string().min(1).max(1024));
+
 export type CheckpointDecision = Readonly<{
   advance: boolean;
   cursorAfter?: JsonObject;
@@ -31,9 +39,9 @@ export type CheckpointInput = Readonly<{
 const checkpointInputSchema = z
   .object({
     currentCursor: jsonObjectSchema.optional(),
-    currentEtag: z.string().trim().min(1).optional(),
+    currentEtag: providerEtagSchema.optional(),
     nextCursor: jsonObjectSchema.optional(),
-    responseEtag: z.string().trim().min(1).optional(),
+    responseEtag: providerEtagSchema.optional(),
     transportSucceeded: z.boolean(),
     pageValid: z.boolean(),
     observationsTerminal: z.boolean(),

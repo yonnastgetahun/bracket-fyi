@@ -125,6 +125,22 @@ describe("decideCheckpoint", () => {
     });
   });
 
+  it("accepts ordinary quoted and weak ETags but rejects unsafe or oversized values", () => {
+    expect(decideCheckpoint(complete({ responseEtag: '"quoted"' })).etag).toBe('"quoted"');
+    expect(decideCheckpoint(complete({ responseEtag: 'W/"weak"' })).etag).toBe('W/"weak"');
+    for (const responseEtag of ["   ", "etag\rvalue", "etag\nvalue", "etag\u0000value", "etag\tvalue", "etag\u0001value"]) {
+      expect(decideCheckpoint(complete({ responseEtag }))).toEqual({
+        advance: false,
+        reason: "invalid_page",
+      });
+    }
+    expect(decideCheckpoint(complete({ responseEtag: "e".repeat(1024) })).etag).toBe("e".repeat(1024));
+    expect(decideCheckpoint(complete({ responseEtag: "e".repeat(1025) }))).toEqual({
+      advance: false,
+      reason: "invalid_page",
+    });
+  });
+
   it("does not mutate input objects", () => {
     const input = complete({
       currentCursor: { nested: { page: 1 } },
