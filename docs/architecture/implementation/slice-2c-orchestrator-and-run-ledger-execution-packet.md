@@ -4,15 +4,15 @@
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence. Slice 2C.4A is approved for pure-policy implementation; Slice
-2C.4A implementation has not started, and Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
+mocked, and synthetic TypeScript evidence. Slice 2C.4A is implemented pending independent acceptance review;
+Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
 **Authorization record:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification,
 and Slice 2C.3 local mocked/synthetic implementation through R2 are accepted at their stated evidence
-ceiling. Slice 2C.4A pure-policy implementation is approved locally; Slice 2C.4B runtime integration
+ceiling. Slice 2C.4A pure-policy implementation is complete pending independent acceptance review; Slice 2C.4B runtime integration
 requires separate approval. No provider call, credential access, deployment, hosted change, notification
 delivery, or production action was authorized or performed. Provider,
 recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
@@ -723,6 +723,9 @@ runtime integration. Slice 2C.4B remains unstarted.
 decisions as pure functions. This sub-slice does not wire pagination into the runtime orchestrator; the
 existing orchestrator remains one-batch until separately approved Slice 2C.4B.
 
+**Status:** Implemented pending independent acceptance review. The pure policies are local TypeScript
+artifacts only; Slice 2C.4B runtime integration remains separately gated and unstarted.
+
 **Exact allowlist:**
 
 - `lib/ingestion/orchestrator/pagination.ts`
@@ -833,7 +836,8 @@ provider page by deleting evidence.
 partial data deletes unseen state; a repeated cursor loops; max pages is unbounded; or a checkpoint cannot
 be replayed idempotently.
 
-**Next approval gate:** accept the pure 2C.4A evidence before separately approving 2C.4B runtime integration.
+**Next approval gate:** independently review the pure 2C.4A evidence before separately approving 2C.4B runtime
+integration.
 
 ### 2C.4B — Runtime orchestrator integration
 

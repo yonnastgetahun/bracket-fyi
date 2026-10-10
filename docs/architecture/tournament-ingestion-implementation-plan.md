@@ -171,8 +171,8 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence. Slice 2C.2 accepted for local/synthetic and
 disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence; Slice 2C.4A is approved for pure-policy implementation but has
-not started, and Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
+mocked, and synthetic TypeScript evidence; Slice 2C.4A is implemented pending independent acceptance review,
+and Slice 2C.4B remains separately gated and unstarted. Provider, hosted,
 deployment, beta, device, production, and external scheduler validation remain unverified.
 
 Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).
@@ -184,7 +184,8 @@ Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-executio
 - `lib/ingestion/retry/**`;
 - focused run-ledger tests.
 
-Slice 2C.4A is the pure cursor, ETag, checkpoint, cursor-repetition, and bounded-pagination policy layer.
+Slice 2C.4A is the implemented pure cursor, ETag, checkpoint, cursor-repetition, and bounded-pagination policy layer,
+pending independent acceptance review.
 Its exact local TypeScript allowlist is `lib/ingestion/orchestrator/checkpoint.ts`,
 `lib/ingestion/orchestrator/pagination.ts`, their focused tests, and
 `docs/architecture/implementation/slice-2c-4-checkpoint-evidence.md`. It does not wire pagination into the
