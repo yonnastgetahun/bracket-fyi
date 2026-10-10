@@ -652,8 +652,9 @@ port with synthetic tests in 2C.3; concrete budget persistence remains Slice 2C.
    `providerPullRequestSchema`, and resolve the adapter only through `AdapterRegistry`. Renew before reserving
    budget whenever the lease is within the 60-second safety threshold. A valid exhausted budget finishes
    `rate_limited` at the authoritative budget `retryAt` without credential or adapter activity; unknown or
-   invalid budget configuration fails closed as `system:invalid_budget_decision`, and malformed repository
-   output or exceptions use `system:budget_reservation_failed`.
+   invalid budget configuration fails closed as `system:invalid_budget_decision`. Structurally malformed or
+   contradictory budget output also uses `system:invalid_budget_decision`; repository exceptions or RPC/storage
+   failures use `system:budget_reservation_failed`.
 3. Reserve exactly one injected provider-wide budget unit, resolve the credential reference through the
    server-only `CredentialResolver`, renew again if the credential step consumed the safety window, and call
    `pull` exactly once.
@@ -673,10 +674,11 @@ port with synthetic tests in 2C.3; concrete budget persistence remains Slice 2C.
    retry-after, and injected observed time before finish. Do not sleep while holding the lease or retry within
    the same attempt; a later claim runs the next bounded attempt. Success and terminal failure close retry state.
 
-All controlled terminal and fail-closed outcomes receive a non-null `nextPollAt`; when no approved retry or
-regular schedule exists, the deterministic terminal hold is 300 seconds from the injected clock. The accepted
-complete-phase policy still permits a successful complete run to omit `nextPollAt`; the null-means-due versus
-complete-phase scheduling decision is a residual cross-slice decision before scheduler deployment.
+The implemented 2C.3 behavior used a deterministic 300-second terminal hold when no approved retry or regular
+schedule existed. That is historical current-state evidence, not the 2C.5 target. Slice 2C.5C replaces that
+hold with `next_poll_at = NULL` for disabled, canceled, terminal provider, terminal system, invalid-budget, and
+complete-phase outcomes; NULL definitively means unscheduled/not due. Retryable provider failures and valid
+local budget exhaustion retain their separately authorized retry times.
 
 Lease loss propagates without attempting an unauthorized finish. Other mode, registry, budget, renewal,
 response-recording, observation-dispatch, checkpoint, and page-commit failures finish through fixed
@@ -690,7 +692,8 @@ Slice 2C.3 processes one provider batch only. Pagination loops, repeated-cursor 
 shadow has evidence but zero canonical/result/audit/outbox mutations; write uses only accepted RPCs; one
 observation is never counted twice; `normalized = projected + unchanged + quarantined + skipped + failed`;
 credentials never enter run JSON; a failed pull does not advance cursor; terminal controlled outcomes do not
-leave a null next-poll schedule; manual result replay remains outside this fetch path.
+leave a null next-poll schedule in the historical 2C.3 implementation; 2C.5C replaces that terminal hold with
+NULL unscheduling; manual result replay remains outside this fetch path.
 
 **TDD sequence and focused matrix:** fake registry with genuinely distinct sports and ceremony adapters and
 private raw shapes; credential reference resolution without serializing value; disabled/shadow/write;
@@ -699,7 +702,8 @@ renewal-before-provider ordering; controlled mode/registry/budget/credential/ren
 missing credential; exact observation replay; structural/result dispatch; adapter error classification;
 namespaced retryable and terminal errors; thrown 429 metadata before finish; fixed generic failure messages
 with secret-sentinel absence; lease loss; no provider-name conditional; no canonical writes in shadow;
-terminal hold coverage; no provider call after controlled pre-call failures; and a later-observation failure
+historical terminal-hold coverage (which 2C.5C must replace); no provider call after controlled pre-call failures;
+and a later-observation failure
 retaining earlier immutable evidence/projection effects, withholding page commit, and replaying without
 duplicate canonical mutations. Mixed dispositions prove count conservation.
 
@@ -940,7 +944,8 @@ variants, unknown values, and unknown object keys. It returns the canonical `Per
 
 An unknown provider or system code fails closed as `system:invalid_provider_failure`, with run outcome
 `failed`, terminal unscheduling, and no item failure increment. A system failure is never converted to
-`rate_limited`; only the provider `rate_limited` class has that run outcome. Provider retries are limited to
+`rate_limited`; that outcome is allowed only for canonical `provider:rate_limited` or valid local budget
+exhaustion with `failureCode = null` and an authoritative retry time. Provider retries are limited to
 `timeout`, `network`, `provider_server`, and `rate_limited`. Every row above increments consecutive run
 failures once unless the dedicated lease-expiry reclaim path owns the transition; item `failed_count` changes
 only for explicit item dispositions emitted before the failure. For every failed or rate-limited row other than
@@ -982,8 +987,9 @@ accepted health and failure-scheduling decisions as follows:
 Valid local budget exhaustion is not passed to `decideFailureScheduling`: the authoritative
 `RateBudgetDecision` supplies `retryAt`, the run is `rate_limited` with no failure code, consecutive failures
 increase once, and no provider call occurs. Unknown/invalid budget configuration is instead
-`system:invalid_budget_decision`; malformed repository output or an exception is
-`system:budget_reservation_failed`.
+`system:invalid_budget_decision`; structurally malformed or contradictory repository output, including
+exhaustion without a valid retry time, is also `system:invalid_budget_decision`. A repository exception or
+RPC/storage failure is `system:budget_reservation_failed`.
 
 | Situation | `next_poll_at` |
 |---|---|
@@ -992,7 +998,8 @@ increase once, and no provider call occurs. Unknown/invalid budget configuration
 | valid exhausted budget | authoritative `RateBudgetDecision.retryAt` |
 | retryable provider failure | `FailureSchedulingDecision.retryAt` |
 | unknown/invalid budget configuration | `NULL` with `system:invalid_budget_decision` |
-| malformed budget repository output or exception | `NULL` with `system:budget_reservation_failed` |
+| structurally malformed/contradictory budget output, including exhausted without valid `retryAt` | `NULL` with `system:invalid_budget_decision` |
+| repository exception or RPC/storage failure | `NULL` with `system:budget_reservation_failed` |
 | successful active run with continuation | current injected `now` |
 | successful active run without continuation | existing phase-based `nextPollAt` policy |
 | complete phase | `NULL` |
@@ -1152,10 +1159,11 @@ status evaluation and are deterministic for every flag combination.
 
 Overall decision precedence is fixed: (1) invalid cross-field input returns the rejected `invalid_input`
 branch; (2) authentication or authorization returns its disabled reason; (3) disabled mode returns
-`disabled_mode`; (4) stale input with accepted changed data returns `stale_input_fresh_data`; (5) stale/no-data
-input without changed data returns `stale_input_no_fresh_data`; and (6) the outcome-specific reason is selected,
-using the partial precedence above. `canceled` preserves the current health and consecutive-failure values,
-performs no timestamp update, and is scheduled NULL by the separate scheduler.
+`disabled_mode`; (4) canceled returns `canceled`; (5) stale input with accepted changed data returns
+`stale_input_fresh_data`; (6) stale/no-data input without changed data returns
+`stale_input_no_fresh_data`; and (7) the outcome-specific reason is selected, using the partial precedence
+above. An accepted active-mode canceled run preserves the current health and consecutive-failure values,
+updates neither timestamp, does not re-evaluate staleness, and is scheduled NULL by the separate scheduler.
 
 `isBindingDue({ mode, nextPollAt }, now)` returns false for disabled mode and for absent/NULL `nextPollAt`;
 shadow/write modes require a non-null ISO value and are due only at `nextPollAt <= now`. `nextPollAt(input)`
