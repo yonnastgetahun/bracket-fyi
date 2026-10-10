@@ -5,6 +5,7 @@ import {
   decideHealthTransition,
   providerFailureCodes,
   systemFailureCodes,
+  type PersistedFailureCode,
   type FailureSchedulingDecision,
   type HealthTransitionInput,
 } from "@/lib/ingestion/orchestrator/health";
@@ -31,6 +32,11 @@ const baseHealth: HealthTransitionInput = {
   hasContinuation: false,
   failureCode: null,
 };
+
+const persistedFailureCodes: readonly PersistedFailureCode[] = [
+  ...providerFailureCodes.map((code) => `provider:${code}` as PersistedFailureCode),
+  ...systemFailureCodes,
+];
 
 describe("failure scheduling policy", () => {
   it.each(providerFailureCodes)("maps provider code %s canonically", (code) => {
@@ -299,5 +305,70 @@ describe("health transition policy", () => {
       expect(() => decideHealthTransition(input)).not.toThrow();
       expect(decideHealthTransition(input)).toEqual({ accepted: false, reason: "invalid_input" });
     }
+  });
+
+  describe("exhaustive health cross-field matrix", () => {
+    it.each(persistedFailureCodes)("rejects %s for succeeded", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, failureCode })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+
+    it.each(persistedFailureCodes)("rejects %s for partial", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "partial", hasContinuation: true, failureCode })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+
+    it.each(persistedFailureCodes)("rejects %s for canceled", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "canceled", dataChanged: false, failureCode })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+
+    it.each([
+      { dataChanged: true },
+      { hasContinuation: true },
+      { hasQuarantine: true },
+      { hasItemFailure: true },
+    ])("rejects canceled with an active-state field: %j", (override) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "canceled", dataChanged: false, ...override })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+
+    it.each(persistedFailureCodes.filter((code) => code !== "provider:rate_limited"))("accepts %s for failed", (failureCode) => {
+      const decision = decideHealthTransition({ ...baseHealth, runOutcome: "failed", dataChanged: false, failureCode });
+      expect(decision).toMatchObject({ accepted: true, reason: failureCode === "provider:authentication" ? "authentication_disabled" : failureCode === "provider:authorization" ? "authorization_disabled" : "failed" });
+    });
+
+    it.each([null, "provider:rate_limited"] as const)("rejects %s for failed", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "failed", dataChanged: false, failureCode })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+
+    it.each([null, "provider:rate_limited"] as const)("accepts %s for rate_limited", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "rate_limited", dataChanged: false, failureCode })).toMatchObject({ accepted: true, reason: "rate_limited" });
+    });
+
+    it.each(persistedFailureCodes.filter((code) => code !== "provider:rate_limited"))("rejects %s for rate_limited", (failureCode) => {
+      expect(decideHealthTransition({ ...baseHealth, runOutcome: "rate_limited", dataChanged: false, failureCode })).toEqual({ accepted: false, reason: "invalid_input" });
+    });
+  });
+
+  it.each([
+    { name: "success_changed", input: { ...baseHealth, dataChanged: true }, reason: "success_changed" },
+    { name: "success_unchanged", input: { ...baseHealth, dataChanged: false }, reason: "success_unchanged" },
+    { name: "partial_continuation", input: { ...baseHealth, runOutcome: "partial", dataChanged: false, hasContinuation: true }, reason: "partial_continuation" },
+    { name: "partial_quarantine", input: { ...baseHealth, runOutcome: "partial", dataChanged: false, hasQuarantine: true }, reason: "partial_quarantine" },
+    { name: "partial_item_failure", input: { ...baseHealth, runOutcome: "partial", dataChanged: false, hasItemFailure: true }, reason: "partial_item_failure" },
+    { name: "failed", input: { ...baseHealth, runOutcome: "failed", dataChanged: false, failureCode: "system:page_commit_failed" }, reason: "failed" },
+    { name: "rate_limited", input: { ...baseHealth, runOutcome: "rate_limited", dataChanged: false, failureCode: "provider:rate_limited" }, reason: "rate_limited" },
+    { name: "canceled", input: { ...baseHealth, runOutcome: "canceled", dataChanged: false }, reason: "canceled" },
+    { name: "disabled_mode", input: { ...baseHealth, mode: "disabled", dataChanged: false }, reason: "disabled_mode" },
+    { name: "authentication_disabled", input: { ...baseHealth, runOutcome: "failed", dataChanged: false, failureCode: "provider:authentication" }, reason: "authentication_disabled" },
+    { name: "authorization_disabled", input: { ...baseHealth, runOutcome: "failed", dataChanged: false, failureCode: "provider:authorization" }, reason: "authorization_disabled" },
+    { name: "stale_input_fresh_data", input: { ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", dataChanged: true }, reason: "stale_input_fresh_data" },
+    { name: "stale_input_no_fresh_data", input: { ...baseHealth, currentHealthStatus: "stale", lastDataAt: "2026-10-10T11:58:00Z", dataChanged: false }, reason: "stale_input_no_fresh_data" },
+  ])("directly exercises the $name reason", ({ input, reason }) => {
+    expect(decideHealthTransition(input)).toMatchObject({ accepted: true, reason });
+  });
+
+  it("treats the stale boundary as fresh and one millisecond beyond as stale", () => {
+    const atBoundary = decideHealthTransition({ ...baseHealth, lastDataAt: "2026-10-10T11:59:00Z", dataChanged: false });
+    const beyondBoundary = decideHealthTransition({ ...baseHealth, lastDataAt: "2026-10-10T11:58:59.999Z", dataChanged: false });
+    expect(atBoundary).toMatchObject({ reason: "success_unchanged", healthStatus: "healthy" });
+    expect(beyondBoundary).toMatchObject({ reason: "stale_input_no_fresh_data", healthStatus: "stale" });
   });
 });

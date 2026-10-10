@@ -21,6 +21,30 @@ describe("accounting policy", () => {
     });
   });
 
+  it("conserves a skipped shadow item without counting it as failed", () => {
+    expect(validateAccountingCounts({
+      fetchedCount: 1,
+      normalizedCount: 1,
+      projectedCount: 0,
+      unchangedCount: 0,
+      quarantinedCount: 0,
+      skippedCount: 1,
+      failedCount: 0,
+    })).toEqual({
+      accepted: true,
+      counts: {
+        fetchedCount: 1,
+        normalizedCount: 1,
+        projectedCount: 0,
+        unchangedCount: 0,
+        quarantinedCount: 0,
+        skippedCount: 1,
+        failedCount: 0,
+      },
+      reason: "accepted",
+    });
+  });
+
   it("retains validated counts for a conservation failure", () => {
     expect(validateAccountingCounts({ ...validCounts, normalizedCount: 7 })).toEqual({
       accepted: false,
