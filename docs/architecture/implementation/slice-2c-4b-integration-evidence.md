@@ -14,6 +14,11 @@ Implementation commit: `e2571564af87e22b7c2acd78abc2f24d9deea0a0`
 (`feat: integrate bounded ingestion pagination`). The documentation commit is
 `docs: record slice 2c.4b local evidence`; its hash is reported in the final handoff.
 
+R1 remediation baseline: `e1003181e80512ac5b95798c8dc57e37b1e3193c`.
+R1 implementation commit: `46608acb7a64c42c611006c6546697730fed3198`
+(`fix: validate pagination commit outcomes`). Independent acceptance remains
+pending.
+
 Slice 2C.4B integrates the accepted 2C.4A checkpoint and pagination policies into the provider-neutral
 orchestrator. Slice 2C.5 was not started. Independent acceptance is not claimed.
 
@@ -32,24 +37,34 @@ orchestrator. Slice 2C.5 was not started. Independent acceptance is not claimed.
 - Detects immediate and historical cursor repetition before dispatch, finishing with fixed
   `provider:invalid_response` metadata and a terminal hold.
 - Uses returned `PageCommitOutcome` state for subsequent requests, including replayed outcomes.
+- Runtime-validates every returned `PageCommitOutcome` before adopting it, including strict shape,
+  run identity, exact generation increment, canonical cursor, normalized ETag, and committed/replayed
+  semantics. Invalid repository outcomes finish through `system:page_commit_failed` while retaining
+  aggregate counts and `dataChanged`.
+- Rejects a current or historical cursor returned by a continuation commit before another provider
+  pull, while allowing a final complete page to retain its current cursor.
 - Continues within one run, completes normally without a next cursor, and yields after exactly 25
   committed pages with immediate continuation. It never attempts page 26.
+- Converts throwing raw ETag getters/proxies into controlled `provider:invalid_response` outcomes before
+  dispatch or checkpoint recording.
 
 ## Verification
 
-- Focused: `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/checkpoint.test.ts tests/ingestion/orchestrator/pagination.test.ts` — 3 files, 91 tests passed.
+- Focused: `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/checkpoint.test.ts tests/ingestion/orchestrator/pagination.test.ts` — 3 files, 109 tests passed.
 - TypeScript: `npx tsc --noEmit` — passed.
-- Full application suite: `npm test` — 30 files, 321 tests passed.
+- Full application suite: `npm test` — 30 files, 339 tests passed.
 - Lint: `npm run lint` — 0 errors, 10 existing warnings.
 - Build: `npm run build` — passed.
 - Formatting: `git diff --check` — passed before documentation commit.
 - No database tests were run; no database files changed.
 
-Coverage includes multi-page cursor/ETag/generation chaining, committed and replayed page outcomes,
-raw unsafe ETags, empty final pages, mixed dispositions, repeated and historical cursors, exact 25-page
-yielding, page-25 completion, per-page budgets, later-page budget denial, lease loss, provider failure,
-dispatch failure, checkpoint conflict, count conservation, credential reuse, and existing synthetic
-sports/ceremony paths.
+Coverage includes multi-page cursor/ETag/generation chaining, valid committed and replayed outcomes,
+strict malformed outcome rejection for identity, generation, cursor, ETag, and unknown fields, current
+and historical authoritative-cursor rejection, stateful exact-page replay without duplicate canonical
+or page effects, a separate later-page conflict, throwing raw ETag access, empty final pages, mixed
+dispositions, repeated and historical provider cursors, exact 25-page yielding, page-25 completion,
+per-page budgets, later-page budget denial, lease loss, provider failure, dispatch failure, checkpoint
+conflict, count conservation, credential reuse, and existing synthetic sports/ceremony paths.
 
 ## Security and evidence ceiling
 
