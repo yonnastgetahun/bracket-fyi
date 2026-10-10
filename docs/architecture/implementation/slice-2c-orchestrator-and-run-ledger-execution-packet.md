@@ -148,7 +148,7 @@ export type PollPhase = "distant" | "pregame" | "live" | "postgame" | "complete"
 
 export type DueBindingInput = Readonly<{
   mode: "disabled" | "shadow" | "write";
-  nextPollAt?: string;
+  nextPollAt?: string | null;
   phase: PollPhase;
   idleSeconds: number;
   pregameSeconds: number;
@@ -197,8 +197,9 @@ policy; the pure policies do not directly depend on or construct a clock.
 
 **Decisions and invariants:**
 
-- `disabled` is never due. `shadow` and `write` are due by the same phase schedule; mode controls only
-  projection after evidence is retained.
+- `disabled` is never due. `shadow` and `write` are due by the same phase schedule only when
+  `nextPollAt` is non-null and `nextPollAt <= now`; a missing/NULL `nextPollAt` is unscheduled and not due.
+  Manual claims remain available independently of this ordinary due check.
 - `complete` returns no next poll. Other phases use `idleSeconds`, `pregameSeconds`, `liveSeconds`, or
   `postgameSeconds` exactly; `nextPollAt` is never earlier than `now`.
 - A provider-wide budget is required before a provider call. Unknown or invalid budget is fail-closed as
@@ -469,7 +470,7 @@ Error SQLSTATEs distinguish `lease_lost`, `checkpoint_conflict`, `page_conflict`
   create at most one child, and the chain has at most four total attempts.
 - `claim_due_ingestion_run` evaluates the union of eligible retry parents and ordinary due bindings in one
   locked selection. A retry is eligible only at `next_retry_at <= p_now`; an ordinary binding is eligible only
-  when `next_poll_at is null or next_poll_at <= p_now`, and the ordinary branch excludes every binding with
+  when `next_poll_at is not null and next_poll_at <= p_now`, and the ordinary branch excludes every binding with
   any unresolved retry parent, whether the retry is future or due. Its ordering is retry priority first, then
   retry time, then ordinary `next_poll_at`, then binding UUID, so an earlier ordinary poll cannot bypass
   backoff or reset the retry chain. Before selecting, the normalized request key takes a transaction-scoped
@@ -868,25 +869,178 @@ migrations, or budget persistence.
 R2 commits are `fc18d24e444d15dfeb0470c640532e742a4871b9` and
 `257bb0e3d98e693960812fd0857ed5a1dc836208`. System Engineer acceptance found no surviving Standards or Spec
 findings. Provider, database, hosted, deployment, beta, device, scheduler, and production evidence remain
-unverified. The complete-phase `nextPollAt = null` versus SQL `NULL`-means-due decision remains unresolved.
+unverified. The approved scheduling rule is that complete-phase `nextPollAt = null` maps to SQL
+`next_poll_at IS NULL`, which means unscheduled/not due for ordinary claims.
 
 ### 2C.5 — Run accounting, provider budget, health, and staleness
 
 **Objective:** Make request budgets, run counts, sanitized failure persistence, and binding health transitions
 authoritative and observable without adding a scheduler or notification worker.
 
-**Exact allowlist:**
+**Status:** Planning only. No 2C.5A, 2C.5B, or 2C.5C behavior is implemented or approved. The next
+implementation gate is 2C.5A.
+
+**Shared scheduling decision:** `provider_bindings.next_poll_at IS NULL` means unscheduled/not due. Ordinary
+automated claims require `next_poll_at IS NOT NULL AND next_poll_at <= scheduler_time`; retry claims use their
+authoritative `next_retry_at`; manual claims remain available. Complete-phase success stores NULL and is not
+automatically reclaimed. Authentication/authorization failures disable the binding and clear scheduling;
+terminal provider/configuration failures clear automatic scheduling without deleting evidence. Re-enabling an
+inactive binding requires an explicit initial `next_poll_at`.
+
+The NULL-semantic change must update the existing TypeScript `isBindingDue`/policy tests, the
+`claim_due_ingestion_run` and `slice_2c_claim_due_impl` ordinary-claim branches, and database test
+`supabase/tests/database/23_slice_2c_run_ledger_test.sql`; any assertion that treats NULL as immediately due
+must be replaced with unscheduled/not-due coverage. Retry and manual-claim assertions remain distinct.
+
+**Failure scheduling and health decision table:**
+
+| Failure class | Run outcome | Retry/scheduling | Item `failed_count` | Health/scheduling effect |
+|---|---|---|---:|---|
+| `timeout`, `network`, `provider_server` | `failed` | Persist the accepted retry time; otherwise no automatic schedule | 0 for transport failure | Count one consecutive run failure; `degraded` at `DEGRADED_AFTER_FAILURES = 1`, unless stale |
+| `rate_limited` / 429 | `rate_limited` | Later of valid Retry-After, trusted reset, and deterministic backoff; no second reservation for the same call | Never increments from the rate limit itself | Counts as one consecutive run failure; stale has priority over degraded |
+| `authentication`, `authorization` | `failed` | No retry; clear `next_poll_at` and disable binding | 0 unless emitted item dispositions exist | `disabled`; operator must provide an explicit initial schedule to re-enable |
+| `not_found`, `unsupported_shape`, `invalid_response` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded` until operator disposition, or `stale` when stale |
+| `permanent`, missing credential, invalid request/poll policy, adapter mismatch, invalid budget configuration | `failed` or `rate_limited` as classified | Terminal; clear automatic scheduling and retain evidence | 0 unless emitted item dispositions exist | `degraded` until operator disposition, or `stale` when stale |
+| checkpoint/page conflict, response/observation persistence failure | `failed` | Terminal system failure; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded` until operator disposition, or `stale` when stale |
+| lease loss/expiry | dedicated lease-expiry path | Reclaim/retry only through the run-ledger policy; unauthorized finish is forbidden | 0 | Health transition is applied by the authoritative reclaim/finish boundary |
+| successful complete-phase run | `succeeded` | Store `next_poll_at = NULL`; no automatic reclaim | 0 unless emitted item dispositions exist | Healthy only when accepted data is not stale |
+
+Rate limiting affects consecutive run-failure health accounting once per terminal rate-limited run, but never
+creates an item failure or increments item `failed_count`. `DEGRADED_AFTER_FAILURES = 1` remains the fixed
+policy. Stale state always has higher priority than degraded, and only fresh accepted data can clear stale.
+
+**Bounded implementation gates:**
+
+### 2C.5A — Pure policy and identity contracts
+
+**Objective:** Define accounting invariants, health transitions, NULL-means-unscheduled due policy, deterministic
+provider-call attempt identity, and explicit failure-to-scheduling decisions without persistence or runtime
+integration.
+
+**Allowlist:**
 
 - `lib/ingestion/orchestrator/accounting.ts`
 - `lib/ingestion/orchestrator/health.ts`
+- `lib/ingestion/orchestrator/policy.ts`
+- `lib/ingestion/rate-limit/attempt-key.ts`
+- `tests/ingestion/orchestrator/accounting.test.ts`
+- `tests/ingestion/orchestrator/health.test.ts`
+- `tests/ingestion/orchestrator/policy.test.ts`
+- `tests/ingestion/rate-limit/attempt-key.test.ts`
+- `docs/architecture/implementation/slice-2c-5a-policy-evidence.md`
+
+**Public contracts:** `isBindingDue` treats absent/NULL `nextPollAt` as false; `nextPollAt` may return NULL
+only for complete phase. `createAttemptKey({ runId, retryIndex, pageKey })` returns exactly
+`v1:request:<run_id>:<retry_index>:<page_key>`, where `page_key` is the existing canonical Slice 2C page key.
+The pure policy owns no clock and receives explicit ISO values; later runtime code supplies an injected clock.
+
+**Required invariants/tests:** accounting conservation; shadow skips not being item failures; rate limits not
+being item failures; stale-over-degraded precedence; authentication/authorization disablement; terminal
+unscheduling; complete-phase NULL; exact due boundaries; deterministic attempt-key validation and replay scope;
+every Slice 2A provider code and listed system failure class mapped to one explicit scheduling outcome. Pure
+TypeScript/synthetic evidence only.
+
+**Rollback/stop/gate:** delete only uncommitted pure artifacts on failure; stop if a policy requires database
+state or silently treats NULL as due. 2C.5B requires separate approval after 2C.5A review.
+
+### 2C.5B — Budget persistence and security
+
+**Objective:** Add provider-wide budget and reservation persistence with database-authoritative time, atomic
+reservation/header recording, replay safety, RPC-only writes, grants/RLS, rollback, and concurrency tests.
+
+**Allowlist:**
+
+- `lib/ingestion/rate-limit/repository.ts`
+- `tests/ingestion/rate-limit/repository.test.ts`
+- `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
+- `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
+- `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
+- `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
+- `docs/architecture/implementation/slice-2c-5b-budget-evidence.md`
+
+**Boundary/signatures:** `reserve_provider_budget(p_run_id uuid, p_lease_token text, p_attempt_key text,
+p_cost integer)` has no caller-supplied time, provider ID, or scope and returns the stored reservation outcome.
+The function derives the authoritative run, retry index, binding, provider, checkpoint generation, cursor,
+ETag, and fixed scope `provider`; it recomputes the expected attempt key and rejects mismatch. Exact replay is
+checked under the established binding-then-run-then-budget lock order before reset replenishment; same key with
+different cost is a conflict. Every provider call reserves exactly once, including 429, and later retry/page
+calls use distinct keys.
+
+Reservation eligibility, `reserved_at`, and reset replenishment use fresh `clock_timestamp()` after locks;
+caller timestamps cannot replenish or advance budget state. Provider headers are observational. Header ordering
+uses a validated provider observation timestamp plus a server-generated database acceptance timestamp; future
+caller timestamps are rejected/ignored and cannot suppress later valid observations. Headers never raise the
+configured ceiling, stale/out-of-order headers are ignored, and trusted local reset windows advance only under
+the budget-row lock.
+
+`record_ingestion_response` remains the sole public response boundary and atomically records sanitized run
+metadata with accepted header state. RLS is enabled; PUBLIC/anon/authenticated/service_role have no direct
+INSERT/UPDATE/DELETE/TRUNCATE, service_role has SELECT only, public mutation wrappers are SECURITY DEFINER
+with `search_path = public, pg_temp`, schema-qualified objects, and service-role-only execution. Private
+helpers remain ungranted invoker-rights. Test 23 must update old NULL-due expectations; test 24 adds budget,
+header, rollback, privilege, replay, and concurrency assertions.
+
+**Rollback/stop/gate:** down SQL must preserve evidence and leave prior public wrappers executable; rehearse
+transactionally. Stop if time/provider/scope is caller-controlled, replay can decrement twice, headers can
+raise the ceiling, or direct mutation is possible. 2C.5C requires separate approval after 2C.5B review.
+
+### 2C.5C — Runtime accounting, scheduling, and health integration
+
+**Objective:** Wire attempt keys and the persistent budget repository into the existing orchestrator, replace
+SQL ordinary-claim NULL semantics, and integrate authoritative finish/health transitions without a second
+finish path.
+
+**Allowlist:**
+
+- `lib/ingestion/orchestrator/accounting.ts`
+- `lib/ingestion/orchestrator/health.ts`
+- `lib/ingestion/orchestrator/policy.ts`
+- `lib/ingestion/orchestrator/ports.ts`
+- `lib/ingestion/orchestrator/orchestrator.ts`
+- `lib/ingestion/rate-limit/attempt-key.ts`
+- `lib/ingestion/rate-limit/repository.ts`
+- corresponding focused tests, including existing orchestrator and policy tests
+- `supabase/migrations/20261010000005_slice_2c_5_scheduling_health.sql` only if scheduling/health integration
+  cannot remain independently reversible from 00004
+- its rollback companion when that forward migration is required
+- `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
+- new focused scheduling/health database tests
+- Slice 2C.5C evidence document
+
+**Required behavior/tests:** one reservation per page/retry/call; attempt-key mismatch denial; complete-phase
+unscheduling; future/NULL ordinary claim behavior; terminal unscheduling; explicit initial schedule on
+reenable; retry and 429 scheduling; stale/degraded/healthy transitions; rate-limited health accounting without
+item failure; aggregate count preservation; no competing finish path; and legacy test 23 updated for NULL not
+due. Runtime remains provider-neutral and no scheduler/hosted activation is included.
+
+**Rollback/stop/gate:** revert runtime wiring and any 00005 forward migration while preserving run/evidence/
+reservation history. Stop if orchestration can bypass reservation, creates a second finish path, changes
+accepted 2C.4B behavior, or enables an inactive binding without an explicit schedule. 2C.6 remains separately
+gated after 2C.5C.
+
+**Combined implementation inventory:**
+
+- `lib/ingestion/orchestrator/accounting.ts`
+- `lib/ingestion/orchestrator/health.ts`
+- `lib/ingestion/orchestrator/policy.ts`
+- `lib/ingestion/orchestrator/ports.ts`
+- `lib/ingestion/orchestrator/orchestrator.ts`
+- `lib/ingestion/rate-limit/attempt-key.ts`
 - `lib/ingestion/rate-limit/repository.ts`
 - `tests/ingestion/orchestrator/accounting.test.ts`
 - `tests/ingestion/orchestrator/health.test.ts`
+- existing focused orchestrator and policy tests
+- `tests/ingestion/rate-limit/attempt-key.test.ts`
 - `tests/ingestion/rate-limit/repository.test.ts`
-  - `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
-  - `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
+- `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
+- `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
+- conditional `supabase/migrations/20261010000005_slice_2c_5_scheduling_health.sql`
+- conditional rollback companion for migration 00005
+- `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
-- `docs/architecture/implementation/slice-2c-5-accounting-health-evidence.md`
+- `docs/architecture/implementation/slice-2c-5a-policy-evidence.md`
+- `docs/architecture/implementation/slice-2c-5b-budget-evidence.md`
+- `docs/architecture/implementation/slice-2c-5c-integration-evidence.md`
 
 **Required forward schema and RPCs:**
 
@@ -902,6 +1056,7 @@ create table provider_rate_budgets (
   observed_remaining_count integer,
   observed_reset_at timestamptz,
   observed_at timestamptz,
+  observed_accepted_at timestamptz,
   updated_at timestamptz not null default now(),
   primary key (provider_id, scope_key),
   check (btrim(scope_key) = 'provider'),
@@ -931,7 +1086,6 @@ reserve_provider_budget(
   p_run_id uuid,
   p_lease_token text,
   p_attempt_key text,
-  p_now timestamptz,
   p_cost integer
 ) returns table (outcome text, reservation_id uuid, remaining_count integer, retry_at timestamptz)
 
@@ -947,26 +1101,30 @@ record_provider_rate_headers_for_run(
 ```
 
 The initial scope is derived inside the function and is exactly `provider`; callers cannot supply a provider
-ID or scope. Missing configuration fails closed with `configuration_missing`. Each provider call, page
-request, retry request, and 429/Retry-After attempt reserves one unit before the request; the reservation key is
-`v1:request:<run_id>:<retry_index>:<page_key>` and is unique across concurrent replays. An exact reservation
-replay returns the original reservation and remaining count without decrementing again. A changed cost or
-scope for the same attempt key is a conflict. The reservation RPC takes the run ID and lease token, locks the
-authoritative run and binding in the fixed order, derives `provider_id` and the fixed provider scope, verifies
-the active lease, then locks the budget row.
+ID or scope. Missing configuration fails closed with `configuration_missing`. The orchestrator computes
+`attempt_key = v1:request:<run_id>:<retry_index>:<page_key>` before every provider call; SQL derives the
+authoritative run, retry index, binding, checkpoint generation, cursor, and ETag, recomputes the expected
+canonical page key, and rejects mismatches. Each provider call, page request, retry request, and 429/Retry-After
+attempt reserves one unit exactly once. An exact reservation replay returns the original reservation and
+remaining count without decrementing again. A changed cost or scope for the same attempt key is a conflict.
+The reservation RPC takes the run ID and lease token, locks the authoritative binding then run in the fixed
+order, derives `provider_id` and the fixed provider scope, verifies the active lease, then locks the budget row.
 
 `configured_limit_count` is the hard ceiling and is never raised by a provider header. Headers can only
 reduce `available_count` (subject to nonnegative bounds) and update observed metadata. Header observations
-whose timestamp is not newer than the stored observation are ignored. Under the budget-row lock, if
-`now >= trusted_reset_at`, compute
-`elapsed_windows = floor((now - trusted_reset_at) / configured_window) + 1`, restore availability to the
+whose provider timestamp is not newer than the stored observation are ignored; future caller-supplied provider
+timestamps are rejected/ignored. Each accepted header receives a fresh database acceptance timestamp after
+the authoritative locks, so caller time cannot suppress a later valid observation. Under the budget-row lock,
+if `clock_timestamp() >= trusted_reset_at`, compute
+`elapsed_windows = floor((clock_timestamp() - trusted_reset_at) / configured_window) + 1`, restore availability to the
 configured ceiling once, and advance `trusted_reset_at` by `elapsed_windows * configured_window` until it is
 strictly after `now`. A trusted reset header cannot advance this boundary; only local configured policy does.
 An exact reservation replay returns its stored result before reset replenishment, so replay cannot replenish
 twice. Reset and header handling are performed while locking the budget row.
 
-Both functions and the run-response RPC from 2C.2 are `SECURITY DEFINER`, schema-qualified, fixed-search-
-path, and service-role-only. RLS is enabled on both tables. `PUBLIC`, `anon`, `authenticated`, and
+The public `reserve_provider_budget` wrapper and the existing run-response RPC from 2C.2 are `SECURITY
+DEFINER`, schema-qualified, fixed-search-path, and service-role-only. The private header helper remains
+ungranted invoker-rights. RLS is enabled on both tables. `PUBLIC`, `anon`, `authenticated`, and
 `service_role` receive no direct `INSERT`, `UPDATE`, `DELETE`, or `TRUNCATE`; `service_role` receives only
 `SELECT`. The function owner retains private writes. Database tests must use `has_table_privilege` and
 `SET ROLE service_role` to prove direct mutation denial and wrapper success, including the budget and
@@ -1055,7 +1213,8 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** accept accounting, budget, health, and grant evidence before complete synthetic replay.
+**Next approval gate:** approve and implement 2C.5A first; 2C.5B and 2C.5C require their own subsequent
+approval gates before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
 
@@ -1231,8 +1390,9 @@ The packet makes the following bounded recommendations for review:
     only SQL boundaries with direct table mutation denied. Response metadata and accepted budget headers commit
     together through the lease-scoped response RPC; caller-supplied provider IDs and scopes are rejected.
 
-Architecture approval must explicitly accept or reject these constants and boundaries before 2C.1 begins.
-Rejection of any item returns this packet for revision; implementation must not silently choose a variant.
+Architecture approval must explicitly accept or reject the 2C.5A constants and boundaries before 2C.5A
+implementation begins. Rejection of any item returns this packet for revision; implementation must not
+silently choose a variant.
 
 ## 8. Exclusions and later gates
 
