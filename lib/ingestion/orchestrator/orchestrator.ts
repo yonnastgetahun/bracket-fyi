@@ -67,7 +67,7 @@ const pageCommitOutcomeSchema = z
   .object({
     outcome: z.enum(["committed", "replayed"]),
     pageLedgerId: z.string().trim().min(1),
-    runId: z.string().trim().min(1),
+    runId: z.string().min(1).refine((value) => value.trim().length > 0),
     checkpointGeneration: z.number().int().safe().nonnegative(),
     cursorAfter: jsonObjectSchema,
     providerEtag: providerEtagSchema.nullable(),

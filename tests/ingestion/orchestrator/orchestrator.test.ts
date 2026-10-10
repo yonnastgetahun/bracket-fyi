@@ -500,6 +500,7 @@ describe("provider-neutral ingestion orchestration", () => {
     ["invalid outcome", { outcome: "ignored" }],
     ["blank page ledger id", { pageLedgerId: " " }],
     ["wrong run id", { runId: "other-run" }],
+    ["whitespace-padded run id", { runId: " run-1 " }],
     ["negative generation", { checkpointGeneration: -1 }],
     ["fractional generation", { checkpointGeneration: 1.5 }],
     ["unsafe generation", { checkpointGeneration: Number.MAX_SAFE_INTEGER + 1 }],
@@ -538,7 +539,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
   it.each([
     ["current", { page: 0 }],
-    ["historical", { page: 99 }],
+    ["inconsistent", { page: 99 }],
   ] as const)("rejects a %s cursor returned for a continuation commit", async (_name, cursorAfter) => {
     const ledger = makeLedger({
       commitPage: vi.fn().mockResolvedValue({
@@ -570,6 +571,25 @@ describe("provider-neutral ingestion orchestration", () => {
     const result = await execute(dependencies);
 
     expect(result.status).toBe("failed");
+    expect(ledger.recordResponse).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
+  });
+
+  it("conservatively converts a throwing raw ETag proxy into invalid response", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    const candidate = new Proxy(batchFor([], { etag: "etag-proxy" }), {
+      get(target, property, receiver) {
+        if (property === "etag") throw new Error("etag proxy getter");
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(candidate);
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
     expect(ledger.recordResponse).not.toHaveBeenCalled();
     expect(ledger.commitPage).not.toHaveBeenCalled();
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
@@ -699,6 +719,42 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(dependencies.evidence.record).not.toHaveBeenCalled();
     expect(ledger.commitPage).toHaveBeenCalledTimes(1);
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
+  });
+
+  it("rejects a commit outcome that returns a genuinely previously committed cursor", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([sportsObservation], { nextCursor: { page: 1 }, etag: "etag-1" }))
+      .mockResolvedValueOnce(batchFor([sportsObservation], { nextCursor: { page: 2 }, etag: "etag-2" }));
+    (ledger.commitPage as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        outcome: "committed",
+        pageLedgerId: "page-1",
+        runId: runDefaults.runId,
+        checkpointGeneration: 1,
+        cursorAfter: { page: 1 },
+        providerEtag: "etag-1",
+      })
+      .mockResolvedValueOnce({
+        outcome: "replayed",
+        pageLedgerId: "page-2",
+        runId: runDefaults.runId,
+        checkpointGeneration: 2,
+        cursorAfter: { page: 1 },
+        providerEtag: "etag-2",
+      });
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "failed", projectedCount: 2 });
+    expect(adapter.pull).toHaveBeenCalledTimes(2);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(2);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: "system:page_commit_failed",
+      dataChanged: true,
+      metadata: { stage: "page_commit_outcome" },
+      nextPollAt: expect.any(String),
+    }));
   });
 
   it("commits exactly 25 pages and yields without a 26th pull", async () => {
