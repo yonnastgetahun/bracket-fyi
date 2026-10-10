@@ -139,6 +139,10 @@ describe("decideCheckpoint", () => {
       advance: false,
       reason: "invalid_page",
     });
+    expect(decideCheckpoint(complete({ responseEtag: ` ${"e".repeat(1024)} ` }))).toEqual({
+      advance: false,
+      reason: "invalid_page",
+    });
   });
 
   it("does not mutate input objects", () => {

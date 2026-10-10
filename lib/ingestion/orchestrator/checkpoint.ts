@@ -7,6 +7,9 @@ export const providerEtagSchema = z
   .refine((value) => !/[\u0000-\u001f\u007f]/.test(value), {
     message: "ETag contains a control character",
   })
+  .refine((value) => value.length <= 1024, {
+    message: "ETag exceeds the raw length limit",
+  })
   .transform((value) => value.trim())
   .pipe(z.string().min(1).max(1024));
 
