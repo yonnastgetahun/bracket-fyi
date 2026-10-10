@@ -151,7 +151,7 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 for local mocked/synthetic evidence and pending independent acceptance review, and Slice 2C.4 has not started.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, and Slice 2C.4 has not started.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
 
@@ -170,8 +170,8 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 ### Slice 2C: orchestrator and run ledger
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence. Slice 2C.2 accepted for local/synthetic and
-disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 for local, mocked, and
-synthetic TypeScript evidence, pending independent acceptance review; Slice 2C.4 has not started. Provider, hosted,
+disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 and accepted for local,
+mocked, and synthetic TypeScript evidence; Slice 2C.4 has not started. Provider, hosted,
 deployment, beta, device, production, and external scheduler validation remain unverified.
 
 Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).

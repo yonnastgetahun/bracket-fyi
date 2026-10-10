@@ -3,15 +3,15 @@
 **Prepared:** 2026-10-08
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
-disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 for local, mocked, and
-synthetic TypeScript evidence, pending independent acceptance review. Slice 2C.4 has not started. Provider, hosted,
+disposable-local database evidence through R2/R3; Slice 2C.3 implemented through R2 and accepted for local,
+mocked, and synthetic TypeScript evidence. Slice 2C.4 has not started. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
 **Authorization record:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification,
-and Slice 2C.3 local mocked/synthetic implementation through R2 are recorded at their stated evidence
-levels, with R2 pending independent acceptance review. No provider call, credential access, deployment, hosted
+and Slice 2C.3 local mocked/synthetic implementation through R2 are accepted at their stated evidence
+ceiling. No provider call, credential access, deployment, hosted
 change, notification delivery, or production action was authorized or performed. Slice 2C.4 implementation
 requires a separate approval. Provider,
 recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
@@ -713,9 +713,8 @@ Any later hosted defect is repaired through binding disablement and a forward mi
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
 or an orchestrator branch names a provider.
 
-**Next approval gate:** complete independent acceptance review of the R2 local mocked/synthetic evidence,
-then separately approve Slice 2C.4 pagination, repeated-cursor, 25-page, and generalized checkpoint
-implementation. Slice 2C.4 has not started.
+**Next approval gate:** separately approve Slice 2C.4 pagination, repeated-cursor, 25-page, and generalized
+checkpoint implementation. Slice 2C.4 has not started.
 
 ### 2C.4 — Cursor, ETag, pagination, partial-batch, and checkpoint policy
 

@@ -8,11 +8,12 @@
 
 **R2 code commit:** `16e7ab2cc6137cd148d40b7e7be14cc841534827` (`fix: close slice 2c.3 acceptance gaps`)
 
-**Documentation commit:** `docs: record slice 2c.3 remediation evidence`
+**Documentation commit:** `0e184348fac701712d0d3fa88611f5efd64ad100` (`docs: record slice 2c.3-r2 evidence`)
 
 **Status:** Slice 2C.3 is implemented through R2 for local, mocked, and synthetic TypeScript evidence and is
-pending independent acceptance review. Slice 2C.4 was not started. Provider, hosted, deployment, beta,
-device, and production acceptance remain unverified.
+accepted at that evidence ceiling following independent standards and specification review. Slice 2C.4 was
+not started. Provider, recorded-provider, hosted, deployment, beta, device, and production acceptance remain
+unverified.
 
 ## Files changed by R1/R2 remediation
 
@@ -88,7 +89,7 @@ and ceremony normalization; and stateful crash replay.
 | `npm run lint` | passed; 0 errors, 10 pre-existing unrelated warnings |
 | `npm run build` | passed; serial Next.js production build completed |
 | `git diff --check` | passed |
-| `git diff --check ea0d67ee5ca63277d702715e8116507d323c9845..HEAD` | passed after documentation commit |
+| `git diff --check 685cedadd80ca1a06d50aa698ef37015e0e77bfb...HEAD` | passed after R2 documentation closure |
 
 No Supabase tests were run because R2 changes no database files and the approved prompt made database
 verification conditional on an unexpected repository-contract problem. No dependency changes were made.
