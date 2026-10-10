@@ -3,15 +3,17 @@
 **Prepared:** 2026-10-08
 
 **Status:** Slice 2C.1 accepted for local/synthetic evidence; Slice 2C.2 accepted for local/synthetic and
-disposable-local database evidence through R2/R3; Slice 2C.3 awaits implementation approval and has not
-started. Provider, hosted, deployment, beta, device, and production acceptance remain unverified.
+disposable-local database evidence through R2/R3; Slice 2C.3 implemented and accepted only for local,
+mocked, and synthetic TypeScript evidence through R1. Slice 2C.4 has not started. Provider, hosted,
+deployment, beta, device, and production acceptance remain unverified.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
-**Authorization:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification are
-accepted. This packet authorizes no Slice 2C.3 application code, provider call, credential access, deployment,
-hosted change, notification delivery, or production action. Slice 2C.3 implementation requires explicit
-approval. Provider, recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
+**Authorization record:** Slice 2C.1 and Slice 2C.2 local implementation and disposable-local verification,
+and Slice 2C.3 local mocked/synthetic implementation through R1, are accepted at their stated evidence
+levels. No provider call, credential access, deployment, hosted change, notification delivery, or production
+action was authorized or performed. Slice 2C.4 implementation requires a separate approval. Provider,
+recorded-fixture, sandbox, beta, device, and production gates remain later approvals.
 
 **Evidence ceiling for the planned local work:** Pure TypeScript policy evidence, deterministic synthetic
 adapter tests, and disposable-local Supabase integration only. Recorded-provider and live-provider evidence
@@ -569,6 +571,10 @@ evidence boundary, and accepted Slice 2B projection wrappers without provider-sp
 - `tests/ingestion/orchestrator/observation-dispatch.test.ts`
 - `docs/architecture/implementation/slice-2c-3-orchestration-evidence.md`
 
+The R1 acceptance remediation changed only `lib/ingestion/orchestrator/orchestrator.ts` and
+`tests/ingestion/orchestrator/orchestrator.test.ts`; the accepted ports and evidence dispatcher were not
+modified. The R1 documentation update is recorded in the evidence file and this packet/status plan.
+
 **Public interfaces:**
 
 ```ts
@@ -619,7 +625,10 @@ export type RunExecutionOutcome = Readonly<{
 projector, result projector, injected rate-budget repository, binding-mode reader, pull-window resolver,
 and clock. No port accepts a provider raw page or credential value in a serializable command. The
 `PullWindowResolver` receives the claimed run and `requestedAt`, and returns provider-neutral window bounds.
-The resulting `ProviderPullRequest` must pass `providerPullRequestSchema` before adapter invocation.
+The resulting `ProviderPullRequest` must pass `providerPullRequestSchema` before adapter invocation. The
+orchestrator also runtime-validates the claimed and re-read current modes (`disabled`, `shadow`, `write`) and
+the injected budget decision; malformed values fail closed before budget, credential, adapter, evidence, or
+projection activity.
 
 Before any budget reservation, credential resolution, or provider call, `BindingModeReader` rechecks the
 current binding mode. Effective mode is least privilege: `disabled` if either claimed or current mode is
@@ -630,41 +639,62 @@ port with synthetic tests in 2C.3; concrete budget persistence remains Slice 2C.
 
 **Execution behavior:**
 
-1. Receive a verified claimed run, call `start_ingestion_run`, resolve a one-batch pull window, and if its
-   effective mode is disabled, finish canceled without a provider call.
-2. Validate the resulting request with `providerPullRequestSchema`; before the provider call, renew when the
-   safety threshold requires it and
-   reserve one provider-wide budget unit through the repository. If unavailable, finish `rate_limited` with
-   no adapter call and the policy-derived retry time. A response header is recorded through the lease-checked
-   run-response RPC, never by direct table write.
-3. Resolve the adapter by `providerKey`, build the Slice 2A `ProviderPullRequest`, resolve the credential
-   reference through the server-only `CredentialResolver`, and call `pull`.
-4. For each normalized observation, call `record_provider_observation` before any identity or projection.
+1. Receive a verified claimed run and call `start_ingestion_run`. Strictly validate both binding modes, then
+   apply least privilege. If effective mode is disabled, finish canceled with no budget, credential, adapter,
+   evidence, or projection activity.
+2. Resolve the polling phase and one-batch pull window, validate the complete request with
+   `providerPullRequestSchema`, and resolve the adapter only through `AdapterRegistry`. Renew before reserving
+   budget whenever the lease is within the 60-second safety threshold. A valid denial finishes `rate_limited`
+   without credential or adapter activity; malformed budget output fails closed as
+   `system:invalid_budget_decision`.
+3. Reserve exactly one injected provider-wide budget unit, resolve the credential reference through the
+   server-only `CredentialResolver`, renew again if the credential step consumed the safety window, and call
+   `pull` exactly once.
+4. Runtime-validate the returned batch. For each normalized observation, call
+   `record_provider_observation` before any identity or projection.
    Exact replay and revision conflict outcomes remain counted and are not treated as transport failures.
 5. In `shadow`, retain evidence and count the accepted observation as `skipped`; do not call a canonical
    projector. In `write`, dispatch structural kinds to `project_structural_observation` and results to
    `project_provider_result`; non-write outcomes cannot mutate canonical/result/audit/outbox state.
-6. Commit the page checkpoint only after every observation has a terminal evidence/projection/quarantine/
-   skipped outcome, using the immutable page key and expected-checkpoint CAS. Finish the attempt through the
-   lease RPC.
-7. Classify adapter errors through `classifyError`, persist only sanitized failure code/message/details, and
-   persist the next retry time/index. Do not sleep while holding the lease or retry within the same attempt;
-   a later claim runs the next bounded attempt. Success and terminal failure close retry state.
+6. Renew before page commit when needed, then commit the page checkpoint only after every observation has a
+   terminal evidence/projection/quarantine/skipped outcome, using the immutable page key and expected-
+   checkpoint CAS. Finish the attempt through the lease RPC.
+7. Classify adapter errors through `classifyError`, `providerFailureSchema`, `sanitizeFailure`,
+   `classifyFailure`, and `decideRetry`. Persist only fixed generic messages derived from validated failure
+   codes and recursively filtered details; provider classes are `provider:<Slice 2A code>` and internal
+   failures are `system:<specific_class>`. A validated thrown HTTP/rate-limit failure records only safe status,
+   retry-after, and injected observed time before finish. Do not sleep while holding the lease or retry within
+   the same attempt; a later claim runs the next bounded attempt. Success and terminal failure close retry state.
+
+All controlled terminal and fail-closed outcomes receive a non-null `nextPollAt`; when no approved retry or
+regular schedule exists, the deterministic terminal hold is 300 seconds from the injected clock. The accepted
+complete-phase policy still permits a successful complete run to omit `nextPollAt`; the null-means-due versus
+complete-phase scheduling decision is a residual cross-slice decision before scheduler deployment.
+
+Lease loss propagates without attempting an unauthorized finish. Other mode, registry, budget, renewal,
+response-recording, observation-dispatch, checkpoint, and page-commit failures finish through fixed
+namespaced system outcomes when the lease still authorizes it. No adapter-controlled message, cause, stack,
+raw response, header, payload, credential, or secret is persisted.
 
 Slice 2C.3 processes one provider batch only. Pagination loops, repeated-cursor detection, and the
 25-page limit remain Slice 2C.4 and must not be introduced through this sub-slice.
 
 **Invariants:** no provider conditional in orchestration; no call for disabled or budget-exhausted binding;
 shadow has evidence but zero canonical/result/audit/outbox mutations; write uses only accepted RPCs; one
-observation is never counted twice; credentials never enter run JSON; a failed pull does not advance cursor;
-manual result replay remains outside this fetch path.
+observation is never counted twice; `normalized = projected + unchanged + quarantined + skipped + failed`;
+credentials never enter run JSON; a failed pull does not advance cursor; terminal controlled outcomes do not
+leave a null next-poll schedule; manual result replay remains outside this fetch path.
 
-**TDD sequence and focused matrix:** fake registry with structurally different sports and ceremony adapters;
-credential reference resolution without serializing value; disabled/shadow/write; budget denial; exact
-observation replay; structural/result dispatch; adapter error classification; retryable and terminal errors;
-sanitized run error; lease loss; no provider-name conditional; no canonical writes in shadow; a later
-observation failure retains earlier immutable evidence/projection effects, does not advance the page
-checkpoint, and safely replays those effects without duplicate canonical mutations.
+**TDD sequence and focused matrix:** fake registry with genuinely distinct sports and ceremony adapters and
+private raw shapes; credential reference resolution without serializing value; disabled/shadow/write;
+malformed claimed/current modes; malformed and contradictory budgets; renewal-before-budget and
+renewal-before-provider ordering; controlled mode/registry/budget/credential/renewal/response failures;
+missing credential; exact observation replay; structural/result dispatch; adapter error classification;
+namespaced retryable and terminal errors; thrown 429 metadata before finish; fixed generic failure messages
+with secret-sentinel absence; lease loss; no provider-name conditional; no canonical writes in shadow;
+terminal hold coverage; no provider call after controlled pre-call failures; and a later-observation failure
+retaining earlier immutable evidence/projection effects, withholding page commit, and replaying without
+duplicate canonical mutations. Mixed dispositions prove count conservation.
 
 **Verification:** `npm test -- tests/ingestion/orchestrator/orchestrator.test.ts tests/ingestion/orchestrator/observation-dispatch.test.ts`;
 `npx tsc --noEmit`; `npm run lint`; `git diff --check`. Database behavior remains proven by sub-slice 2C.2
@@ -682,8 +712,9 @@ Any later hosted defect is repaired through binding disablement and a forward mi
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
 or an orchestrator branch names a provider.
 
-**Next approval gate:** accept provider-neutral orchestration and mode evidence before pagination/checkpoint
-implementation.
+**Next approval gate:** accept the local mocked/synthetic Slice 2C.3 evidence, then separately approve Slice
+2C.4 pagination, repeated-cursor, 25-page, and generalized checkpoint implementation. Slice 2C.4 has not
+started.
 
 ### 2C.4 — Cursor, ETag, pagination, partial-batch, and checkpoint policy
 
@@ -1061,8 +1092,9 @@ accepted result, but the outbox worker and delivery semantics remain outside thi
   provider IDs, claim scopes, or counts without validation.
 - `credential_ref` is a reference only. The secret resolver is server-only and is not a database function,
   serialized request field, fixture value, log field, or error detail.
-- Stored failures contain only Slice 2A code, sanitized message, bounded HTTP status/timestamps, and safe
-  JSON details. Headers, raw bodies, tokens, cookies, and personal data are excluded.
+- Stored failures contain only namespaced Slice 2A/system codes, fixed generic messages derived from those
+  codes, bounded HTTP status/timestamps, and recursively filtered safe JSON details. Adapter-controlled
+  messages, headers, raw bodies, tokens, cookies, and personal data are excluded.
 - Shadow is a retention/proposal mode, not a write shortcut. Disabled is an operational kill state. Neither
   mode may mutate canonical, result, audit, or outbox state.
 - Run IDs, binding IDs, and provider IDs are internal/provenance values; no participant-facing UI or public
