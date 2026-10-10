@@ -716,8 +716,7 @@ Any later hosted defect is repaired through binding disablement and a forward mi
 projector; an adapter error bypasses the Slice 2A classifier; an observation is projected before evidence;
 or an orchestrator branch names a provider.
 
-**Next approval gate:** separately approve Slice 2C.4A implementation evidence before authorizing Slice 2C.4B
-runtime integration. Slice 2C.4B remains unstarted.
+**Next approval gate:** separately approve Slice 2C.4B runtime integration. Slice 2C.4B remains unstarted.
 
 ### 2C.4A — Pure cursor, ETag, checkpoint, and bounded-pagination policies
 

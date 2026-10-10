@@ -185,8 +185,8 @@ Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-executio
 - `lib/ingestion/retry/**`;
 - focused run-ledger tests.
 
-Slice 2C.4A is the implemented pure cursor, ETag, checkpoint, cursor-repetition, and bounded-pagination policy layer,
-pending independent acceptance review.
+Slice 2C.4A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling. It is the
+implemented pure cursor, ETag, checkpoint, cursor-repetition, and bounded-pagination policy layer.
 Its exact local TypeScript allowlist is `lib/ingestion/orchestrator/checkpoint.ts`,
 `lib/ingestion/orchestrator/pagination.ts`, their focused tests, and
 `docs/architecture/implementation/slice-2c-4-checkpoint-evidence.md`. It does not wire pagination into the
