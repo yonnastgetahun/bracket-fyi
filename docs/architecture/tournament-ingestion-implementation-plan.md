@@ -194,6 +194,10 @@ runtime orchestrator. The approved scheduling rule is that complete-phase `nextP
 `next_poll_at IS NULL`, which is unscheduled/not due for ordinary claims. Slice 2C.4B is accepted through R2 at
 the local mocked/synthetic TypeScript evidence ceiling; Slice 2C.5 is the next separately gated slice.
 
+The Slice 2C.5 planning packet separates 2C.5A pure accounting, health, scheduling, and attempt-key
+contracts; 2C.5B budget persistence and security; and 2C.5C runtime scheduling and health integration.
+Only 2C.5A is the next implementation gate; all 2C.5 sub-slices remain unimplemented and unapproved.
+
 Implement due-binding claims, one active run per binding, provider budgets, retry classification, cursors, ETags where supported, shadow/write modes, and complete run accounting. Use fake clocks and deterministic jitter in tests.
 
 **Acceptance:** Two fake adapters with substantially different shapes—sports fixture and ceremony category—must use the same orchestration and projection modules. This validates the abstraction locally without claiming a real provider integration.
