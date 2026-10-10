@@ -202,8 +202,9 @@ policy; the pure policies do not directly depend on or construct a clock.
   Manual claims remain available independently of this ordinary due check.
 - `disabled` and `complete` return no next poll (`null`). Other active phases use `idleSeconds`, `pregameSeconds`, `liveSeconds`, or
   `postgameSeconds` exactly; `nextPollAt` is never earlier than `now`.
-- A provider-wide budget is required before a provider call. Unknown or invalid budget is fail-closed as
-  `unknown_budget` or `invalid_budget`; it creates a recorded rate-limited run outcome and makes no call.
+- A provider-wide budget is required before a provider call. Valid exhausted budget is a rate-limited run
+  outcome scheduled at the authoritative budget `retryAt` and makes no call. Unknown or invalid budget is
+  fail-closed as `system:invalid_budget_decision`, a terminal failed/unscheduled outcome, and makes no call.
   Cost is one request unless a later adapter packet explicitly defines a different cost. The policy never
   raises `available` from observed headers; only the trusted configured reset boundary can restore the
   configured ceiling.
@@ -649,9 +650,10 @@ port with synthetic tests in 2C.3; concrete budget persistence remains Slice 2C.
    evidence, or projection activity.
 2. Resolve the polling phase and one-batch pull window, validate the complete request with
    `providerPullRequestSchema`, and resolve the adapter only through `AdapterRegistry`. Renew before reserving
-   budget whenever the lease is within the 60-second safety threshold. A valid denial finishes `rate_limited`
-   without credential or adapter activity; malformed budget output fails closed as
-   `system:invalid_budget_decision`.
+   budget whenever the lease is within the 60-second safety threshold. A valid exhausted budget finishes
+   `rate_limited` at the authoritative budget `retryAt` without credential or adapter activity; unknown or
+   invalid budget configuration fails closed as `system:invalid_budget_decision`, and malformed repository
+   output or exceptions use `system:budget_reservation_failed`.
 3. Reserve exactly one injected provider-wide budget unit, resolve the credential reference through the
    server-only `CredentialResolver`, renew again if the credential step consumed the safety window, and call
    `pull` exactly once.
@@ -941,38 +943,56 @@ An unknown provider or system code fails closed as `system:invalid_provider_fail
 `rate_limited`; only the provider `rate_limited` class has that run outcome. Provider retries are limited to
 `timeout`, `network`, `provider_server`, and `rate_limited`. Every row above increments consecutive run
 failures once unless the dedicated lease-expiry reclaim path owns the transition; item `failed_count` changes
-only for explicit item dispositions emitted before the failure.
+only for explicit item dispositions emitted before the failure. For every failed or rate-limited row other than
+authentication/authorization disablement, committed changed data from an earlier page forces `degraded` rather
+than `stale`; `stale` applies only when no fresh changed data was accepted and the existing data is stale.
 
 Rate limiting affects consecutive run-failure health accounting once per terminal rate-limited run, but never
 creates an item failure or increments item `failed_count`. `DEGRADED_AFTER_FAILURES = 1` remains the fixed
 policy. Stale state always has higher priority than degraded, and only fresh accepted data can clear stale.
 
 **Health transition outcomes:** `decideHealthTransition` consumes only the operational health input and never
-chooses `nextPollAt`. For an active binding, `succeeded` with changed data sets consecutive failures to zero,
-updates `last_success_at` and `last_data_at`, and returns `healthy`. `succeeded` with unchanged or empty data
-sets consecutive failures to zero and updates only `last_success_at`; it returns `healthy` when accepted data is
-fresh and `stale` when no prior data exists or the stale threshold is exceeded. `partial` with continuation only
-sets consecutive failures to zero and updates `last_success_at`; `partial` with quarantine returns `degraded`
-(or `stale`) without incrementing provider failures. `partial` with an explicit item failure increments
-consecutive failures once and returns `degraded` (or `stale`), while `last_data_at` may update when changed data
-was accepted. `failed` and `rate_limited` increment consecutive failures once and update neither success nor
-data timestamps; `rate_limited` never changes item failure counts. `canceled` preserves the failure count and
-timestamps and does not count as a provider failure. Disabled mode always returns mode/health `disabled` without
-inventing a schedule. Authentication or authorization overrides all other health outcomes to mode/health
-`disabled` and clears automatic scheduling in the separately composed scheduler. A stale input with fresh
-accepted changed data returns `stale_input_fresh_data` and may clear stale to `healthy`; stale input without
-fresh accepted changed data returns `stale_input_no_fresh_data` and remains `stale`. At the exact boundary
-`now - last_data_at = staleAfterSeconds`, data is not stale; only a strictly greater age is stale. Stale always
-has priority over degraded.
+chooses `nextPollAt`. For every accepted non-canceled transition, `updateLastDataAt === dataChanged`; committed
+changed data therefore remains fresh even when a later page fails or is rate-limited. `succeeded` with changed
+data sets consecutive failures to zero, updates both timestamps, and returns `healthy`. `succeeded` with
+unchanged or empty data sets consecutive failures to zero, updates only `last_success_at`, and returns `healthy`
+when accepted data is fresh or `stale` when no prior data exists or the stale threshold is exceeded. `partial`
+with continuation only sets consecutive failures to zero, updates `last_success_at`, and returns `healthy` when
+fresh or when changed data clears stale. `partial` with quarantine preserves consecutive failures, does not
+update `last_success_at`, and returns `degraded` unless stale data remains without fresh changed data. `partial`
+with an explicit item failure increments consecutive failures once, does not update `last_success_at`, and
+returns `degraded` unless stale data remains without fresh changed data. `failed` and `rate_limited` increment
+consecutive failures once, do not update `last_success_at`, and return `degraded` when fresh changed data was
+accepted or the existing data is fresh; they return `stale` only without fresh data. A valid local budget
+exhaustion is `rate_limited` with `failureCode = null`; a provider 429 is `rate_limited` with
+`failureCode = provider:rate_limited`. Neither changes item failure counts. `canceled` preserves the failure
+count and timestamps, requires no changed data or partial flags, and does not count as a provider failure.
+Disabled mode always returns mode/health `disabled` without inventing a schedule. Authentication or
+authorization overrides all other health outcomes to mode/health `disabled`; earlier committed changed data
+still sets `updateLastDataAt = true`, while automatic scheduling is cleared separately. A stale input with
+fresh accepted changed data returns `stale_input_fresh_data` and uses the outcome status (healthy for success or
+continuation, degraded for quarantine/item failure/failure/rate limit); stale input without fresh accepted
+changed data returns `stale_input_no_fresh_data` and remains `stale`. At the exact boundary
+`now - last_data_at = staleAfterSeconds`, data is not stale; only a strictly greater age is stale. Stale takes
+precedence over degraded only when there is no fresh changed data to clear it.
 
 **Scheduling composition in 2C.5C:** Health never invents a polling timestamp. The runtime composes the
 accepted health and failure-scheduling decisions as follows:
+
+Valid local budget exhaustion is not passed to `decideFailureScheduling`: the authoritative
+`RateBudgetDecision` supplies `retryAt`, the run is `rate_limited` with no failure code, consecutive failures
+increase once, and no provider call occurs. Unknown/invalid budget configuration is instead
+`system:invalid_budget_decision`; malformed repository output or an exception is
+`system:budget_reservation_failed`.
 
 | Situation | `next_poll_at` |
 |---|---|
 | disabled mode, authentication, or authorization | `NULL` |
 | terminal provider or terminal system failure | `NULL` |
+| valid exhausted budget | authoritative `RateBudgetDecision.retryAt` |
 | retryable provider failure | `FailureSchedulingDecision.retryAt` |
+| unknown/invalid budget configuration | `NULL` with `system:invalid_budget_decision` |
+| malformed budget repository output or exception | `NULL` with `system:budget_reservation_failed` |
 | successful active run with continuation | current injected `now` |
 | successful active run without continuation | existing phase-based `nextPollAt` policy |
 | complete phase | `NULL` |
@@ -1084,7 +1104,7 @@ export type HealthTransitionInput = Readonly<{
   hasItemFailure: boolean;
   hasQuarantine: boolean;
   hasContinuation: boolean;
-  failureCode?: string;
+  failureCode: PersistedFailureCode | null;
 }>;
 
 export type HealthTransitionDecision =
@@ -1116,6 +1136,27 @@ export type AttemptKeyInput = Readonly<{
 export function createAttemptKey(input: unknown): string;
 ```
 
+`HealthTransitionInput` cross-field validation is strict: `succeeded` and `partial` require
+`failureCode = null`; `canceled` requires `failureCode = null`, `dataChanged = false`, and all three partial
+flags false; `failed` requires a canonical persisted failure code; and `rate_limited` accepts only
+`provider:rate_limited` or null, with null reserved for valid local budget exhaustion. Authentication and
+authorization are represented only as `provider:authentication` and `provider:authorization`. Any invalid
+combination returns only `{ accepted: false, reason: "invalid_input" }`.
+
+For `partial`, at least one of `hasContinuation`, `hasQuarantine`, or `hasItemFailure` is required. If more
+than one is true, the reason precedence is `partial_item_failure`, then `partial_quarantine`, then
+`partial_continuation`. A continuation-only partial resets consecutive failures and updates last success;
+quarantine preserves the failure count and does not update last success; an explicit item failure increments
+consecutive failures once and does not update last success. These precedence rules are applied before stale
+status evaluation and are deterministic for every flag combination.
+
+Overall decision precedence is fixed: (1) invalid cross-field input returns the rejected `invalid_input`
+branch; (2) authentication or authorization returns its disabled reason; (3) disabled mode returns
+`disabled_mode`; (4) stale input with accepted changed data returns `stale_input_fresh_data`; (5) stale/no-data
+input without changed data returns `stale_input_no_fresh_data`; and (6) the outcome-specific reason is selected,
+using the partial precedence above. `canceled` preserves the current health and consecutive-failure values,
+performs no timestamp update, and is scheduled NULL by the separate scheduler.
+
 `isBindingDue({ mode, nextPollAt }, now)` returns false for disabled mode and for absent/NULL `nextPollAt`;
 shadow/write modes require a non-null ISO value and are due only at `nextPollAt <= now`. `nextPollAt(input)`
 returns NULL for `mode = "disabled"` and for `phase = "complete"`; active shadow/write bindings require an
@@ -1123,9 +1164,12 @@ explicit non-null schedule, and malformed input is rejected rather than defaulte
 requires nonnegative safe integers, keeps `fetchedCount` independent, returns `counts: null` for malformed
 counts, retains validated counts for a conservation failure, and accepts only when
 `normalizedCount = projectedCount + unchangedCount + quarantinedCount + skippedCount + failedCount`.
-`decideFailureScheduling` requires a valid ISO `now` and `deterministicBackoffAt`; for retryable provider codes
-it chooses the latest valid value among `now`, `deterministicBackoffAt`, `providerRetryAt`, and
-`providerResetAt`. Missing or malformed required retry data returns the rejected invalid-input branch. Its
+`decideFailureScheduling` requires a valid ISO `now`; terminal provider and system codes may omit
+`deterministicBackoffAt`, while retryable provider codes (`timeout`, `network`, `provider_server`, and
+`rate_limited`) require a valid one. If any optional timestamp is supplied, it must be valid ISO. For
+retryable provider codes it chooses the latest valid value among `now`, `deterministicBackoffAt`,
+`providerRetryAt`, and `providerResetAt`. Missing or malformed required retry data returns the rejected
+invalid-input branch. Its
 accepted branch always returns canonical `provider:<code>` or `system:<code>` and `itemFailedCountDelta: 0`;
 explicit observation dispositions, not failure scheduling, own item `failed_count`. Malformed or unknown input
 returns the specified rejected `system:invalid_provider_failure` branch. `decideHealthTransition` never returns
@@ -1143,7 +1187,11 @@ every Slice 2A provider code and listed system failure class mapped to one expli
 unknown, prefixed, whitespace-padded, case-altered, malformed-object, and unknown-key rejection; invalid
 accounting counts and conservation failures; every health outcome listed above; exact stale boundary;
 partial continuation/quarantine/item-failure distinctions; canceled behavior; failure timestamp ordering;
-NULL-unscheduled due behavior; and exact attempt-key validation. Pure TypeScript/synthetic evidence only.
+NULL-unscheduled due behavior; exact attempt-key validation; failed and rate-limited runs after earlier changed
+pages; stale recovery followed by failed or rate-limited outcomes; valid budget exhaustion versus unknown or
+invalid budget; provider 429 versus local budget exhaustion; every partial-flag combination and precedence;
+all health `failureCode`/`runOutcome` cross-field combinations; terminal failures without a backoff timestamp;
+and retryable failures missing a backoff timestamp. Pure TypeScript/synthetic evidence only.
 
 **Rollback/stop/gate:** delete only uncommitted pure artifacts on failure; stop if a policy requires database
 state or silently treats NULL as due. 2C.5B requires separate approval after 2C.5A review.
