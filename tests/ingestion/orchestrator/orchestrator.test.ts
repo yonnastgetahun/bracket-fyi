@@ -365,17 +365,289 @@ describe("provider-neutral ingestion orchestration", () => {
 
   it("preserves omitted cursor and ETag and schedules a next-cursor batch immediately", async () => {
     const { dependencies, ledger } = makeDependencies();
-    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([], { nextCursor: { page: 1 }, etag: undefined }));
+    ((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([], { nextCursor: { page: 1 }, etag: undefined }))
+      .mockResolvedValueOnce(batchFor([], { etag: undefined }));
     const result = await execute(dependencies);
 
-    expect(result.status).toBe("partial");
+    expect(result.status).toBe("succeeded");
+    expect((dependencies.adapters.get("synthetic-sports") as ProviderAdapter).pull).toHaveBeenCalledTimes(2);
     expect(ledger.commitPage).toHaveBeenCalledWith(expect.objectContaining({
       expectedCursor: runDefaults.providerCursor,
       expectedEtag: runDefaults.providerEtag,
       nextCursor: { page: 1 },
       responseEtag: runDefaults.providerEtag,
     }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "succeeded", nextPollAt: "2026-10-10T18:00:30.000Z" }));
+  });
+
+  it("progresses through two pages using each committed cursor, ETag, and generation", async () => {
+    const firstPage = batchFor([sportsObservation], { nextCursor: { page: 1 }, etag: "etag-1" });
+    const secondPage = batchFor([], { etag: "etag-2" });
+    const { dependencies, ledger } = makeDependencies();
+    const adapter = dependencies.adapters.get("synthetic-sports") as ProviderAdapter;
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValueOnce(firstPage).mockResolvedValueOnce(secondPage);
+    (ledger.commitPage as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({
+        outcome: "committed",
+        pageLedgerId: "page-1",
+        runId: runDefaults.runId,
+        checkpointGeneration: 1,
+        cursorAfter: { page: 1 },
+        providerEtag: "etag-1",
+      })
+      .mockResolvedValueOnce({
+        outcome: "committed",
+        pageLedgerId: "page-2",
+        runId: runDefaults.runId,
+        checkpointGeneration: 2,
+        cursorAfter: { page: 1 },
+        providerEtag: "etag-2",
+      });
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "succeeded", fetchedCount: 1, normalizedCount: 1, projectedCount: 1 });
+    expect(adapter.pull).toHaveBeenCalledTimes(2);
+    expect(adapter.pull).toHaveBeenNthCalledWith(1, expect.objectContaining({ cursor: { page: 0 }, etag: "etag-0", requestedAt: expect.any(String) }));
+    expect(adapter.pull).toHaveBeenNthCalledWith(2, expect.objectContaining({ cursor: { page: 1 }, etag: "etag-1", requestedAt: expect.any(String) }));
+    expect(ledger.commitPage).toHaveBeenNthCalledWith(1, expect.objectContaining({ expectedCheckpointGeneration: 0, expectedCursor: { page: 0 }, expectedEtag: "etag-0", nextCursor: { page: 1 }, responseEtag: "etag-1" }));
+    expect(ledger.commitPage).toHaveBeenNthCalledWith(2, expect.objectContaining({ expectedCheckpointGeneration: 1, expectedCursor: { page: 1 }, expectedEtag: "etag-1", nextCursor: { page: 1 }, responseEtag: "etag-2" }));
+  });
+
+  it("chains three pages with fresh budget reservations and one credential resolution", async () => {
+    const { dependencies, ledger } = makeDependencies();
+    const adapter = dependencies.adapters.get("synthetic-sports") as ProviderAdapter;
+    let pullIndex = 0;
+    (adapter.pull as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      pullIndex += 1;
+      return pullIndex < 3
+        ? batchFor([sportsObservation], { nextCursor: { page: pullIndex }, etag: `etag-${pullIndex}` })
+        : batchFor([] , { etag: "etag-2" });
+    });
+    (ledger.commitPage as ReturnType<typeof vi.fn>).mockImplementation(async (input: { expectedCheckpointGeneration: number; nextCursor: { page: number }; responseEtag?: string }) => ({
+      outcome: "committed",
+      pageLedgerId: `page-${input.expectedCheckpointGeneration + 1}`,
+      runId: runDefaults.runId,
+      checkpointGeneration: input.expectedCheckpointGeneration + 1,
+      cursorAfter: input.nextCursor,
+      providerEtag: input.responseEtag ?? null,
+    }));
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "succeeded", fetchedCount: 2, normalizedCount: 2, projectedCount: 2 });
+    expect(adapter.pull).toHaveBeenCalledTimes(3);
+    expect(dependencies.budget.reserve).toHaveBeenCalledTimes(3);
+    expect(dependencies.credentials.resolve).toHaveBeenCalledTimes(1);
+    expect(adapter.pull).toHaveBeenNthCalledWith(2, expect.objectContaining({ cursor: { page: 1 }, etag: "etag-1" }));
+    expect(adapter.pull).toHaveBeenNthCalledWith(3, expect.objectContaining({ cursor: { page: 2 }, etag: "etag-2" }));
+  });
+
+  it("uses a replayed page outcome as the authoritative checkpoint for the next page", async () => {
+    const { dependencies, ledger } = makeDependencies();
+    const adapter = dependencies.adapters.get("synthetic-sports") as ProviderAdapter;
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([], { nextCursor: { page: 1 }, etag: "etag-1" }))
+      .mockResolvedValueOnce(batchFor([]));
+    (ledger.commitPage as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ outcome: "replayed", pageLedgerId: "page-existing", runId: runDefaults.runId, checkpointGeneration: 41, cursorAfter: { page: 41 }, providerEtag: "etag-authoritative" })
+      .mockResolvedValueOnce({ outcome: "committed", pageLedgerId: "page-new", runId: runDefaults.runId, checkpointGeneration: 42, cursorAfter: { page: 41 }, providerEtag: "etag-authoritative" });
+
+    await execute(dependencies);
+
+    expect(adapter.pull).toHaveBeenNthCalledWith(2, expect.objectContaining({ cursor: { page: 41 }, etag: "etag-authoritative" }));
+    expect(ledger.commitPage).toHaveBeenNthCalledWith(2, expect.objectContaining({ expectedCheckpointGeneration: 41, expectedCursor: { page: 41 }, expectedEtag: "etag-authoritative" }));
+  });
+
+  it("denies a later page budget reservation before making its pull", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies({
+      budget: { reserve: vi.fn().mockResolvedValueOnce({ allowed: true, cost: 1, reason: "available" }).mockResolvedValueOnce({ allowed: false, cost: 1, reason: "exhausted", retryAt: "2026-10-10T18:05:00.000Z" }) },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([], { nextCursor: { page: 1 } }));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("rate_limited");
+    expect(adapter.pull).toHaveBeenCalledTimes(1);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "rate_limited", nextRetryAt: "2026-10-10T18:05:00.000Z" }));
+  });
+
+  it("preserves prior-page aggregate counts when a later provider call fails", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([sportsObservation], { nextCursor: { page: 1 } }))
+      .mockRejectedValueOnce(new Error("later provider failure"));
+    (adapter.classifyError as ReturnType<typeof vi.fn>).mockReturnValue({ code: "timeout", retry: "backoff", message: "later failure", details: {} });
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "failed", fetchedCount: 1, normalizedCount: 1, projectedCount: 1, failedCount: 0 });
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:timeout" }));
+  });
+
+  it("withholds only a later page checkpoint when later dispatch fails", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies({
+      dispatcher: {
+        dispatch: vi.fn().mockRejectedValue(new Error("later dispatch failure")),
+      },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([], { nextCursor: { page: 1 } }))
+      .mockResolvedValueOnce(batchFor([sportsObservation]));
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "failed", normalizedCount: 1, failedCount: 1 });
+    expect(adapter.pull).toHaveBeenCalledTimes(2);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:observation_dispatch_failed" }));
+  });
+
+  it("propagates lease loss during a later page without finishing", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    let renewCalls = 0;
+    (ledger.renew as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      renewCalls += 1;
+      if (renewCalls === 4) throw new RunLedgerRepositoryError("lease_lost", "later page lease lost");
+      return { run_id: runDefaults.runId, lease_expires_at: "2026-10-10T18:00:30.000Z" };
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([], { nextCursor: { page: 1 } }));
+
+    await expect(execute(dependencies, { ...runDefaults, leaseExpiresAt: "2026-10-10T18:00:30.000Z" })).rejects.toMatchObject({ kind: "lease_lost" });
+    expect(adapter.pull).toHaveBeenCalledTimes(1);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(ledger.finish).not.toHaveBeenCalled();
+  });
+
+  it("stops pagination on a later checkpoint conflict", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([], { nextCursor: { page: 1 } }))
+      .mockResolvedValueOnce(batchFor([]));
+    (ledger.commitPage as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce({ outcome: "committed", pageLedgerId: "page-1", runId: runDefaults.runId, checkpointGeneration: 1, cursorAfter: { page: 1 }, providerEtag: "etag-0" })
+      .mockRejectedValueOnce(new RunLedgerRepositoryError("checkpoint_conflict", "later checkpoint conflict"));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(adapter.pull).toHaveBeenCalledTimes(2);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(2);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:checkpoint_conflict" }));
+  });
+
+  it("detects a historical cursor cycle before dispatching or committing the offending page", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor([], { nextCursor: { page: 1 } }))
+      .mockResolvedValueOnce(batchFor([sportsObservation], { nextCursor: { page: 0 } }));
+    (ledger.commitPage as ReturnType<typeof vi.fn>).mockImplementation(async (input: { expectedCheckpointGeneration: number; nextCursor: { page: number } }) => ({
+      outcome: "committed",
+      pageLedgerId: `page-${input.expectedCheckpointGeneration + 1}`,
+      runId: runDefaults.runId,
+      checkpointGeneration: input.expectedCheckpointGeneration + 1,
+      cursorAfter: input.nextCursor,
+      providerEtag: "etag-0",
+    }));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(adapter.pull).toHaveBeenCalledTimes(2);
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
+    expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
+  });
+
+  it("commits exactly 25 pages and yields without a 26th pull", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    let page = 0;
+    (adapter.pull as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      page += 1;
+      return batchFor([], { nextCursor: { page }, etag: `etag-${page}` });
+    });
+    (ledger.commitPage as ReturnType<typeof vi.fn>).mockImplementation(async (input: { expectedCheckpointGeneration: number; nextCursor: { page: number }; responseEtag?: string }) => ({
+      outcome: "committed",
+      pageLedgerId: `page-${input.expectedCheckpointGeneration + 1}`,
+      runId: runDefaults.runId,
+      checkpointGeneration: input.expectedCheckpointGeneration + 1,
+      cursorAfter: input.nextCursor,
+      providerEtag: input.responseEtag ?? null,
+    }));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("partial");
+    expect(adapter.pull).toHaveBeenCalledTimes(25);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(25);
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "partial", nextPollAt: "2026-10-10T18:00:00.000Z" }));
+  });
+
+  it("completes on page 25 when no continuation cursor remains", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    let page = 0;
+    (adapter.pull as ReturnType<typeof vi.fn>).mockImplementation(async () => {
+      page += 1;
+      return batchFor([], page < 25 ? { nextCursor: { page } } : {});
+    });
+    (ledger.commitPage as ReturnType<typeof vi.fn>).mockImplementation(async (input: { expectedCheckpointGeneration: number; nextCursor: { page: number } }) => ({
+      outcome: "committed",
+      pageLedgerId: `page-${input.expectedCheckpointGeneration + 1}`,
+      runId: runDefaults.runId,
+      checkpointGeneration: input.expectedCheckpointGeneration + 1,
+      cursorAfter: input.nextCursor,
+      providerEtag: null,
+    }));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("succeeded");
+    expect(adapter.pull).toHaveBeenCalledTimes(25);
+    expect(ledger.commitPage).toHaveBeenCalledTimes(25);
+  });
+
+  it("rejects unsafe raw page ETags before dispatch or checkpoint commit", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([], { etag: ` ${"e".repeat(1024)} ` } as never));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
+    expect(ledger.recordResponse).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
+  });
+
+  it("rejects control-character raw page ETags before dispatch", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([], { etag: "safe\nunsafe" } as never));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
+    expect(ledger.recordResponse).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response" }));
+  });
+
+  it("stops before dispatch when a cursor repeats immediately", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies();
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([sportsObservation], { nextCursor: { page: 0 } }));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("failed");
+    expect(dependencies.evidence.record).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: "provider:invalid_response",
+      errorMessage: "Provider execution failed: invalid_response",
+    }));
   });
 
   it("treats an empty batch as successful and preserves the checkpoint values", async () => {
@@ -686,6 +958,40 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result).toMatchObject({ status: "partial", normalizedCount: 2, projectedCount: 1, quarantinedCount: 1 });
     expect(ledger.commitPage).toHaveBeenCalledTimes(1);
+    expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
+      .toBe(result.normalizedCount);
+  });
+
+  it("aggregates mixed dispositions across pages and finishes partial when any page quarantines", async () => {
+    const dispositions = ["projected", "unchanged", "quarantined", "skipped"] as const;
+    let dispatchIndex = 0;
+    const { dependencies, ledger, adapter } = makeDependencies({
+      dispatcher: {
+        dispatch: vi.fn().mockImplementation(async () => ({ disposition: dispositions[dispatchIndex++], dataChanged: false })),
+      },
+    });
+    const observations = [
+      sportsObservation,
+      { ...sportsObservation, externalId: "match-2" },
+      { ...sportsObservation, externalId: "match-3" },
+      { ...sportsObservation, externalId: "match-4" },
+    ];
+    (adapter.pull as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(batchFor(observations.slice(0, 2), { nextCursor: { page: 1 } }))
+      .mockResolvedValueOnce(batchFor(observations.slice(2)));
+    (ledger.commitPage as ReturnType<typeof vi.fn>).mockImplementation(async (input: { expectedCheckpointGeneration: number; nextCursor: { page: number } }) => ({
+      outcome: "committed",
+      pageLedgerId: `page-${input.expectedCheckpointGeneration + 1}`,
+      runId: runDefaults.runId,
+      checkpointGeneration: input.expectedCheckpointGeneration + 1,
+      cursorAfter: input.nextCursor,
+      providerEtag: null,
+    }));
+
+    const result = await execute(dependencies);
+
+    expect(result).toMatchObject({ status: "partial", normalizedCount: 4, projectedCount: 1, unchangedCount: 1, quarantinedCount: 1, skippedCount: 1 });
+    expect(ledger.commitPage).toHaveBeenCalledTimes(2);
     expect(result.projectedCount + result.unchangedCount + result.quarantinedCount + result.skippedCount + result.failedCount)
       .toBe(result.normalizedCount);
   });

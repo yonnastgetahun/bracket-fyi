@@ -17,6 +17,8 @@ import {
   type ClaimedIngestionRun,
 } from "@/lib/ingestion/orchestrator/run-ledger-repository";
 import { nextPollAt } from "@/lib/ingestion/orchestrator/policy";
+import { decideCheckpoint, providerEtagSchema } from "@/lib/ingestion/orchestrator/checkpoint";
+import { cursorFingerprint, decidePagination, isRepeatedCursor } from "@/lib/ingestion/orchestrator/pagination";
 import { decideRetry } from "@/lib/ingestion/retry/policy";
 import type { PollPhase } from "@/lib/ingestion/orchestrator/types";
 import {
@@ -135,6 +137,31 @@ const providerFailureMessage = (code: ProviderFailure["code"]): string => `Provi
 const namespacedProviderCode = (code: ProviderFailure["code"]): string => `provider:${code}`;
 
 const failureDetails = (stage: string): JsonObject => ({ stage });
+
+type ExecutionCounts = {
+  -readonly [Key in keyof Omit<RunExecutionOutcome, "runId" | "status">]: Omit<RunExecutionOutcome, "runId" | "status">[Key];
+};
+
+const addCounts = (target: ExecutionCounts, delta: ExecutionCounts): void => {
+  target.fetchedCount += delta.fetchedCount;
+  target.normalizedCount += delta.normalizedCount;
+  target.projectedCount += delta.projectedCount;
+  target.unchangedCount += delta.unchangedCount;
+  target.quarantinedCount += delta.quarantinedCount;
+  target.skippedCount += delta.skippedCount;
+  target.failedCount += delta.failedCount;
+};
+
+const hasConservedCounts = (counts: ExecutionCounts): boolean =>
+  counts.normalizedCount ===
+  counts.projectedCount + counts.unchangedCount + counts.quarantinedCount + counts.skippedCount + counts.failedCount;
+
+const hasRawSafeEtag = (candidate: unknown): boolean => {
+  if (typeof candidate !== "object" || candidate === null || Array.isArray(candidate)) return true;
+  if (!Object.prototype.hasOwnProperty.call(candidate, "etag")) return true;
+  const rawEtag = (candidate as { etag?: unknown }).etag;
+  return rawEtag === undefined || providerEtagSchema.safeParse(rawEtag).success;
+};
 
 const pollAtFor = (
   mode: CurrentBindingMode,
@@ -285,28 +312,6 @@ export function createIngestionOrchestrator(
         return finishFailure(run, "system:invalid_poll_policy", emptyCounts(), failureDetails("poll_policy"));
       }
 
-      let request: ProviderPullRequest;
-      try {
-        const requestedAt = nowIso(dependencies.clock);
-        const window = dependencies.pullWindowResolver.resolve({ run, requestedAt });
-        request = providerPullRequestSchema.parse({
-          bindingId: run.bindingId,
-          providerKey: run.adapterKey,
-          eventEditionId: run.eventEditionId,
-          bindingKey: run.bindingKey,
-          adapterConfigVersion: run.adapterConfigVersion,
-          adapterConfig: run.adapterConfig,
-          windowStart: window.windowStart,
-          windowEnd: window.windowEnd,
-          requestedAt,
-          cursor: run.providerCursor,
-          ...(run.providerEtag ? { etag: run.providerEtag } : {}),
-        });
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "system:invalid_request", emptyCounts(), failureDetails("pull_request"));
-      }
-
       let adapter: ReturnType<OrchestratorDependencies["adapters"]["get"]>;
       try {
         adapter = dependencies.adapters.get(run.adapterKey);
@@ -319,203 +324,313 @@ export function createIngestionOrchestrator(
       }
 
       let leaseExpiresAt = run.leaseExpiresAt;
-      const beforeBudget = await safeRenew(run, leaseExpiresAt);
-      if (beforeBudget.failure) return beforeBudget.failure;
-      leaseExpiresAt = beforeBudget.leaseExpiresAt;
-
-      let rawBudget: unknown;
+      let currentCursor = run.providerCursor;
+      let currentEtag = run.providerEtag;
+      let checkpointGeneration = run.checkpointGeneration;
+      let pagesProcessed = 0;
+      let credential: ProviderCredential | null = null;
+      const seenCursorFingerprints = new Set<string>();
       try {
-        rawBudget = await dependencies.budget.reserve({
-          runId: run.runId,
-          leaseToken: run.leaseToken,
-          requestedAt: request.requestedAt,
-          cost: 1,
-        });
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "system:budget_reservation_failed", emptyCounts(), failureDetails("budget"));
+        seenCursorFingerprints.add(cursorFingerprint(currentCursor));
+      } catch {
+        return finishFailure(run, "system:invalid_request", emptyCounts(), failureDetails("checkpoint"));
       }
-      const budgetResult = budgetDecisionSchema.safeParse(rawBudget);
-      if (!budgetResult.success || budgetResult.data.cost !== 1) {
+      const aggregate = emptyCounts();
+      let dataChanged = false;
+      let hasQuarantine = false;
+
+      const finishInvalidResponse = async (metadata: JsonObject): Promise<RunExecutionOutcome> => {
         const finishedAt = nowIso(dependencies.clock);
-        return finish(run, "rate_limited", emptyCounts(), {
+        return finish(run, "failed", aggregate, {
           finishedAt,
           nextPollAt: terminalHoldAt(finishedAt),
-          dataChanged: false,
-          failureCode: "system:invalid_budget_decision",
-          errorMessage: systemFailureMessage("system:invalid_budget_decision"),
-          metadata: failureDetails("budget"),
-        });
-      }
-
-      const budget = budgetResult.data;
-      if (!budget.allowed) {
-        const finishedAt = nowIso(dependencies.clock);
-        const scheduledAt = budget.retryAt ?? pollAtFor(mode, phase, policy, request.requestedAt) ?? terminalHoldAt(finishedAt);
-        return finish(run, "rate_limited", emptyCounts(), {
-          finishedAt,
-          nextPollAt: scheduledAt,
-          ...(budget.retryAt ? { nextRetryAt: budget.retryAt } : {}),
-          dataChanged: false,
-        });
-      }
-
-      if (!run.credentialRef) {
-        return finishFailure(run, "system:missing_credential", emptyCounts(), failureDetails("credential"));
-      }
-
-      let credential: ProviderCredential;
-      try {
-        credential = await dependencies.credentials.resolve(run.credentialRef);
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "system:credential_resolution_failed", emptyCounts(), failureDetails("credential"));
-      }
-
-      const beforeProvider = await safeRenew(run, leaseExpiresAt);
-      if (beforeProvider.failure) return beforeProvider.failure;
-      leaseExpiresAt = beforeProvider.leaseExpiresAt;
-      let batch: ProviderBatch;
-      let candidate: unknown;
-      try {
-        candidate = await adapter.pull({ ...request, credential });
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        const failure = validateFailure(adapter, error);
-        if (!failure) return finishFailure(run, "system:invalid_provider_failure", emptyCounts(), failureDetails("adapter"));
-        const safe = safeFailure(failure);
-        if (failure.httpStatus !== undefined || failure.retryAt !== undefined) {
-          try {
-            await dependencies.ledger.recordResponse({
-              runId: run.runId,
-              leaseToken: run.leaseToken,
-              ...(failure.httpStatus === undefined ? {} : { httpStatus: failure.httpStatus }),
-              ...(failure.retryAt === undefined ? {} : { retryAfterAt: failure.retryAt }),
-              observedAt: nowIso(dependencies.clock),
-            });
-          } catch (recordError) {
-            if (isLeaseLostError(recordError)) throw recordError;
-            return finishFailure(run, "system:response_recording_failed", emptyCounts(), failureDetails("response"));
-          }
-        }
-        const classification = classifyFailure(failure);
-        const retry = decideRetry({
-          failure,
-          retryIndex: run.retryIndex,
-          now: nowIso(dependencies.clock),
-          claimKey: run.claimKey,
-        });
-        const finishedAt = nowIso(dependencies.clock);
-        const nextPoll = retry.retryAt ?? pollAtFor(mode, phase, policy, finishedAt) ?? terminalHoldAt(finishedAt);
-        return finish(run, failure.code === "rate_limited" ? "rate_limited" : "failed", emptyCounts(), {
-          finishedAt,
-          nextPollAt: nextPoll,
-          ...(retry.retryAt ? { nextRetryAt: retry.retryAt } : {}),
-          dataChanged: false,
-          failureCode: namespacedProviderCode(classification.code),
-          errorMessage: providerFailureMessage(classification.code),
-          metadata: safe.details,
-        });
-      }
-      try {
-        batch = providerBatchSchema.parse(candidate);
-      } catch {
-        return finish(run, "failed", emptyCounts(), {
-          nextPollAt: terminalHoldAt(nowIso(dependencies.clock)),
           failureCode: "provider:invalid_response",
           errorMessage: providerFailureMessage("invalid_response"),
-          metadata: failureDetails("provider_batch"),
-          dataChanged: false,
+          metadata,
+          dataChanged,
         });
-      }
-
-      try {
-        await dependencies.ledger.recordResponse({
-          runId: run.runId,
-          leaseToken: run.leaseToken,
-          observedAt: batch.receivedAt,
-          ...(batch.rateLimit?.limit === undefined ? {} : { rateLimitLimit: batch.rateLimit.limit }),
-          ...(batch.rateLimit?.remaining === undefined ? {} : { rateLimitRemaining: batch.rateLimit.remaining }),
-          ...(batch.rateLimit?.resetAt === undefined ? {} : { rateLimitResetAt: batch.rateLimit.resetAt }),
-          ...(batch.rateLimit?.retryAfterAt === undefined ? {} : { retryAfterAt: batch.rateLimit.retryAfterAt }),
-        });
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        return finishFailure(run, "system:response_recording_failed", emptyCounts(), failureDetails("response"));
-      }
-
-      const counts = {
-        fetchedCount: batch.fetchedCount,
-        normalizedCount: batch.observations.length,
-        projectedCount: 0,
-        unchangedCount: 0,
-        quarantinedCount: 0,
-        skippedCount: 0,
-        failedCount: 0,
       };
 
-      for (const [observationIndex, observation] of batch.observations.entries()) {
+      while (true) {
+        let request: ProviderPullRequest;
         try {
-          const dispatched = observationDispatchResultSchema.parse(await dispatcher.dispatch({
-            run,
-            observation,
-            receivedAt: batch.receivedAt,
-            mode,
-          }));
-          if (dispatched.disposition === "projected") counts.projectedCount += 1;
-          if (dispatched.disposition === "unchanged") counts.unchangedCount += 1;
-          if (dispatched.disposition === "quarantined") counts.quarantinedCount += 1;
-          if (dispatched.disposition === "skipped") counts.skippedCount += 1;
+          const requestedAt = nowIso(dependencies.clock);
+          const etag = currentEtag === null ? undefined : providerEtagSchema.parse(currentEtag);
+          const window = dependencies.pullWindowResolver.resolve({ run, requestedAt });
+          request = providerPullRequestSchema.parse({
+            bindingId: run.bindingId,
+            providerKey: run.adapterKey,
+            eventEditionId: run.eventEditionId,
+            bindingKey: run.bindingKey,
+            adapterConfigVersion: run.adapterConfigVersion,
+            adapterConfig: run.adapterConfig,
+            windowStart: window.windowStart,
+            windowEnd: window.windowEnd,
+            requestedAt,
+            cursor: currentCursor,
+            ...(etag === undefined ? {} : { etag }),
+          });
         } catch (error) {
           if (isLeaseLostError(error)) throw error;
-          counts.failedCount += batch.observations.length - observationIndex;
-          return finishFailure(run, "system:observation_dispatch_failed", counts, failureDetails("observation_dispatch"));
+          return finishFailure(run, "system:invalid_request", aggregate, failureDetails("pull_request"));
         }
-      }
 
-      const beforePage = await safeRenew(run, leaseExpiresAt, counts);
-      if (beforePage.failure) return beforePage.failure;
-      leaseExpiresAt = beforePage.leaseExpiresAt;
-      try {
-        await dependencies.ledger.commitPage({
-          runId: run.runId,
-          leaseToken: run.leaseToken,
-          bindingId: run.bindingId,
-          expectedCheckpointGeneration: run.checkpointGeneration,
-          expectedCursor: run.providerCursor,
-          ...(run.providerEtag ? { expectedEtag: run.providerEtag } : {}),
-          nextCursor: batch.nextCursor ?? run.providerCursor,
-          ...(batch.etag ?? run.providerEtag ? { responseEtag: batch.etag ?? run.providerEtag ?? undefined } : {}),
-          fetchedDelta: batch.fetchedCount,
-          normalizedDelta: batch.observations.length,
-          projectedDelta: counts.projectedCount,
-          unchangedDelta: counts.unchangedCount,
-          quarantinedDelta: counts.quarantinedCount,
-          skippedDelta: counts.skippedCount,
-          failedDelta: counts.failedCount,
+        const beforeBudget = await safeRenew(run, leaseExpiresAt, aggregate);
+        if (beforeBudget.failure) return beforeBudget.failure;
+        leaseExpiresAt = beforeBudget.leaseExpiresAt;
+
+        let rawBudget: unknown;
+        try {
+          rawBudget = await dependencies.budget.reserve({
+            runId: run.runId,
+            leaseToken: run.leaseToken,
+            requestedAt: request.requestedAt,
+            cost: 1,
+          });
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          return finishFailure(run, "system:budget_reservation_failed", aggregate, failureDetails("budget"));
+        }
+        const budgetResult = budgetDecisionSchema.safeParse(rawBudget);
+        if (!budgetResult.success || budgetResult.data.cost !== 1) {
+          const finishedAt = nowIso(dependencies.clock);
+          return finish(run, "rate_limited", aggregate, {
+            finishedAt,
+            nextPollAt: terminalHoldAt(finishedAt),
+            dataChanged,
+            failureCode: "system:invalid_budget_decision",
+            errorMessage: systemFailureMessage("system:invalid_budget_decision"),
+            metadata: failureDetails("budget"),
+          });
+        }
+
+        const budget = budgetResult.data;
+        if (!budget.allowed) {
+          const finishedAt = nowIso(dependencies.clock);
+          const scheduledAt = budget.retryAt ?? pollAtFor(mode, phase, policy, request.requestedAt) ?? terminalHoldAt(finishedAt);
+          return finish(run, "rate_limited", aggregate, {
+            finishedAt,
+            nextPollAt: scheduledAt,
+            ...(budget.retryAt ? { nextRetryAt: budget.retryAt } : {}),
+            dataChanged,
+          });
+        }
+
+        if (!credential) {
+          if (!run.credentialRef) {
+            return finishFailure(run, "system:missing_credential", aggregate, failureDetails("credential"));
+          }
+          try {
+            credential = await dependencies.credentials.resolve(run.credentialRef);
+          } catch (error) {
+            if (isLeaseLostError(error)) throw error;
+            return finishFailure(run, "system:credential_resolution_failed", aggregate, failureDetails("credential"));
+          }
+        }
+
+        const beforeProvider = await safeRenew(run, leaseExpiresAt, aggregate);
+        if (beforeProvider.failure) return beforeProvider.failure;
+        leaseExpiresAt = beforeProvider.leaseExpiresAt;
+
+        let candidate: unknown;
+        try {
+          candidate = await adapter.pull({ ...request, credential });
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          const failure = validateFailure(adapter, error);
+          if (!failure) return finishFailure(run, "system:invalid_provider_failure", aggregate, failureDetails("adapter"));
+          const safe = safeFailure(failure);
+          if (failure.httpStatus !== undefined || failure.retryAt !== undefined) {
+            try {
+              await dependencies.ledger.recordResponse({
+                runId: run.runId,
+                leaseToken: run.leaseToken,
+                ...(failure.httpStatus === undefined ? {} : { httpStatus: failure.httpStatus }),
+                ...(failure.retryAt === undefined ? {} : { retryAfterAt: failure.retryAt }),
+                observedAt: nowIso(dependencies.clock),
+              });
+            } catch (recordError) {
+              if (isLeaseLostError(recordError)) throw recordError;
+              return finishFailure(run, "system:response_recording_failed", aggregate, failureDetails("response"));
+            }
+          }
+          const classification = classifyFailure(failure);
+          const retry = decideRetry({
+            failure,
+            retryIndex: run.retryIndex,
+            now: nowIso(dependencies.clock),
+            claimKey: run.claimKey,
+          });
+          const finishedAt = nowIso(dependencies.clock);
+          const nextPoll = retry.retryAt ?? pollAtFor(mode, phase, policy, finishedAt) ?? terminalHoldAt(finishedAt);
+          return finish(run, failure.code === "rate_limited" ? "rate_limited" : "failed", aggregate, {
+            finishedAt,
+            nextPollAt: nextPoll,
+            ...(retry.retryAt ? { nextRetryAt: retry.retryAt } : {}),
+            dataChanged,
+            failureCode: namespacedProviderCode(classification.code),
+            errorMessage: providerFailureMessage(classification.code),
+            metadata: safe.details,
+          });
+        }
+
+        if (!hasRawSafeEtag(candidate)) return finishInvalidResponse(failureDetails("provider_batch"));
+        let batch: ProviderBatch;
+        try {
+          batch = providerBatchSchema.parse(candidate);
+        } catch {
+          return finishInvalidResponse(failureDetails("provider_batch"));
+        }
+
+        const pageCounts: ExecutionCounts = {
+          fetchedCount: batch.fetchedCount,
+          normalizedCount: batch.observations.length,
+          projectedCount: 0,
+          unchangedCount: 0,
+          quarantinedCount: 0,
+          skippedCount: 0,
+          failedCount: 0,
+        };
+
+        try {
+          await dependencies.ledger.recordResponse({
+            runId: run.runId,
+            leaseToken: run.leaseToken,
+            observedAt: batch.receivedAt,
+            ...(batch.rateLimit?.limit === undefined ? {} : { rateLimitLimit: batch.rateLimit.limit }),
+            ...(batch.rateLimit?.remaining === undefined ? {} : { rateLimitRemaining: batch.rateLimit.remaining }),
+            ...(batch.rateLimit?.resetAt === undefined ? {} : { rateLimitResetAt: batch.rateLimit.resetAt }),
+            ...(batch.rateLimit?.retryAfterAt === undefined ? {} : { retryAfterAt: batch.rateLimit.retryAfterAt }),
+          });
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          pageCounts.failedCount = pageCounts.normalizedCount;
+          addCounts(aggregate, pageCounts);
+          return finishFailure(run, "system:response_recording_failed", aggregate, failureDetails("response"));
+        }
+
+        let repeated = false;
+        try {
+          repeated = isRepeatedCursor({
+            currentCursor,
+            nextCursor: batch.nextCursor,
+            seenCursorFingerprints,
+          });
+        } catch {
+          repeated = true;
+        }
+        if (repeated) {
+          pageCounts.failedCount = pageCounts.normalizedCount;
+          addCounts(aggregate, pageCounts);
+          return finishInvalidResponse(failureDetails("repeated_cursor"));
+        }
+
+        for (const [observationIndex, observation] of batch.observations.entries()) {
+          try {
+            const dispatched = observationDispatchResultSchema.parse(await dispatcher.dispatch({
+              run,
+              observation,
+              receivedAt: batch.receivedAt,
+              mode,
+            }));
+            if (dispatched.disposition === "projected") {
+              pageCounts.projectedCount += 1;
+              dataChanged = true;
+            }
+            if (dispatched.disposition === "unchanged") pageCounts.unchangedCount += 1;
+            if (dispatched.disposition === "quarantined") {
+              pageCounts.quarantinedCount += 1;
+              hasQuarantine = true;
+            }
+            if (dispatched.disposition === "skipped") pageCounts.skippedCount += 1;
+          } catch (error) {
+            if (isLeaseLostError(error)) throw error;
+            pageCounts.failedCount += batch.observations.length - observationIndex;
+            addCounts(aggregate, pageCounts);
+            return finishFailure(run, "system:observation_dispatch_failed", aggregate, failureDetails("observation_dispatch"));
+          }
+        }
+
+        if (!hasConservedCounts(pageCounts)) {
+          addCounts(aggregate, pageCounts);
+          return finishFailure(run, "system:observation_dispatch_failed", aggregate, failureDetails("count_conservation"));
+        }
+
+        const checkpoint = decideCheckpoint({
+          currentCursor,
+          ...(currentEtag === null ? {} : { currentEtag }),
+          ...(batch.nextCursor === undefined ? {} : { nextCursor: batch.nextCursor }),
+          ...(batch.etag === undefined ? {} : { responseEtag: batch.etag }),
+          transportSucceeded: true,
+          pageValid: true,
+          observationsTerminal: true,
+          pageWasNotModified: false,
+          validPartialPage: false,
+          repeatedCursor: false,
         });
-      } catch (error) {
-        if (isLeaseLostError(error)) throw error;
-        const code = error instanceof RunLedgerRepositoryError && error.kind === "checkpoint_conflict"
-          ? "system:checkpoint_conflict"
-          : error instanceof RunLedgerRepositoryError && error.kind === "page_conflict"
-            ? "system:page_conflict"
-            : "system:page_commit_failed";
-        return finishFailure(run, code, counts, failureDetails("page_commit"));
-      }
+        const pagination = decidePagination({
+          pagesProcessed,
+          checkpoint,
+          ...(batch.nextCursor === undefined ? {} : { nextCursor: batch.nextCursor }),
+        });
+        if (!checkpoint.advance || pagination.action === "hold" || pagination.action === "invalid") {
+          addCounts(aggregate, pageCounts);
+          return finishFailure(run, "system:checkpoint_conflict", aggregate, failureDetails("checkpoint_policy"));
+        }
 
-      const finishedAt = nowIso(dependencies.clock);
-      const hasContinuation = batch.nextCursor !== undefined;
-      const status = hasContinuation || counts.quarantinedCount > 0 ? "partial" : "succeeded";
-      const scheduledAt = hasContinuation
-        ? finishedAt
-        : pollAtFor(mode, phase, policy, finishedAt)
-          ?? (status === "partial" ? terminalHoldAt(finishedAt) : null);
-      return finish(run, status, counts, {
-        finishedAt,
-        nextPollAt: scheduledAt,
-        dataChanged: counts.projectedCount > 0,
-      });
+        addCounts(aggregate, pageCounts);
+        const beforePage = await safeRenew(run, leaseExpiresAt, aggregate);
+        if (beforePage.failure) return beforePage.failure;
+        leaseExpiresAt = beforePage.leaseExpiresAt;
+        let committed;
+        try {
+          committed = await dependencies.ledger.commitPage({
+            runId: run.runId,
+            leaseToken: run.leaseToken,
+            bindingId: run.bindingId,
+            expectedCheckpointGeneration: checkpointGeneration,
+            expectedCursor: currentCursor,
+            ...(currentEtag === null ? {} : { expectedEtag: currentEtag }),
+            nextCursor: checkpoint.cursorAfter ?? currentCursor,
+            ...(checkpoint.etag === undefined ? {} : { responseEtag: checkpoint.etag }),
+            fetchedDelta: pageCounts.fetchedCount,
+            normalizedDelta: pageCounts.normalizedCount,
+            projectedDelta: pageCounts.projectedCount,
+            unchangedDelta: pageCounts.unchangedCount,
+            quarantinedDelta: pageCounts.quarantinedCount,
+            skippedDelta: pageCounts.skippedCount,
+            failedDelta: pageCounts.failedCount,
+          });
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          const code = error instanceof RunLedgerRepositoryError && error.kind === "checkpoint_conflict"
+            ? "system:checkpoint_conflict"
+            : error instanceof RunLedgerRepositoryError && error.kind === "page_conflict"
+              ? "system:page_conflict"
+              : "system:page_commit_failed";
+          return finishFailure(run, code, aggregate, failureDetails("page_commit"));
+        }
+
+        checkpointGeneration = committed.checkpointGeneration;
+        currentCursor = committed.cursorAfter;
+        currentEtag = committed.providerEtag;
+        pagesProcessed = pagination.pagesProcessed;
+        seenCursorFingerprints.add(cursorFingerprint(currentCursor));
+
+        if (pagination.action === "continue") continue;
+
+        const finishedAt = nowIso(dependencies.clock);
+        const status = pagination.action === "yield" || hasQuarantine ? "partial" : "succeeded";
+        const scheduledAt = pagination.action === "yield"
+          ? finishedAt
+          : pollAtFor(mode, phase, policy, finishedAt)
+            ?? (status === "partial" ? terminalHoldAt(finishedAt) : null);
+        return finish(run, status, aggregate, {
+          finishedAt,
+          nextPollAt: scheduledAt,
+          dataChanged,
+        });
+      }
     },
   };
 }
