@@ -1,10 +1,12 @@
 # Slice 2C.5A policy evidence
 
-Status: implemented through R1 locally; pending independent acceptance review.
+Status: implemented through R2 locally; pending independent acceptance review.
 
 R1 baseline: `df7c7620807605713f9704f9adb9ae20455dbe32`
+R2 baseline: `1e272e02778b0871da11e28e8fadd382f2ed8ed3`
 
 Implementation commit: `7276a9bc929ab1b8cc5afaf47c6609eb4cc30766` — `fix: harden slice 2c.5a policy acceptance`
+R2 test commit: `9f9fb65c9e14bce7b2dcffc98f9271ce1a1b65d2` — `test: close slice 2c.5a health matrix gaps`
 
 ## Files changed
 
@@ -34,17 +36,19 @@ Implementation commit: `7276a9bc929ab1b8cc5afaf47c6609eb4cc30766` — `fix: hard
   overflow fail closed without exposing arbitrary exceptions.
 - Coverage includes all eight partial-flag combinations, complete provider/system scheduling matrices,
   exact stale boundaries, maximum-safe counters, hostile runtime objects, and nullable optional timestamps.
+- R2 adds exhaustive run-outcome/failure-code cross-field coverage, direct assertions for every health
+  decision reason, and explicit conservation of skipped shadow-classified items without failed counts.
 
 ## Verification
 
-- Focused policy suite: 4 files, 117 tests passed.
-- Full application suite: 33 files, 451 tests passed.
+- Focused policy suite: 4 files, 278 tests passed.
+- Full application suite: 33 files, 612 tests passed.
 - `npx tsc --noEmit`: passed.
 - `npm run lint`: passed with 0 errors and 10 pre-existing warnings.
 - `npm run build`: passed.
 - `git diff --check`: passed.
-- `git diff --check df7c7620807605713f9704f9adb9ae20455dbe32...HEAD`: passed for the implementation
-  commit before this evidence update.
+- `git diff --check 1e272e02778b0871da11e28e8fadd382f2ed8ed3...HEAD`: passed for the R2 test commit
+  before this evidence update.
 
 No Supabase or database tests were run because no database files changed.
 
@@ -54,5 +58,5 @@ Evidence is static/local pure-TypeScript and synthetic test evidence only. No pr
 network access, database or hosted activity, deployment, notifications, beta/device testing, or production
 activity occurred. No dependencies changed.
 
-Slice 2C.5B and Slice 2C.5C remain unstarted and separately gated. Independent acceptance review is pending;
-no independent acceptance is claimed.
+No production-code defect was exposed by the R2 coverage additions. Slice 2C.5B and Slice 2C.5C remain
+unstarted and separately gated. Independent acceptance review is pending; no independent acceptance is claimed.
