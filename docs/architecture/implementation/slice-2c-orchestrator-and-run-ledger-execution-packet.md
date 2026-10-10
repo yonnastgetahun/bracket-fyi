@@ -892,20 +892,30 @@ The NULL-semantic change must update the existing TypeScript `isBindingDue`/poli
 `supabase/tests/database/23_slice_2c_run_ledger_test.sql`; any assertion that treats NULL as immediately due
 must be replaced with unscheduled/not-due coverage. Retry and manual-claim assertions remain distinct.
 
+**Failure-code vocabulary:** `ProviderFailureCode` is the unprefixed Slice 2A adapter union
+`authentication | authorization | not_found | rate_limited | timeout | network | provider_server |
+invalid_response | unsupported_shape | permanent`. `SystemFailureCode` is the exact `system:*` union in the
+table below. `PersistedFailureCode` is `provider:${ProviderFailureCode} | SystemFailureCode`; provider failures
+are persisted with the `provider:` prefix and system failures already carry their `system:` prefix.
+
+`decideFailureScheduling` accepts exactly one representation: an unprefixed `ProviderFailureCode` or a
+canonical `SystemFailureCode`. It rejects already-prefixed provider codes, whitespace-padded values, case
+variants, unknown values, and unknown object keys. It returns the canonical `PersistedFailureCode`.
+
 **Failure scheduling and health decision table:**
 
 | Failure class | Run outcome | Retry/scheduling | Item `failed_count` | Health/scheduling effect |
 |---|---|---|---:|---|
-| `authentication` | `failed` | Disable; clear `next_poll_at`; no retry | 0 unless emitted item dispositions exist | `disabled`; explicit operator schedule required to re-enable |
-| `authorization` | `failed` | Disable; clear `next_poll_at`; no retry | 0 unless emitted item dispositions exist | `disabled`; explicit operator schedule required to re-enable |
-| `not_found` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
-| `rate_limited` | `rate_limited` | Retry at the later of valid Retry-After, trusted reset, and deterministic backoff; one reservation already consumed | 0 | One consecutive run failure; degraded after `DEGRADED_AFTER_FAILURES = 1`, unless stale |
-| `timeout` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 | One consecutive run failure; degraded after the threshold, unless stale |
-| `network` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 | One consecutive run failure; degraded after the threshold, unless stale |
-| `provider_server` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 | One consecutive run failure; degraded after the threshold, unless stale |
-| `invalid_response` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
-| `unsupported_shape` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
-| `permanent` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
+| `provider:authentication` | `failed` | Disable; clear `next_poll_at`; no retry | 0 from the failure itself | `disabled`; explicit operator schedule required to re-enable |
+| `provider:authorization` | `failed` | Disable; clear `next_poll_at`; no retry | 0 from the failure itself | `disabled`; explicit operator schedule required to re-enable |
+| `provider:not_found` | `failed` | Terminal; clear automatic scheduling | 0 from the failure itself | `degraded`, unless stale |
+| `provider:rate_limited` | `rate_limited` | Retry at the later of valid Retry-After, trusted reset, and deterministic backoff; one reservation already consumed | 0 | One consecutive run failure; degraded after `DEGRADED_AFTER_FAILURES = 1`, unless stale |
+| `provider:timeout` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 from the failure itself | One consecutive run failure; degraded after the threshold, unless stale |
+| `provider:network` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 from the failure itself | One consecutive run failure; degraded after the threshold, unless stale |
+| `provider:provider_server` | `failed` | Retry only when `decideRetry` returns a bounded retry time; otherwise clear automatic scheduling | 0 from the failure itself | One consecutive run failure; degraded after the threshold, unless stale |
+| `provider:invalid_response` | `failed` | Terminal; clear automatic scheduling | 0 from the failure itself | `degraded`, unless stale |
+| `provider:unsupported_shape` | `failed` | Terminal; clear automatic scheduling | 0 from the failure itself | `degraded`, unless stale |
+| `provider:permanent` | `failed` | Terminal; clear automatic scheduling | 0 from the failure itself | `degraded`, unless stale |
 | `system:adapter_mismatch` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
 | `system:adapter_registry_failed` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
 | `system:binding_mode_read_failed` | `failed` | Terminal; clear automatic scheduling | 0 unless emitted item dispositions exist | `degraded`, unless stale |
@@ -936,6 +946,40 @@ only for explicit item dispositions emitted before the failure.
 Rate limiting affects consecutive run-failure health accounting once per terminal rate-limited run, but never
 creates an item failure or increments item `failed_count`. `DEGRADED_AFTER_FAILURES = 1` remains the fixed
 policy. Stale state always has higher priority than degraded, and only fresh accepted data can clear stale.
+
+**Health transition outcomes:** `decideHealthTransition` consumes only the operational health input and never
+chooses `nextPollAt`. For an active binding, `succeeded` with changed data sets consecutive failures to zero,
+updates `last_success_at` and `last_data_at`, and returns `healthy`. `succeeded` with unchanged or empty data
+sets consecutive failures to zero and updates only `last_success_at`; it returns `healthy` when accepted data is
+fresh and `stale` when no prior data exists or the stale threshold is exceeded. `partial` with continuation only
+sets consecutive failures to zero and updates `last_success_at`; `partial` with quarantine returns `degraded`
+(or `stale`) without incrementing provider failures. `partial` with an explicit item failure increments
+consecutive failures once and returns `degraded` (or `stale`), while `last_data_at` may update when changed data
+was accepted. `failed` and `rate_limited` increment consecutive failures once and update neither success nor
+data timestamps; `rate_limited` never changes item failure counts. `canceled` preserves the failure count and
+timestamps and does not count as a provider failure. Disabled mode always returns mode/health `disabled` without
+inventing a schedule. Authentication or authorization overrides all other health outcomes to mode/health
+`disabled` and clears automatic scheduling in the separately composed scheduler. A stale input with fresh
+accepted changed data returns `stale_input_fresh_data` and may clear stale to `healthy`; stale input without
+fresh accepted changed data returns `stale_input_no_fresh_data` and remains `stale`. At the exact boundary
+`now - last_data_at = staleAfterSeconds`, data is not stale; only a strictly greater age is stale. Stale always
+has priority over degraded.
+
+**Scheduling composition in 2C.5C:** Health never invents a polling timestamp. The runtime composes the
+accepted health and failure-scheduling decisions as follows:
+
+| Situation | `next_poll_at` |
+|---|---|
+| disabled mode, authentication, or authorization | `NULL` |
+| terminal provider or terminal system failure | `NULL` |
+| retryable provider failure | `FailureSchedulingDecision.retryAt` |
+| successful active run with continuation | current injected `now` |
+| successful active run without continuation | existing phase-based `nextPollAt` policy |
+| complete phase | `NULL` |
+| canceled run | `NULL`, unless a separately approved operator action reschedules it |
+
+Manual claims remain independent of automatic scheduling. `isBindingDue` and `nextPollAt` remain fail-closed:
+malformed input returns false and null respectively.
 
 **Bounded implementation gates:**
 
@@ -973,33 +1017,57 @@ export type IngestionCounts = Readonly<{
   failedCount: number;
 }>;
 
-export type AccountingDecision = Readonly<{
-  accepted: boolean;
-  counts: IngestionCounts;
-  reason: "accepted" | "invalid_counts" | "not_conserved";
-}>;
+export type AccountingDecision =
+  | Readonly<{ accepted: true; counts: IngestionCounts; reason: "accepted" }>
+  | Readonly<{ accepted: false; counts: null; reason: "invalid_counts" }>
+  | Readonly<{ accepted: false; counts: IngestionCounts; reason: "not_conserved" }>;
 
 export function validateAccountingCounts(input: unknown): AccountingDecision;
+
+export type ProviderFailureCode =
+  | "authentication" | "authorization" | "not_found" | "rate_limited" | "timeout"
+  | "network" | "provider_server" | "invalid_response" | "unsupported_shape" | "permanent";
+
+export type SystemFailureCode =
+  | "system:adapter_mismatch" | "system:adapter_registry_failed" | "system:binding_mode_read_failed"
+  | "system:budget_reservation_failed" | "system:checkpoint_conflict" | "system:credential_resolution_failed"
+  | "system:invalid_binding_mode" | "system:invalid_budget_decision" | "system:invalid_poll_policy"
+  | "system:invalid_provider_failure" | "system:invalid_request" | "system:lease_renewal_failed"
+  | "system:missing_credential" | "system:observation_dispatch_failed" | "system:page_commit_failed"
+  | "system:page_conflict" | "system:response_recording_failed" | "system:lease_expired";
+
+export type PersistedFailureCode = `provider:${ProviderFailureCode}` | SystemFailureCode;
 
 export type FailureSchedulingInput = Readonly<{
   failureCode: string;
   now: string;
+  deterministicBackoffAt?: string | null;
   providerRetryAt?: string | null;
   providerResetAt?: string | null;
-  deterministicBackoffAt?: string | null;
-  hasItemFailure: boolean;
 }>;
 
-export type FailureSchedulingDecision = Readonly<{
-  failureCode: string;
-  outcome: "failed" | "rate_limited";
-  disposition: "retry" | "unschedule" | "disable";
-  retryAt: string | null;
-  incrementConsecutiveFailures: boolean;
-  itemFailedCountDelta: number;
-  reason: "retryable_provider" | "rate_limited_provider" | "terminal_provider" |
-    "terminal_system" | "lease_expired";
-}>;
+export type FailureSchedulingDecision =
+  | Readonly<{
+      accepted: true;
+      failureCode: PersistedFailureCode;
+      outcome: "failed" | "rate_limited";
+      disposition: "retry" | "unschedule" | "disable";
+      retryAt: string | null;
+      incrementConsecutiveFailures: boolean;
+      itemFailedCountDelta: 0;
+      reason: "retryable_provider" | "rate_limited_provider" | "terminal_provider" |
+        "terminal_system" | "lease_expired";
+    }>
+  | Readonly<{
+      accepted: false;
+      failureCode: "system:invalid_provider_failure";
+      outcome: "failed";
+      disposition: "unschedule";
+      retryAt: null;
+      incrementConsecutiveFailures: true;
+      itemFailedCountDelta: 0;
+      reason: "invalid_input" | "unknown_failure_code";
+    }>;
 
 export function decideFailureScheduling(input: unknown): FailureSchedulingDecision;
 
@@ -1014,21 +1082,28 @@ export type HealthTransitionInput = Readonly<{
   runOutcome: "succeeded" | "partial" | "failed" | "rate_limited" | "canceled";
   dataChanged: boolean;
   hasItemFailure: boolean;
+  hasQuarantine: boolean;
   hasContinuation: boolean;
   failureCode?: string;
 }>;
 
-export type HealthTransitionDecision = Readonly<{
-  accepted: boolean;
-  mode: "disabled" | "shadow" | "write";
-  healthStatus: "healthy" | "degraded" | "stale" | "disabled";
-  consecutiveFailures: number;
-  updateLastSuccessAt: boolean;
-  updateLastDataAt: boolean;
-  nextPollAt: string | null;
-  reason: "success" | "retryable_failure" | "terminal_failure" |
-    "disabled_failure" | "stale" | "invalid_input";
-}>;
+export type HealthTransitionDecision =
+  | Readonly<{
+      accepted: true;
+      mode: "disabled" | "shadow" | "write";
+      healthStatus: "healthy" | "degraded" | "stale" | "disabled";
+      consecutiveFailures: number;
+      updateLastSuccessAt: boolean;
+      updateLastDataAt: boolean;
+      reason: "success_changed" | "success_unchanged" | "partial_continuation" |
+        "partial_quarantine" | "partial_item_failure" | "failed" | "rate_limited" |
+        "canceled" | "disabled_mode" | "authentication_disabled" | "authorization_disabled" |
+        "stale_input_fresh_data" | "stale_input_no_fresh_data";
+    }>
+  | Readonly<{
+      accepted: false;
+      reason: "invalid_input";
+    }>;
 
 export function decideHealthTransition(input: unknown): HealthTransitionDecision;
 
@@ -1045,21 +1120,30 @@ export function createAttemptKey(input: unknown): string;
 shadow/write modes require a non-null ISO value and are due only at `nextPollAt <= now`. `nextPollAt(input)`
 returns NULL for `mode = "disabled"` and for `phase = "complete"`; active shadow/write bindings require an
 explicit non-null schedule, and malformed input is rejected rather than defaulted due. `validateAccountingCounts`
-requires nonnegative safe integers, keeps `fetchedCount` independent, and accepts only when
+requires nonnegative safe integers, keeps `fetchedCount` independent, returns `counts: null` for malformed
+counts, retains validated counts for a conservation failure, and accepts only when
 `normalizedCount = projectedCount + unchangedCount + quarantinedCount + skippedCount + failedCount`.
-`decideFailureScheduling` has no implicit default: an unknown code returns terminal `system:invalid_provider_failure`,
-`failed`, `unschedule`. `decideHealthTransition` gives stale precedence over degraded, applies authentication/
-authorization disabled override, and returns `accepted: false`, no automatic schedule, and `reason: "invalid_input"`
-for malformed input. `createAttemptKey` accepts only a strict canonical run UUID, safe integer `retryIndex` 0–3,
-and exactly 64 lowercase hexadecimal characters for `pageKey`; malformed input throws `AttemptKeyValidationError`
-without trimming or other normalization. The exact output is
-`v1:request:<run_id>:<retry_index>:<page_key>`.
+`decideFailureScheduling` requires a valid ISO `now` and `deterministicBackoffAt`; for retryable provider codes
+it chooses the latest valid value among `now`, `deterministicBackoffAt`, `providerRetryAt`, and
+`providerResetAt`. Missing or malformed required retry data returns the rejected invalid-input branch. Its
+accepted branch always returns canonical `provider:<code>` or `system:<code>` and `itemFailedCountDelta: 0`;
+explicit observation dispositions, not failure scheduling, own item `failed_count`. Malformed or unknown input
+returns the specified rejected `system:invalid_provider_failure` branch. `decideHealthTransition` never returns
+or invents a polling timestamp: it applies the exact health reasons in its discriminated union, gives stale
+precedence over degraded, applies authentication/authorization disabled override, and returns only
+`{ accepted: false, reason: "invalid_input" }` for malformed input. `createAttemptKey` accepts only a strict
+canonical run UUID, safe integer `retryIndex` 0–3, and exactly 64 lowercase hexadecimal characters for
+`pageKey`; malformed input throws `AttemptKeyValidationError` without trimming or other normalization. The
+exact output is `v1:request:<run_id>:<retry_index>:<page_key>`.
 
 **Required invariants/tests:** accounting conservation; shadow skips not being item failures; rate limits not
 being item failures; stale-over-degraded precedence; authentication/authorization disablement; terminal
 unscheduling; complete-phase NULL; exact due boundaries; deterministic attempt-key validation and replay scope;
-every Slice 2A provider code and listed system failure class mapped to one explicit scheduling outcome. Pure
-TypeScript/synthetic evidence only.
+every Slice 2A provider code and listed system failure class mapped to one explicit scheduling outcome; exhaustive
+unknown, prefixed, whitespace-padded, case-altered, malformed-object, and unknown-key rejection; invalid
+accounting counts and conservation failures; every health outcome listed above; exact stale boundary;
+partial continuation/quarantine/item-failure distinctions; canceled behavior; failure timestamp ordering;
+NULL-unscheduled due behavior; and exact attempt-key validation. Pure TypeScript/synthetic evidence only.
 
 **Rollback/stop/gate:** delete only uncommitted pure artifacts on failure; stop if a policy requires database
 state or silently treats NULL as due. 2C.5B requires separate approval after 2C.5A review.
