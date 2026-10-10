@@ -39,10 +39,29 @@ describe("phase-based polling policy", () => {
     expect(isBindingDue(binding({ mode: "disabled" }), now)).toBe(false);
   });
 
-  it("treats an absent next poll as due for active non-complete modes", () => {
+  it("treats absent and null next polls as unscheduled", () => {
     for (const mode of ["shadow", "write"] as const) {
-      expect(isBindingDue(binding({ mode, nextPollAt: undefined }), "2026-10-08T17:00:00Z")).toBe(true);
+      expect(isBindingDue(binding({ mode, nextPollAt: undefined }), "2026-10-08T17:00:00Z")).toBe(false);
+      expect(isBindingDue(binding({ mode, nextPollAt: null as never }), "2026-10-08T17:00:00Z")).toBe(false);
     }
+  });
+
+  it.each([
+    null,
+    [],
+    { ...binding(), unexpected: true },
+    { ...binding(), mode: "unknown" },
+    { ...binding(), phase: "unknown" },
+    { ...binding(), liveSeconds: -1 },
+    { ...binding(), nextPollAt: "not-a-time" },
+  ])("fails closed for malformed policy input: %j", (input) => {
+    expect(isBindingDue(input as never, "2026-10-08T17:00:00Z")).toBe(false);
+    expect(nextPollAt(input as never, "2026-10-08T17:00:00Z")).toBeNull();
+  });
+
+  it("fails closed for malformed now values", () => {
+    expect(isBindingDue(binding({ nextPollAt: "2026-10-08T17:00:00Z" }), "not-a-time")).toBe(false);
+    expect(nextPollAt(binding(), "not-a-time")).toBeNull();
   });
 
   it("uses an inclusive exact due boundary", () => {

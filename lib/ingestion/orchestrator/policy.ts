@@ -1,4 +1,12 @@
+import { z } from "zod";
+
+import { isoDateTimeSchema } from "@/lib/ingestion/contracts";
 import type { DueBindingInput, PollPhase } from "@/lib/ingestion/orchestrator/types";
+
+export type PollingPolicyInput = Omit<DueBindingInput, "nextPollAt"> & {
+  nextPollAt?: string | null;
+  staleAfterSeconds?: number;
+};
 
 type PollingIntervalKey = "idleSeconds" | "pregameSeconds" | "liveSeconds" | "postgameSeconds";
 
@@ -9,32 +17,48 @@ const phaseIntervals: Readonly<Record<Exclude<PollPhase, "complete">, PollingInt
   postgame: "postgameSeconds",
 };
 
-const parseTimestamp = (value: string, label: string): number => {
-  const timestamp = Date.parse(value);
-  if (!Number.isFinite(timestamp)) {
-    throw new RangeError(`${label} must be a valid timestamp`);
-  }
-  return timestamp;
+const isPlainObject = (value: unknown): value is Record<string, unknown> => {
+  if (typeof value !== "object" || value === null) return false;
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 };
 
-const phaseSeconds = (input: DueBindingInput): number => {
-  if (input.phase === "complete") return 0;
-  const seconds = input[phaseIntervals[input.phase]];
-  if (!Number.isSafeInteger(seconds) || seconds < 0) {
-    throw new RangeError("Polling interval must be a nonnegative safe integer");
-  }
-  return seconds;
+const pollingPolicySchema = z.object({
+  mode: z.enum(["disabled", "shadow", "write"]),
+  nextPollAt: isoDateTimeSchema.nullable().optional(),
+  phase: z.enum(["distant", "pregame", "live", "postgame", "complete"]),
+  idleSeconds: z.number().int().nonnegative().safe(),
+  pregameSeconds: z.number().int().nonnegative().safe(),
+  liveSeconds: z.number().int().nonnegative().safe(),
+  postgameSeconds: z.number().int().nonnegative().safe(),
+  staleAfterSeconds: z.number().int().nonnegative().safe().optional(),
+}).strict();
+
+const parseInput = (input: unknown): PollingPolicyInput | null => {
+  if (!isPlainObject(input)) return null;
+  const parsed = pollingPolicySchema.safeParse(input);
+  return parsed.success ? parsed.data : null;
 };
 
-export function isBindingDue(input: DueBindingInput, now: string): boolean {
-  if (input.mode === "disabled" || input.phase === "complete") return false;
-  const nowTimestamp = parseTimestamp(now, "now");
-  if (input.nextPollAt === undefined) return true;
-  return parseTimestamp(input.nextPollAt, "nextPollAt") <= nowTimestamp;
+const parseNow = (now: unknown): number | null => {
+  if (typeof now !== "string" || !isoDateTimeSchema.safeParse(now).success) return null;
+  const timestamp = Date.parse(now);
+  return Number.isFinite(timestamp) ? timestamp : null;
+};
+
+export function isBindingDue(input: PollingPolicyInput, now: string): boolean {
+  const parsed = parseInput(input);
+  const nowTimestamp = parseNow(now);
+  if (parsed === null || nowTimestamp === null) return false;
+  if (parsed.mode === "disabled" || parsed.phase === "complete") return false;
+  if (parsed.nextPollAt === undefined || parsed.nextPollAt === null) return false;
+  return Date.parse(parsed.nextPollAt) <= nowTimestamp;
 }
 
-export function nextPollAt(input: DueBindingInput, now: string): string | null {
-  if (input.mode === "disabled" || input.phase === "complete") return null;
-  const nowTimestamp = parseTimestamp(now, "now");
-  return new Date(nowTimestamp + phaseSeconds(input) * 1000).toISOString();
+export function nextPollAt(input: PollingPolicyInput, now: string): string | null {
+  const parsed = parseInput(input);
+  const nowTimestamp = parseNow(now);
+  if (parsed === null || nowTimestamp === null || parsed.mode === "disabled" || parsed.phase === "complete") return null;
+  const seconds = parsed[phaseIntervals[parsed.phase]];
+  return new Date(nowTimestamp + seconds * 1000).toISOString();
 }
