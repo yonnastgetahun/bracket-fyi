@@ -2,107 +2,110 @@
 
 ## Status and evidence ceiling
 
-This document records the local Slice 2C.5B implementation from baseline
-`521554ec229335d1bfa20aec12e8f75ef5a4c69f`.
-
-The TypeScript repository evidence is local and synthetic. The disposable
-PostgreSQL evidence is pending: the local Docker/Supabase service was
-unresponsive during reset, one reset attempt ended with the local container
-exit-137 setup error, and a later reset remained in database recreation until
-it was stopped. A direct connection to `127.0.0.1:54322` was refused. No
-database assertion, two-session probe, or rollback rehearsal is claimed as
-passed. Provider, credential, hosted, deployment, notification, production,
-beta, and device activity did not occur.
-
-Slice 2C.5C was not started. The repository is not wired into the
-orchestrator or ports; that remains 2C.5C work.
+Slice 2C.5B-R1 is implemented from baseline
+`f6e8d69daf0a3b3a868da6fb4763e764e4c8837d` and remains pending independent
+acceptance review. Evidence is limited to local synthetic TypeScript and
+disposable-local PostgreSQL. No provider, credential, network, hosted,
+deployment, notification, production, beta, or device activity occurred.
+Slice 2C.5C was not started.
 
 ## Commits
 
-- `f970823` — `feat: add provider rate budget persistence`
-- `e7313c9` — `test: prove provider budget security and concurrency`
+- `0f35aca` — `fix: remediate slice 2c.5b budget boundaries`
 - Documentation commit: recorded in the final handoff after this file is
   committed.
 
-## Delivered boundaries
+## R1 corrections delivered
 
-Migration `20261010000004_slice_2c_rate_budget.sql` adds:
+The forward migration
+`20261010000005_slice_2c_5b_acceptance_remediation.sql` preserves the prior
+00004 migration and corrects its local acceptance defects:
 
-- provider-wide `provider_rate_budgets`, keyed only by `(provider_id,
-  scope_key)` with `scope_key = 'provider'`;
-- immutable `provider_rate_budget_reservations`, uniquely keyed by provider,
-  scope, and deterministic attempt key;
-- configured ceiling/window, database-authoritative trusted reset, bounded
-  observational header fields, and availability constraints;
-- RLS and service-role SELECT-only table privileges.
+- reservation lease validation now occurs before budget lookup and again after
+  the provider-budget lock;
+- header acceptance time is captured after binding, run, and budget locks;
+- expired trusted windows advance before a current-window remaining header is
+  applied, preventing quota over-credit;
+- provider remaining data can reduce availability but cannot raise it or
+  advance the trusted reset boundary;
+- run/binding/provider/edition consistency is checked in the sole public
+  response boundary;
+- decorated `lease_lost` and `attempt_key_conflict` RPC errors map to typed,
+  sanitized repository errors without exposing database text.
 
-`public.reserve_provider_budget(uuid,text,text,integer)` derives provider,
-scope, retry index, binding checkpoint, cursor, ETag, page key, and expected
-attempt key from the locked run/binding. It locks binding → run → budget,
-checks replay before reset replenishment, uses a post-lock database clock,
-decrements once per new attempt, and returns `reserved`, `replayed`,
-`exhausted`, or `configuration_missing`.
+The rollback companion is an explicit non-destructive forward-repair note. It
+preserves budget, reservation, run, response, and prior ledger evidence and
+does not remove public wrappers.
+
+## Schema, RPC, and security boundary
+
+The accepted 00004 schema remains provider-wide: budget state is keyed by
+`(provider_id, scope_key)` with the fixed `provider` scope, and reservation
+identity is `(provider_id, scope_key, attempt_key)`. The reservation RPC
+derives provider, scope, retry index, checkpoint, cursor, ETag, and canonical
+attempt key from the authoritative run and binding. It uses binding → run →
+budget locking, database `clock_timestamp()`, replay-before-reset ordering,
+single-decrement reservations, and authoritative reset timestamps.
 
 The existing `record_ingestion_response` signature remains the sole public
-response boundary. Its forward body records sanitized response metadata and
-invokes the ungranted invoker-rights header helper in the same transaction.
-Header observations are clamped/ordered by fresh database acceptance time,
-can only reduce configured availability, and never advance trusted reset
-state.
+response boundary. Its response metadata and provider-header reconciliation
+are atomic. Header observations use post-lock acceptance ordering, clamp
+future observation times, ignore stale observations, and never redefine the
+configured ceiling or trusted reset.
 
-Rollback `20261010000004_slice_2c_rate_budget_down.sql` is intentionally a
-non-destructive transactional no-op. It preserves budget, reservation, run,
-and response evidence and leaves public wrappers resolvable. Hosted rollback
-requires a separately reviewed forward repair.
-
-## TypeScript repository
-
-`lib/ingestion/rate-limit/repository.ts` exposes a provider-neutral repository
-that accepts only `runId`, `leaseToken`, `attemptKey`, and `cost`. It calls the
-four-argument reservation RPC, strictly validates the RPC envelope and row,
-maps reserved/replayed to available, exhausted to authoritative retry timing,
-and missing configuration to `unknown_budget`. Malformed output and RPC
-failures become typed, secret-free repository errors; lease loss and attempt
-conflicts remain distinct. It is not integrated into runtime orchestration.
+Both budget tables retain RLS and service-role SELECT-only access. Direct
+INSERT, UPDATE, DELETE, and TRUNCATE remain denied to browser roles and
+service_role. Public reservation and response wrappers are fixed-search-path,
+schema-qualified, SECURITY DEFINER, and service-role-only. The private header
+helper is invoker-rights and ungranted.
 
 ## Verification
 
-Passed locally:
+Passed sequentially:
 
-- repository focus: 1 file, 12 tests;
-- accounting/health/repository focus: 3 files, 258 tests;
-- application regression: 34 files, 624 tests;
+- focused TypeScript: 3 files, 260 tests;
+- full application suite: 34 files, 626 tests;
 - `npx tsc --noEmit`;
 - `npm run build`;
 - `npm run lint`: 0 errors, 10 pre-existing warnings;
-- staged diff checks for both implementation commits.
+- clean `SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local` through
+  migration 00005;
+- targeted database test 24: 98 assertions;
+- full database suite: 24 files, 581 assertions;
+- `SUPABASE_TELEMETRY_DISABLED=1 supabase db lint --local --level warning`:
+  only the three existing unused `p_now` warnings in
+  `slice_2c_assert_lease`, `start_ingestion_run`, and
+  `renew_ingestion_run`;
+- `git diff --check`.
 
-Not passed or not run because the disposable local database was unavailable:
+## Disposable concurrency and rollback evidence
 
-- Supabase reset;
-- database test 24 and the full database suite;
-- database lint;
-- two-session reservation/reset/header concurrency probes;
-- transactional rollback rehearsal.
+Temporary fixtures and probe scripts were kept outside the repository and
+were removed by a final clean local database reset. Sanitized probe outcomes:
 
-Database test 24 contains 95 planned assertions covering schema, constraints,
-provider-wide sharing, replay, reset windows, header ordering, wrapper
-security, browser-role denial, and missing configuration. Those assertions
-remain unexecuted in this environment rather than being represented as
-green evidence.
+- same-attempt reservation: one `reserved`, one exact `replayed`, one
+  reservation row, and one decrement (remaining 9 from a ceiling of 10);
+- expired-window reservation contention: one replenishment, remaining 9,
+  trusted reset strictly in the future, and no over-credit;
+- serialized headers from different bindings: a current-window remaining 2
+  was accepted first; a later remaining 7 was accepted observationally but
+  availability stayed 2;
+- lease expiry while waiting on the provider-budget lock: the blocked reserve
+  returned `lease_lost` after post-lock revalidation, not
+  `configuration_missing`;
+- the response/header atomic-failure path is covered by database test 24,
+  including invalid header bounds and unchanged run metadata;
+- rollback rehearsal: the no-op companion returned `BEGIN`/`COMMIT`, and the
+  service-role privilege probe was `true|true` for reservation and response
+  wrappers both before and after inclusion.
 
-## Security and residual risk
+The two-session lock probes used local `psql` sessions and left no fixtures
+after reset. The response rollback assertion is pgTAP-backed; no hosted or
+provider-backed concurrency claim is made.
 
-The migration revokes direct mutation privileges from PUBLIC, anon,
-authenticated, and service_role on both budget tables and grants service_role
-SELECT only. Only the reservation and response wrappers receive service_role
-EXECUTE; the header helper is ungranted invoker-rights. The migration uses
-fixed `search_path = public, pg_temp` and schema-qualified application
-objects.
+## Residual risks and deferred work
 
-Residual risk is the unverified SQL execution path: migration parsing,
-interaction with the complete existing database suite, actual concurrency,
-RLS behavior, and rollback resolvability still require a functioning
-disposable local Supabase instance. Slice 2C.5C remains separately gated and
-must perform runtime attempt-key/budget integration after this database
-evidence is completed.
+The repository is intentionally not wired into `ports.ts` or the orchestrator;
+runtime attempt-key and budget integration belongs to Slice 2C.5C. Provider,
+hosted, deployment, scheduler, beta, device, and production behavior remain
+unverified. Independent acceptance review remains pending.

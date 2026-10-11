@@ -9,7 +9,8 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B is the next separately gated slice and remains unstarted, and Slice 2C.5C remains unstarted.
+Slice 2C.5B is implemented through R1 with disposable-database remediation evidence pending review, and
+Slice 2C.5C remains unstarted.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
@@ -886,7 +887,7 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B is the next separately gated slice and remains unstarted; 2C.5C also remains unstarted. Provider,
+2C.5B is implemented through R1 with local database verification pending; 2C.5C remains unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
 **Shared scheduling decision:** `provider_bindings.next_poll_at IS NULL` means unscheduled/not due. Ordinary
@@ -1258,8 +1259,8 @@ finish path.
 - `lib/ingestion/orchestrator/ports.ts`
 - `lib/ingestion/orchestrator/orchestrator.ts`
 - `tests/ingestion/orchestrator/orchestrator.test.ts`
-- `supabase/migrations/20261010000005_slice_2c_5_scheduling_health.sql`
-- `supabase/rollbacks/20261010000005_slice_2c_5_scheduling_health_down.sql`
+- `supabase/migrations/20261010000006_slice_2c_5_scheduling_health.sql`
+- `supabase/rollbacks/20261010000006_slice_2c_5_scheduling_health_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `supabase/tests/database/25_slice_2c_scheduling_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5c-integration-evidence.md`
@@ -1270,7 +1271,7 @@ reenable; retry and 429 scheduling; stale/degraded/healthy transitions; rate-lim
 item failure; aggregate count preservation; no competing finish path; and legacy test 23 updated for NULL not
 due. Runtime remains provider-neutral and no scheduler/hosted activation is included.
 
-**Rollback/stop/gate:** revert runtime wiring and any 00005 forward migration while preserving run/evidence/
+**Rollback/stop/gate:** revert runtime wiring and any 00006 forward migration while preserving run/evidence/
 reservation history. Stop if orchestration can bypass reservation, creates a second finish path, changes
 accepted 2C.4B behavior, or enables an inactive binding without an explicit schedule. 2C.6 remains separately
 gated after 2C.5C.
@@ -1290,8 +1291,8 @@ gated after 2C.5C.
 - `tests/ingestion/rate-limit/repository.test.ts`
 - `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
 - `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
-- `supabase/migrations/20261010000005_slice_2c_5_scheduling_health.sql`
-- `supabase/rollbacks/20261010000005_slice_2c_5_scheduling_health_down.sql`
+- `supabase/migrations/20261010000006_slice_2c_5_scheduling_health.sql`
+- `supabase/rollbacks/20261010000006_slice_2c_5_scheduling_health_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `supabase/tests/database/25_slice_2c_scheduling_health_test.sql`
@@ -1481,8 +1482,8 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** approve and implement 2C.5B; 2C.5C requires its own subsequent approval gate before
-complete synthetic replay.
+**Next approval gate:** complete independent 2C.5B-R1 database acceptance; 2C.5C requires its own subsequent
+approval gate before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
 
