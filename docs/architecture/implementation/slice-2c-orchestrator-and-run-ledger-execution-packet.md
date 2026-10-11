@@ -9,7 +9,7 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B is implemented through R2 with disposable-local database verification complete and independent
+Slice 2C.5B-R3 is implemented with disposable-local database verification complete and independent
 acceptance review pending, and
 Slice 2C.5C remains unstarted.
 
@@ -888,7 +888,7 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B is implemented through R2 with disposable-local database verification complete and independent
+2C.5B-R3 is implemented with disposable-local database verification complete and independent
 acceptance review pending; 2C.5C remains unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
@@ -1277,7 +1277,7 @@ reenable; retry and 429 scheduling; stale/degraded/healthy transitions; rate-lim
 item failure; aggregate count preservation; no competing finish path; and legacy test 23 updated for NULL not
 due. Runtime remains provider-neutral and no scheduler/hosted activation is included.
 
-**Rollback/stop/gate:** revert runtime wiring and any 00006 forward migration while preserving run/evidence/
+**Rollback/stop/gate:** revert runtime wiring and any 00007 forward migration while preserving run/evidence/
 reservation history. Stop if orchestration can bypass reservation, creates a second finish path, changes
 accepted 2C.4B behavior, or enables an inactive binding without an explicit schedule. 2C.6 remains separately
 gated after 2C.5C.
@@ -1492,7 +1492,7 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** complete independent 2C.5B-R2 database acceptance; 2C.5C requires its own subsequent
+**Next approval gate:** complete independent 2C.5B-R3 database acceptance; 2C.5C requires its own subsequent
 approval gate before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
