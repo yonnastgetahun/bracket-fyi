@@ -1,6 +1,6 @@
 begin;
 
-select plan(131);
+select plan(157);
 
 select has_table('public', 'provider_rate_budgets', 'provider-wide budget table exists');
 select has_table('public', 'provider_rate_budget_reservations', 'immutable reservation table exists');
@@ -218,6 +218,12 @@ where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'prov
 select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, (select trusted_reset_at - interval '1 second' from stale_header_before), null, clock_timestamp())$$, 'fresh stale-reset header is ignored');
 select is((select available_count from provider_rate_budgets), (select available_count from stale_header_before), 'stale-reset header cannot change availability');
 select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from stale_header_before), 'stale-reset header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from stale_header_before), 'stale-reset header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from stale_header_before), 'stale-reset header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from stale_header_before), 'stale-reset header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from stale_header_before), 'stale-reset header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from stale_header_before), 'stale-reset header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from stale_header_before), 'stale-reset header cannot change budget updated_at');
 
 update provider_rate_budgets
 set available_count = 0,
@@ -237,6 +243,12 @@ where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'prov
 select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, clock_timestamp() - interval '30 seconds', null, clock_timestamp())$$, 'stale-reset header is ignored when the local window is already expired');
 select is((select available_count from provider_rate_budgets), (select available_count from expired_stale_before), 'expired-window stale header cannot replenish availability');
 select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from expired_stale_before), 'expired-window stale header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from expired_stale_before), 'expired-window stale header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from expired_stale_before), 'expired-window stale header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from expired_stale_before), 'expired-window stale header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from expired_stale_before), 'expired-window stale header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from expired_stale_before), 'expired-window stale header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from expired_stale_before), 'expired-window stale header cannot change budget updated_at');
 
 update provider_rate_budgets
 set available_count = 0,
@@ -247,8 +259,21 @@ set available_count = 0,
     observed_reset_at = clock_timestamp() - interval '61 seconds',
     updated_at = clock_timestamp()
 where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create temporary table out_of_order_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
 select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, clock_timestamp() + interval '60 seconds', null, clock_timestamp() - interval '2 hours')$$, 'out-of-order header is ignored before local reset mutation');
-select is((select available_count from provider_rate_budgets), 0, 'out-of-order header cannot trigger replenishment');
+select is((select available_count from provider_rate_budgets), (select available_count from out_of_order_before), 'out-of-order header cannot change availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from out_of_order_before), 'out-of-order header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from out_of_order_before), 'out-of-order header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from out_of_order_before), 'out-of-order header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from out_of_order_before), 'out-of-order header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from out_of_order_before), 'out-of-order header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from out_of_order_before), 'out-of-order header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from out_of_order_before), 'out-of-order header cannot change budget updated_at');
 
 update provider_rate_budgets
 set available_count = 0,
@@ -271,8 +296,8 @@ select is((select remaining_count from current_window_reservation), 1, 'current-
 update provider_rate_budgets
 set available_count = 3,
     trusted_reset_at = clock_timestamp() + interval '60 seconds',
-    observed_at = clock_timestamp() - interval '1 hour',
-    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    observed_at = '2000-01-01 00:00:00+00',
+    observed_accepted_at = '2000-01-01 00:00:00+00',
     observed_remaining_count = 3,
     observed_reset_at = clock_timestamp() + interval '60 seconds',
     updated_at = clock_timestamp()
@@ -301,11 +326,18 @@ before update on provider_rate_budgets
 for each row execute function public.slice_2c_test_fail_budget_header();
 select throws_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 201, 3, 1, clock_timestamp() + interval '60 seconds', null, clock_timestamp())$$, 'P0001', null, 'helper-stage failure rolls back response and budget atomically');
 select is((select http_status from ingestion_runs where id = (select run_id from budget_claim)), (select http_status from helper_failure_run_before), 'helper failure rolls back HTTP metadata');
+select is((select rate_limit_limit from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_limit from helper_failure_run_before), 'helper failure rolls back run rate-limit limit');
 select is((select rate_limit_remaining from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_remaining from helper_failure_run_before), 'helper failure rolls back run rate-limit metadata');
+select is((select rate_limit_reset_at from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_reset_at from helper_failure_run_before), 'helper failure rolls back run rate-limit reset');
+select is((select retry_after_at from ingestion_runs where id = (select run_id from budget_claim)), (select retry_after_at from helper_failure_run_before), 'helper failure rolls back retry-after metadata');
 select is((select metadata from ingestion_runs where id = (select run_id from budget_claim)), (select metadata from helper_failure_run_before), 'helper failure rolls back run metadata');
 select is((select available_count from provider_rate_budgets), (select available_count from helper_failure_budget_before), 'helper failure rolls back availability');
 select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from helper_failure_budget_before), 'helper failure rolls back trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from helper_failure_budget_before), 'helper failure rolls back observed limit');
 select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from helper_failure_budget_before), 'helper failure rolls back observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from helper_failure_budget_before), 'helper failure rolls back observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from helper_failure_budget_before), 'helper failure rolls back observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from helper_failure_budget_before), 'helper failure rolls back acceptance time');
 select is((select updated_at from provider_rate_budgets), (select updated_at from helper_failure_budget_before), 'helper failure rolls back budget timestamp');
 drop trigger slice_2c_test_fail_budget_header_trigger on provider_rate_budgets;
 drop function public.slice_2c_test_fail_budget_header();
