@@ -9,7 +9,8 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B is implemented through R1 with disposable-database remediation evidence pending review, and
+Slice 2C.5B is implemented through R1 with disposable-local database verification complete and independent
+acceptance review pending, and
 Slice 2C.5C remains unstarted.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
@@ -887,7 +888,8 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B is implemented through R1 with local database verification pending; 2C.5C remains unstarted. Provider,
+2C.5B is implemented through R1 with disposable-local database verification complete and independent
+acceptance review pending; 2C.5C remains unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
 **Shared scheduling decision:** `provider_bindings.next_poll_at IS NULL` means unscheduled/not due. Ordinary
