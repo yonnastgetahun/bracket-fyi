@@ -109,6 +109,20 @@ describe("provider budget repository", () => {
     await expect(repository.reserve(request)).rejects.toMatchObject({ kind, message: expect.not.stringContaining("secret") });
   });
 
+  it.each([
+    { message: "function failed: lease_lost (worker expired)", kind: "lease_lost" },
+    { message: "attempt_key_conflict: duplicate cost", kind: "attempt_conflict" },
+  ] as const)("recognizes decorated RPC messages without exposing them", async ({ message, kind }) => {
+    const repository = createProviderBudgetRepository({
+      rpc: vi.fn().mockResolvedValue({ data: null, error: { message } }),
+    });
+
+    await expect(repository.reserve(request)).rejects.toMatchObject({
+      kind,
+      message: expect.not.stringContaining(message),
+    });
+  });
+
   it("rejects malformed caller input without making an RPC call", async () => {
     const rpc = vi.fn();
     const repository = createProviderBudgetRepository({ rpc });

@@ -79,10 +79,11 @@ const invalidInput = () => new ProviderBudgetRepositoryError("invalid_input", "I
 const invalidBudget = () => new ProviderBudgetRepositoryError("invalid_budget", "Invalid provider budget response");
 
 const mapRpcError = (error: ProviderBudgetRpcError): ProviderBudgetRepositoryError => {
-  if (error.code === "P0001" || error.message === "lease_lost") {
+  const message = typeof error.message === "string" ? error.message : "";
+  if (error.code === "P0001" || message.includes("lease_lost")) {
     return new ProviderBudgetRepositoryError("lease_lost", "Provider budget lease lost", error.code);
   }
-  if (error.code === "P0005" || error.message === "attempt_key_conflict") {
+  if (error.code === "P0005" || message.includes("attempt_key_conflict")) {
     return new ProviderBudgetRepositoryError("attempt_conflict", "Provider budget attempt conflict", error.code);
   }
   return new ProviderBudgetRepositoryError("rpc", "Provider budget RPC failed", error.code);
