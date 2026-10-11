@@ -95,6 +95,9 @@ were removed by a final clean local database reset. Sanitized probe outcomes:
   `configuration_missing`;
 - the response/header atomic-failure path is covered by database test 24,
   including invalid header bounds and unchanged run metadata;
+- direct disposable `psql` response probe: invalid header bounds returned
+  `invalid_rate_limit_bounds`, with run metadata `NULL|NULL|NULL` before and
+  after the failed call;
 - rollback rehearsal: the no-op companion returned `BEGIN`/`COMMIT`, and the
   service-role privilege probe was `true|true` for reservation and response
   wrappers both before and after inclusion.
