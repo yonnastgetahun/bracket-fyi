@@ -9,7 +9,7 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B is implemented through R1 with disposable-local database verification complete and independent
+Slice 2C.5B is implemented through R2 with disposable-local database verification complete and independent
 acceptance review pending, and
 Slice 2C.5C remains unstarted.
 
@@ -888,7 +888,7 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B is implemented through R1 with disposable-local database verification complete and independent
+2C.5B is implemented through R2 with disposable-local database verification complete and independent
 acceptance review pending; 2C.5C remains unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
@@ -1221,6 +1221,10 @@ reservation/header recording, replay safety, RPC-only writes, grants/RLS, rollba
 - `tests/ingestion/rate-limit/repository.test.ts`
 - `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
 - `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
+- `supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql`
+- `supabase/rollbacks/20261010000005_slice_2c_5b_acceptance_remediation_down.sql`
+- `supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql`
+- `supabase/rollbacks/20261010000006_slice_2c_5b_r2_header_semantics_down.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5b-budget-evidence.md`
 
@@ -1261,8 +1265,8 @@ finish path.
 - `lib/ingestion/orchestrator/ports.ts`
 - `lib/ingestion/orchestrator/orchestrator.ts`
 - `tests/ingestion/orchestrator/orchestrator.test.ts`
-- `supabase/migrations/20261010000006_slice_2c_5_scheduling_health.sql`
-- `supabase/rollbacks/20261010000006_slice_2c_5_scheduling_health_down.sql`
+- `supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql`
+- `supabase/rollbacks/20261010000007_slice_2c_5_scheduling_health_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `supabase/tests/database/25_slice_2c_scheduling_health_test.sql`
 - `docs/architecture/implementation/slice-2c-5c-integration-evidence.md`
@@ -1293,8 +1297,12 @@ gated after 2C.5C.
 - `tests/ingestion/rate-limit/repository.test.ts`
 - `supabase/migrations/20261010000004_slice_2c_rate_budget.sql`
 - `supabase/rollbacks/20261010000004_slice_2c_rate_budget_down.sql`
-- `supabase/migrations/20261010000006_slice_2c_5_scheduling_health.sql`
-- `supabase/rollbacks/20261010000006_slice_2c_5_scheduling_health_down.sql`
+- `supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql`
+- `supabase/rollbacks/20261010000005_slice_2c_5b_acceptance_remediation_down.sql`
+- `supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql`
+- `supabase/rollbacks/20261010000006_slice_2c_5b_r2_header_semantics_down.sql`
+- `supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql`
+- `supabase/rollbacks/20261010000007_slice_2c_5_scheduling_health_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
 - `supabase/tests/database/25_slice_2c_scheduling_health_test.sql`
@@ -1484,7 +1492,7 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** complete independent 2C.5B-R1 database acceptance; 2C.5C requires its own subsequent
+**Next approval gate:** complete independent 2C.5B-R2 database acceptance; 2C.5C requires its own subsequent
 approval gate before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
