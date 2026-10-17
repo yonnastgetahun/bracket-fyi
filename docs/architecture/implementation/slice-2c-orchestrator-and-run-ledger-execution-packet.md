@@ -9,9 +9,8 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B-R3 is implemented with disposable-local database verification complete and independent
-acceptance review pending, and
-Slice 2C.5C remains unstarted.
+Slice 2C.5B-R4 is implemented as of 2026-10-11 with disposable-local database verification complete and
+independent acceptance review pending, and Slice 2C.5C remains gated, unapproved, and unstarted.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 
@@ -888,8 +887,8 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B-R3 is implemented with disposable-local database verification complete and independent
-acceptance review pending; 2C.5C remains unstarted. Provider,
+2C.5B-R4 is implemented as of 2026-10-11 with disposable-local database verification complete and
+independent acceptance review pending; 2C.5C remains gated and unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
 **Shared scheduling decision:** `provider_bindings.next_poll_at IS NULL` means unscheduled/not due. Ordinary
@@ -1226,7 +1225,10 @@ reservation/header recording, replay safety, RPC-only writes, grants/RLS, rollba
 - `supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql`
 - `supabase/rollbacks/20261010000006_slice_2c_5b_r2_header_semantics_down.sql`
 - `supabase/tests/database/24_slice_2c_rate_budget_and_health_test.sql`
+- `scripts/verify-slice-2c-5b-budget-probes.sh`
 - `docs/architecture/implementation/slice-2c-5b-budget-evidence.md`
+- `docs/architecture/implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`
+- `docs/architecture/tournament-ingestion-implementation-plan.md`
 
 **Boundary/signatures:** `reserve_provider_budget(p_run_id uuid, p_lease_token text, p_attempt_key text,
 p_cost integer)` has no caller-supplied time, provider ID, or scope and returns the stored reservation outcome.
@@ -1301,6 +1303,7 @@ gated after 2C.5C.
 - `supabase/rollbacks/20261010000005_slice_2c_5b_acceptance_remediation_down.sql`
 - `supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql`
 - `supabase/rollbacks/20261010000006_slice_2c_5b_r2_header_semantics_down.sql`
+- `scripts/verify-slice-2c-5b-budget-probes.sh`
 - `supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql`
 - `supabase/rollbacks/20261010000007_slice_2c_5_scheduling_health_down.sql`
 - `supabase/tests/database/23_slice_2c_run_ledger_test.sql`
@@ -1309,6 +1312,8 @@ gated after 2C.5C.
 - `supabase/tests/database/26_slice_2c_orchestrator_replay_test.sql`
 - `docs/architecture/implementation/slice-2c-5a-policy-evidence.md`
 - `docs/architecture/implementation/slice-2c-5b-budget-evidence.md`
+- `docs/architecture/implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`
+- `docs/architecture/tournament-ingestion-implementation-plan.md`
 - `docs/architecture/implementation/slice-2c-5c-integration-evidence.md`
 
 **Required forward schema and RPCs:**
@@ -1492,7 +1497,7 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** complete independent 2C.5B-R3 database acceptance; 2C.5C requires its own subsequent
+**Next approval gate:** complete independent 2C.5B-R4 database acceptance; 2C.5C requires its own subsequent
 approval gate before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance
