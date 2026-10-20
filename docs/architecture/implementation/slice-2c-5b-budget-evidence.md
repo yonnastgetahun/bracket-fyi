@@ -3,12 +3,14 @@
 **R4 evidence date:** 2026-10-17
 **R5 evidence date:** 2026-10-20
 **R6 evidence date:** 2026-10-20
+**R7 evidence date:** 2026-10-20
 
 ## Status and evidence ceiling
 
-Slice 2C.5B-R6 is implemented as of 2026-10-20 from baseline
-`15f193f976ca52ac3f88fa468d67a23e2bc5eba7` and remains pending independent
-acceptance review. R5 was implemented and recorded on 2026-10-20; R4 was
+Slice 2C.5B-R7 is implemented as of 2026-10-20 from baseline
+`e8c4b565952c9af8a967ab4d205063d4550d8eba` and remains pending independent
+acceptance review. R6 was implemented and recorded on 2026-10-20; R5 was
+implemented and recorded on 2026-10-20; R4 was
 implemented and recorded on 2026-10-17. Evidence is limited to local synthetic TypeScript and
 disposable-local PostgreSQL. No provider, credential, network, hosted,
 deployment, notification, production, beta, or device activity occurred.
@@ -25,6 +27,8 @@ Slice 2C.5C remains gated, unapproved, and unstarted.
 - `14b421ff78c0a4faf72c0a9515e6c2260694e7ef` — `fix: harden slice 2c.5b probe coordination`
 - `15f193f976ca52ac3f88fa468d67a23e2bc5eba7` — `docs: record slice 2c.5b-r5 evidence`
 - `c8f2136c313193228b7f344e13d8bb88e0486d33` — `fix: close slice 2c.5b probe acceptance gaps`
+- `e8c4b565952c9af8a967ab4d205063d4550d8eba` — `docs: record slice 2c.5b-r6 evidence`
+- `494de87917c87a53202b9568daa6989489d79093` — `fix: stabilize slice 2c.5b concurrent header probe`
 
 ## R2 and R3 corrections delivered
 
@@ -97,6 +101,18 @@ behavior:
   binding, ingestion-run, budget, reservation, function, and trigger fixtures;
 - cleanup reads the validated temporary-directory listing before using trash.
 
+R7 corrects the remaining concurrent-header probe nondeterminism:
+
+- one valid clock timestamp is captured before the concurrent response pair and
+  passed to both calls as p_observed_at;
+- the shared conservative predicate requires available_count = 2 while still
+  allowing observed_remaining_count to be 2 or 7 after serialized acceptance;
+- the R6 independent failure is recorded accurately: its first run observed
+  expected 2 but actual 7 because separate clock_timestamp() values allowed the
+  remaining=7 response to be accepted first and the remaining=2 response to be
+  treated as older; the next run passed. This was fixture nondeterminism, not a
+  production lost-update finding.
+
 ## Permanent database coverage
 
 Test 24 now has 157 assertions covering no-header provenance preservation,
@@ -115,7 +131,7 @@ attempt keys, coordinates genuine overlapping sessions, and resets before setup
 and after success or failure. It does not extract line ranges from test 24 or
 depend on `/private/tmp` files.
 
-The committed R6 runner is now the authoritative reproduction procedure. Run
+The committed R7 runner is now the authoritative reproduction procedure. Run
 exactly:
 
 ```sh
@@ -140,7 +156,7 @@ bash scripts/verify-slice-2c-5b-budget-probes.sh --self-test
 R5_SELF_TEST wrong_assertion=pass timeout=pass status=pass
 ```
 
-Three consecutive acknowledged runs completed on 2026-10-20. Representative
+Three consecutive acknowledged R7 runs completed on 2026-10-20. Representative
 machine-readable output was:
 
 ```text
@@ -158,6 +174,9 @@ R5_PROBE cleanup_objects=pass providers=0 organizations=0 competitions=0 edition
 R5_PROBE cleanup_inspect=pass entries=48
 R5_PROBE cleanup_temp=pass
 R5_PROBE cleanup=pass
+
+The three R7 final header states were 2|2, 2|7, and 2|2; each had
+available_count = 2 and therefore passed the conservative invariant.
 ```
 
 The reservation pair proves one immutable row and one decrement for an exact
@@ -235,6 +254,6 @@ helper denial remain covered by test 24 and the prior database suite.
 The budget repository remains intentionally unwired into `ports.ts` or the
 orchestrator; that is Slice 2C.5C work. Provider, hosted, deployment,
 scheduler, beta, device, and production behavior remain unverified.
-R5 script hardening and verification are limited to the local synthetic and
+R7 script hardening and verification are limited to the local synthetic and
 disposable-local evidence ceiling. Independent acceptance review remains
 pending.
