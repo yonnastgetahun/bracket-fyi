@@ -1,12 +1,13 @@
 # Slice 2C.5B provider budget evidence
 
-**Evidence date:** 2026-10-11
+**R4 evidence date:** 2026-10-17
+**R5 evidence date:** 2026-10-20
 
 ## Status and evidence ceiling
 
-Slice 2C.5B-R4 is implemented as of 2026-10-11 from baseline
-`f2458d1cc4c6454162a3a76e43c6d76451747fa8` and remains pending independent
-acceptance review. Evidence is limited to local synthetic TypeScript and
+Slice 2C.5B-R5 is implemented as of 2026-10-20 from baseline
+`16af580e84a78f63abda09728fb280c929ec2cbd` and remains pending independent
+acceptance review. R4 was implemented and recorded on 2026-10-17. Evidence is limited to local synthetic TypeScript and
 disposable-local PostgreSQL. No provider, credential, network, hosted,
 deployment, notification, production, beta, or device activity occurred.
 Slice 2C.5C remains gated, unapproved, and unstarted.
@@ -19,6 +20,7 @@ Slice 2C.5C remains gated, unapproved, and unstarted.
 - `0fea413e691ed5b1dc2b557e4c7cd97941798f83` — `test: close slice 2c.5b rollback evidence gaps`
 - `f2458d1cc4c6454162a3a76e43c6d76451747fa8` — `docs: record slice 2c.5b-r3 evidence`
 - `6682c6d60b236aafa15f9265ff8f3e879bb1594b` — `test: add reproducible slice 2c.5b budget probes`
+- `14b421ff78c0a4faf72c0a9515e6c2260694e7ef` — `fix: harden slice 2c.5b probe coordination`
 
 ## R2 and R3 corrections delivered
 
@@ -55,8 +57,8 @@ R3 adds permanent acceptance proof without changing production SQL:
   00007 as the future 2C.5C migration; the implementation plan records status
   only and does not contain a migration inventory.
 
-R4 adds a committed, self-contained probe runner without broadening application
-implementation scope:
+R4 added a committed, self-contained probe runner without broadening application
+implementation scope. The original R4 run was recorded on 2026-10-17:
 
 - `scripts/verify-slice-2c-5b-budget-probes.sh` embeds its fixture SQL,
   derives both canonical attempt keys, coordinates genuine overlapping
@@ -64,6 +66,20 @@ implementation scope:
   database before setup and after completion or failure;
 - the 2C.5B inventory includes the probe runner and the packet/plan files used
   for approved status maintenance.
+
+R5 hardens that runner without broadening application implementation scope:
+
+- preflight validates the acknowledgement, required commands, fixed local
+  database URL, and repository configuration before creating temporary files or
+  resetting the database;
+- reset, cleanup, worker waits, readiness polling, and lock coordination are
+  bounded; the lock holder publishes readiness only after acquiring the budget
+  row lock and the reservation waiter is observed waiting before lease expiry;
+- EXIT, INT, and TERM cleanup tracks workers, validates temporary paths, uses
+  `trash`, resets the disposable database, and proves the probe provider,
+  functions, and triggers are absent;
+- `--self-test` proves both deliberate assertion failure and timeout behavior
+  without resetting the database.
 
 ## Permanent database coverage
 
@@ -83,22 +99,48 @@ attempt keys, coordinates genuine overlapping sessions, and resets before setup
 and after success or failure. It does not extract line ranges from test 24 or
 depend on `/private/tmp` files.
 
-Run exactly:
+The committed R5 runner is now the authoritative reproduction procedure. Run
+exactly:
 
 ```sh
 bash scripts/verify-slice-2c-5b-budget-probes.sh --ack-reset-local
 ```
 
-Successful machine-readable output from the 2026-10-17 run was:
+The missing-acknowledgement guard was also run without resetting the database:
 
 ```text
-R4_PROBE same_key=pass a=reserved|9 b=replayed|9 reservations=1
-R4_PROBE expired_window_reset=pass a=reserved|8 b=reserved|9 available=8 reset_future=true
-R4_PROBE concurrent_headers=pass a=t b=t state=2|2
-R4_PROBE lease_expiry_while_blocked=pass error=ERROR: lease_lost
-R4_PROBE helper_rollback=pass
-R4_PROBE status=pass
-R4_PROBE cleanup=reset_pass
+command: bash scripts/verify-slice-2c-5b-budget-probes.sh
+exit: 1
+R5_PROBE reset=not_started reason=ack_required
+```
+
+The non-destructive self-test was:
+
+```sh
+bash scripts/verify-slice-2c-5b-budget-probes.sh --self-test
+```
+
+```text
+R5_SELF_TEST wrong_assertion=pass timeout=pass status=pass
+```
+
+Three consecutive acknowledged runs completed on 2026-10-20. Representative
+machine-readable output was:
+
+```text
+R5_RUN=1
+R5_PROBE same_key=pass a=reserved|9 b=replayed|9 reservations=1
+R5_PROBE expired_window_reset=pass a=reserved|9 b=reserved|8 available=8 reset_future=true
+R5_PROBE concurrent_headers=pass a=t b=t state=2|2
+R5_PROBE readiness=budget_lock_held
+R5_PROBE readiness=reservation_waiting
+R5_PROBE lease_expiry_while_blocked=pass error=ERROR: lease_lost
+R5_PROBE helper_rollback=pass
+R5_PROBE status=pass
+R5_PROBE cleanup_reset=pass
+R5_PROBE cleanup_objects=pass providers=0 functions=0 triggers=0
+R5_PROBE cleanup_temp=pass
+R5_PROBE cleanup=pass
 ```
 
 The reservation pair proves one immutable row and one decrement for an exact
@@ -108,7 +150,10 @@ availability. The blocked lease pair proves post-lock expiry returns
 `lease_lost`. The helper-stage pair compares all six run fields and all eight
 budget/provenance fields before and after the forced failure. The runner exits
 nonzero on any failed invariant and leaves no fixture object, trigger, or
-function after its cleanup reset.
+function after its cleanup reset. Runs 2 and 3 produced the same pass set;
+their serialized header final states were `2|7` and `2|2`, respectively. Both
+satisfy the invariant that concurrent headers cannot increase availability above
+the configured ceiling or the conservative accepted value.
 
 ### Same-attempt reservation
 
@@ -126,7 +171,9 @@ future trusted reset.
 
 The runner invokes the response wrapper concurrently from both bindings with
 remaining values 2 and 7. It requires both wrappers to succeed and the final
-availability to be the conservative value 2, never an increase.
+availability to remain within the configured ceiling and never increase from
+the initial state; lock serialization determines which accepted observation is
+visible.
 
 ### Lease expiry while waiting on the budget lock
 
@@ -143,7 +190,7 @@ by the cleanup reset; no temporary repository object remains.
 
 ## Verification
 
-Passed sequentially:
+Passed sequentially for the R3/R4 database evidence:
 
 - full application suite: 34 files, 626 tests;
 - `npx tsc --noEmit`;
@@ -171,4 +218,6 @@ helper denial remain covered by test 24 and the prior database suite.
 The budget repository remains intentionally unwired into `ports.ts` or the
 orchestrator; that is Slice 2C.5C work. Provider, hosted, deployment,
 scheduler, beta, device, and production behavior remain unverified.
-Independent acceptance review remains pending.
+R5 script hardening and verification are limited to the local synthetic and
+disposable-local evidence ceiling. Independent acceptance review remains
+pending.
