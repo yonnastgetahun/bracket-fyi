@@ -9,8 +9,9 @@ synthetic evidence ceiling through R2; Slice 2C.4B is accepted through R2 at the
 TypeScript evidence ceiling. Provider, hosted,
 deployment, beta, device, and production acceptance remain unverified.
 Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling;
-Slice 2C.5B-R5 is implemented as of 2026-10-20 with disposable-local database verification complete and
-independent acceptance review pending; R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains
+Slice 2C.5B-R6 is implemented as of 2026-10-20 with disposable-local database verification complete and
+independent acceptance review pending; R5 was implemented and recorded on 2026-10-20, and R4 was implemented
+and recorded on 2026-10-17. Slice 2C.5C remains
 gated, unapproved, and unstarted.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
@@ -888,8 +889,9 @@ unverified. The approved scheduling rule is that complete-phase `nextPollAt = nu
 authoritative and observable without adding a scheduler or notification worker.
 
 **Status:** 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling.
-2C.5B-R5 is implemented as of 2026-10-20 with disposable-local database verification complete and
-independent acceptance review pending; R4 was implemented and recorded on 2026-10-17. 2C.5C remains gated
+2C.5B-R6 is implemented as of 2026-10-20 with disposable-local database verification complete and
+independent acceptance review pending; R5 was implemented and recorded on 2026-10-20, and R4 was implemented
+and recorded on 2026-10-17. 2C.5C remains gated
 and unstarted. Provider,
 database, hosted, deployment, beta, device, and production acceptance remain unverified.
 
@@ -1499,7 +1501,7 @@ as an item failure; `invalid_response` retries without an approved taxonomy chan
 fresh accepted data; authentication failure continues automatic calls; secrets enter error fields; direct table
 writes bypass the RPC; or browser roles can mutate budget state.
 
-**Next approval gate:** complete independent 2C.5B-R5 probe and database acceptance; 2C.5C requires its own subsequent
+**Next approval gate:** complete independent 2C.5B-R6 probe and database acceptance; 2C.5C requires its own subsequent
 approval gate before complete synthetic replay.
 
 ### 2C.6 — Synthetic sports and ceremony orchestrator acceptance

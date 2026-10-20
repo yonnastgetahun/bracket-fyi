@@ -2,12 +2,14 @@
 
 **R4 evidence date:** 2026-10-17
 **R5 evidence date:** 2026-10-20
+**R6 evidence date:** 2026-10-20
 
 ## Status and evidence ceiling
 
-Slice 2C.5B-R5 is implemented as of 2026-10-20 from baseline
-`16af580e84a78f63abda09728fb280c929ec2cbd` and remains pending independent
-acceptance review. R4 was implemented and recorded on 2026-10-17. Evidence is limited to local synthetic TypeScript and
+Slice 2C.5B-R6 is implemented as of 2026-10-20 from baseline
+`15f193f976ca52ac3f88fa468d67a23e2bc5eba7` and remains pending independent
+acceptance review. R5 was implemented and recorded on 2026-10-20; R4 was
+implemented and recorded on 2026-10-17. Evidence is limited to local synthetic TypeScript and
 disposable-local PostgreSQL. No provider, credential, network, hosted,
 deployment, notification, production, beta, or device activity occurred.
 Slice 2C.5C remains gated, unapproved, and unstarted.
@@ -21,6 +23,8 @@ Slice 2C.5C remains gated, unapproved, and unstarted.
 - `f2458d1cc4c6454162a3a76e43c6d76451747fa8` — `docs: record slice 2c.5b-r3 evidence`
 - `6682c6d60b236aafa15f9265ff8f3e879bb1594b` — `test: add reproducible slice 2c.5b budget probes`
 - `14b421ff78c0a4faf72c0a9515e6c2260694e7ef` — `fix: harden slice 2c.5b probe coordination`
+- `15f193f976ca52ac3f88fa468d67a23e2bc5eba7` — `docs: record slice 2c.5b-r5 evidence`
+- `c8f2136c313193228b7f344e13d8bb88e0486d33` — `fix: close slice 2c.5b probe acceptance gaps`
 
 ## R2 and R3 corrections delivered
 
@@ -81,6 +85,18 @@ R5 hardens that runner without broadening application implementation scope:
 - `--self-test` proves both deliberate assertion failure and timeout behavior
   without resetting the database.
 
+R6 closes the remaining harness acceptance gaps without changing production
+behavior:
+
+- the concurrent-header probe requires final available_count = 2 for remaining
+  values 2 and 7, and the reset-free self-test rejects the known-wrong value 7;
+- preflight resolves and verifies the repository root, requires
+  project_id = "bracket-fyi" and [db] port = 54322, and rejects database URL
+  overrides before temporary-file creation or reset;
+- cleanup proves zero provider, organization, competition, event-edition,
+  binding, ingestion-run, budget, reservation, function, and trigger fixtures;
+- cleanup reads the validated temporary-directory listing before using trash.
+
 ## Permanent database coverage
 
 Test 24 now has 157 assertions covering no-header provenance preservation,
@@ -99,7 +115,7 @@ attempt keys, coordinates genuine overlapping sessions, and resets before setup
 and after success or failure. It does not extract line ranges from test 24 or
 depend on `/private/tmp` files.
 
-The committed R5 runner is now the authoritative reproduction procedure. Run
+The committed R6 runner is now the authoritative reproduction procedure. Run
 exactly:
 
 ```sh
@@ -138,7 +154,8 @@ R5_PROBE lease_expiry_while_blocked=pass error=ERROR: lease_lost
 R5_PROBE helper_rollback=pass
 R5_PROBE status=pass
 R5_PROBE cleanup_reset=pass
-R5_PROBE cleanup_objects=pass providers=0 functions=0 triggers=0
+R5_PROBE cleanup_objects=pass providers=0 organizations=0 competitions=0 editions=0 bindings=0 runs=0 budgets=0 reservations=0 functions=0 triggers=0
+R5_PROBE cleanup_inspect=pass entries=48
 R5_PROBE cleanup_temp=pass
 R5_PROBE cleanup=pass
 ```
@@ -171,9 +188,9 @@ future trusted reset.
 
 The runner invokes the response wrapper concurrently from both bindings with
 remaining values 2 and 7. It requires both wrappers to succeed and the final
-availability to remain within the configured ceiling and never increase from
-the initial state; lock serialization determines which accepted observation is
-visible.
+available_count to equal 2; observed_remaining_count may reflect either
+serialized accepted observation. Lock serialization determines that provenance
+field.
 
 ### Lease expiry while waiting on the budget lock
 

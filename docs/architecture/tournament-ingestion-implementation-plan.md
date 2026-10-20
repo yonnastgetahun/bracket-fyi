@@ -151,7 +151,7 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2, and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R5 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2, and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R6 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R5 was implemented and recorded on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
 
@@ -173,7 +173,7 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 and accepted for local,
 mocked, and synthetic TypeScript evidence; Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic
 evidence ceiling through R2,
-and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R5 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted. Provider, hosted,
+and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R6 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R5 was implemented and recorded on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted. Provider, hosted,
 deployment, beta, device, production, and external scheduler validation remain unverified.
 
 Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).
@@ -196,9 +196,9 @@ the local mocked/synthetic TypeScript evidence ceiling; Slice 2C.5 is the next s
 
 The Slice 2C.5 planning packet separates 2C.5A pure accounting, health, scheduling, and attempt-key
 contracts; 2C.5B budget persistence and security; and 2C.5C runtime scheduling and health integration.
-2C.5A is accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; 2C.5B-R5 is implemented as of 2026-10-20
-with disposable-local database verification complete and independent acceptance review pending; R4 was implemented and recorded
-on 2026-10-17. 2C.5C remains unimplemented and unapproved.
+2C.5A is accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; 2C.5B-R6 is implemented as of 2026-10-20
+with disposable-local database verification complete and independent acceptance review pending; R5 was implemented and recorded
+on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. 2C.5C remains unimplemented and unapproved.
 
 Implement due-binding claims, one active run per binding, provider budgets, retry classification, cursors, ETags where supported, shadow/write modes, and complete run accounting. Use fake clocks and deterministic jitter in tests.
 
