@@ -519,9 +519,10 @@ create trigger slice_2c_r4_pause_budget_update_trigger
 before update on public.provider_rate_budgets
 for each row execute function public.slice_2c_r4_pause_budget_update();
 SQL
+observed_at="$(psql_local_quiet -c "select clock_timestamp();")"
 run_pair \
-  "select recorded from public.record_ingestion_response('$RUN_A', '$LEASE_A', 200, 10, 2, clock_timestamp()+interval '60 seconds', null, clock_timestamp());" \
-  "select recorded from public.record_ingestion_response('$RUN_B', '$LEASE_B', 200, 10, 7, clock_timestamp()+interval '60 seconds', null, clock_timestamp());"
+  "select recorded from public.record_ingestion_response('$RUN_A', '$LEASE_A', 200, 10, 2, clock_timestamp()+interval '60 seconds', null, '$observed_at'::timestamptz);" \
+  "select recorded from public.record_ingestion_response('$RUN_B', '$LEASE_B', 200, 10, 7, clock_timestamp()+interval '60 seconds', null, '$observed_at'::timestamptz);"
 assert_equals headers_binding_a t "$PAIR_A"
 assert_equals headers_binding_b t "$PAIR_B"
 header_state="$(psql_local_quiet -c "select available_count || '|' || observed_remaining_count from public.provider_rate_budgets where provider_id='$PROVIDER_ID' and scope_key='provider';")"
