@@ -138,6 +138,12 @@ safe_trash_temp() {
   [[ "$TMP_DIR" == /tmp/slice-2c-5b-r5.* ]] || return 1
   [[ "$TMP_DIR" != /tmp && "$TMP_DIR" != / ]] || return 1
   if [[ -e "$TMP_DIR" ]]; then
+    local inspected_entry inspected_count=0
+    while IFS= read -r inspected_entry; do
+      [[ -n "$inspected_entry" ]] || continue
+      inspected_count=$((inspected_count + 1))
+    done < <(find "$TMP_DIR" -mindepth 1 -maxdepth 1 -print)
+    printf 'R5_PROBE cleanup_inspect=pass entries=%s\n' "$inspected_count"
     trash "$TMP_DIR" || return 1
   fi
   [[ ! -e "$TMP_DIR" ]] || return 1
@@ -148,12 +154,19 @@ verify_cleanup_objects() {
   local cleanup_state
   cleanup_state="$(psql_local_quiet -c "
 select
-  (select count(*) from public.data_providers where adapter_key = 'slice-2c-r4-probe') || '|' ||
+  (select count(*) from public.data_providers where id = 'e4000000-0000-4000-8000-000000000001') || '|' ||
+  (select count(*) from public.organizations where id = 'e4000000-0000-4000-8000-000000000002') || '|' ||
+  (select count(*) from public.competitions where id = 'e4000000-0000-4000-8000-000000000003') || '|' ||
+  (select count(*) from public.event_editions where id = 'e4000000-0000-4000-8000-000000000004') || '|' ||
+  (select count(*) from public.provider_bindings where id in ('e4000000-0000-4000-8000-000000000005', 'e4000000-0000-4000-8000-000000000006')) || '|' ||
+  (select count(*) from public.ingestion_runs where binding_id in ('e4000000-0000-4000-8000-000000000005', 'e4000000-0000-4000-8000-000000000006')) || '|' ||
+  (select count(*) from public.provider_rate_budgets where provider_id = 'e4000000-0000-4000-8000-000000000001' and scope_key = 'provider') || '|' ||
+  (select count(*) from public.provider_rate_budget_reservations where provider_id = 'e4000000-0000-4000-8000-000000000001' and scope_key = 'provider') || '|' ||
   (select count(*) from pg_proc where proname like 'slice_2c_r4_%') || '|' ||
   (select count(*) from pg_trigger where tgname like 'slice_2c_r4_%' and not tgisinternal);
 ")"
-  [[ "$cleanup_state" == "0|0|0" ]] || return 1
-  printf '%s\n' 'R5_PROBE cleanup_objects=pass providers=0 functions=0 triggers=0'
+  [[ "$cleanup_state" == "0|0|0|0|0|0|0|0|0|0" ]] || return 1
+  printf '%s\n' 'R5_PROBE cleanup_objects=pass providers=0 organizations=0 competitions=0 editions=0 bindings=0 runs=0 budgets=0 reservations=0 functions=0 triggers=0'
 }
 
 cleanup() {
@@ -238,9 +251,16 @@ self_test_assertion() {
   [[ "$1" == "$2" ]]
 }
 
+conservative_header_assertion() {
+  [[ "$1" == "2" ]]
+}
+
 run_self_test() {
   if self_test_assertion expected deliberately_wrong; then
     fail self_test_wrong_assertion_accepted
+  fi
+  if conservative_header_assertion 7; then
+    fail self_test_conservative_wrong_state_accepted
   fi
   if run_with_timeout 1 sleep 2; then
     fail self_test_timeout_not_triggered
@@ -269,9 +289,14 @@ command_required bash
 command_required cat
 command_required date
 command_required env
+command_required awk
+command_required find
+command_required git
+command_required head
 command_required kill
 command_required mktemp
 command_required psql
+command_required sed
 command_required supabase
 command_required tail
 command_required trash
@@ -280,6 +305,23 @@ command_required sleep
 [[ -f "$REPO_ROOT/supabase/config.toml" ]] || fail missing_supabase_config
 [[ -d "$REPO_ROOT/supabase/migrations" ]] || fail missing_supabase_migrations
 [[ "$DB_URL" == "postgresql://postgres:postgres@127.0.0.1:54322/postgres" ]] || fail non_local_database_target
+resolved_root="$(git -C "$REPO_ROOT" rev-parse --show-toplevel 2>/dev/null || true)"
+[[ "$resolved_root" == "$REPO_ROOT" ]] || fail unexpected_repository_root
+config_project_id="$(sed -nE 's/^[[:space:]]*project_id[[:space:]]*=[[:space:]]*"([^"]+)"[[:space:]]*$/\1/p' "$REPO_ROOT/supabase/config.toml" | head -n 1)"
+[[ "$config_project_id" == "bracket-fyi" ]] || fail "invalid_supabase_project_id:$config_project_id"
+config_db_port="$(awk '
+  BEGIN { in_db = 0 }
+  /^[[:space:]]*\[db\][[:space:]]*$/ { in_db = 1; next }
+  /^[[:space:]]*\[/ { in_db = 0 }
+  in_db && /^[[:space:]]*port[[:space:]]*=/ {
+    value = $0
+    sub(/^[^=]*=[[:space:]]*/, "", value)
+    sub(/[[:space:]]*(#.*)?$/, "", value)
+    print value
+    exit
+  }
+' "$REPO_ROOT/supabase/config.toml")"
+[[ "$config_db_port" == "54322" ]] || fail "invalid_supabase_db_port:$config_db_port"
 [[ -z "${SUPABASE_DB_URL:-}" ]] || fail configurable_database_target
 [[ -z "${DATABASE_URL:-}" ]] || fail configurable_database_target
 
@@ -484,7 +526,7 @@ assert_equals headers_binding_a t "$PAIR_A"
 assert_equals headers_binding_b t "$PAIR_B"
 header_state="$(psql_local_quiet -c "select available_count || '|' || observed_remaining_count from public.provider_rate_budgets where provider_id='$PROVIDER_ID' and scope_key='provider';")"
 header_available="$(printf '%s' "$header_state" | sed 's/|.*//')"
-(( header_available >= 0 && header_available <= 10 )) || fail "headers_increased:state=$header_state"
+assert_equals concurrent_header_available 2 "$header_available"
 printf 'R5_PROBE concurrent_headers=pass a=%s b=%s state=%s\n' "$PAIR_A" "$PAIR_B" "$header_state"
 
 psql_local <<'SQL'
