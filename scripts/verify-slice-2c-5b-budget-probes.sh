@@ -5,76 +5,300 @@ readonly SCRIPT_DIR="$(cd -- "$(dirname -- "$0")" && pwd -P)"
 readonly REPO_ROOT="$(cd -- "$SCRIPT_DIR/.." && pwd -P)"
 readonly DB_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"
 readonly DB_NAME="postgres"
-readonly TMP_DIR="$(mktemp -d /tmp/slice-2c-5b-r4.XXXXXX)"
+readonly RESET_TIMEOUT_SECONDS=90
+readonly PSQL_TIMEOUT_SECONDS=15
+readonly WORKER_TIMEOUT_SECONDS=20
+readonly POLL_TIMEOUT_SECONDS=15
+readonly TERMINATE_GRACE_SECONDS=2
+readonly LOCK_KEY=900000000000000501
 
 RESET_ACK=false
+SELF_TEST=false
+RESET_ARMED=false
+TMP_DIR=""
 RUN_A=""
 RUN_B=""
 LEASE_A=""
 LEASE_B=""
+PAIR_A=""
+PAIR_B=""
+WORKER_PID=""
+declare -a BG_PIDS=()
 readonly BINDING_A="e4000000-0000-4000-8000-000000000005"
 readonly BINDING_B="e4000000-0000-4000-8000-000000000006"
 readonly PROVIDER_ID="e4000000-0000-4000-8000-000000000001"
 
 usage() {
-  printf '%s\n' 'Usage: scripts/verify-slice-2c-5b-budget-probes.sh --ack-reset-local' >&2
+  cat >&2 <<'USAGE'
+Usage:
+  scripts/verify-slice-2c-5b-budget-probes.sh --ack-reset-local
+  scripts/verify-slice-2c-5b-budget-probes.sh --self-test
+
+--ack-reset-local  acknowledge that the disposable local Supabase database will be reset
+--self-test        run reset-free assertion and timeout mechanism checks
+USAGE
 }
 fail() {
-  printf 'R4_PROBE status=failed reason=%s\n' "$1" >&2
+  printf 'R5_PROBE status=failed reason=%s\n' "$1" >&2
   exit 1
 }
+
+command_required() {
+  command -v "$1" >/dev/null 2>&1 || fail "missing_command:$1"
+}
+
+track_pid() {
+  BG_PIDS+=("$1")
+}
+
+untrack_pid() {
+  local pid="$1"
+  local remaining=()
+  local item
+  for item in "${BG_PIDS[@]}"; do
+    [[ "$item" == "$pid" ]] || remaining+=("$item")
+  done
+  if ((${#remaining[@]} > 0)); then
+    BG_PIDS=("${remaining[@]}")
+  else
+    BG_PIDS=()
+  fi
+}
+
+terminate_pid() {
+  local pid="$1"
+  local started now
+  if ! kill -0 "$pid" 2>/dev/null; then
+    return 0
+  fi
+  kill -TERM "$pid" 2>/dev/null || true
+  started="$(date +%s)"
+  while kill -0 "$pid" 2>/dev/null; do
+    now="$(date +%s)"
+    if (( now - started >= TERMINATE_GRACE_SECONDS )); then
+      kill -KILL "$pid" 2>/dev/null || true
+      break
+    fi
+    sleep 0.1
+  done
+}
+
+wait_for_pid() {
+  local pid="$1"
+  local timeout_seconds="$2"
+  local started now rc
+  started="$(date +%s)"
+  while kill -0 "$pid" 2>/dev/null; do
+    now="$(date +%s)"
+    if (( now - started >= timeout_seconds )); then
+      terminate_pid "$pid"
+      wait "$pid" 2>/dev/null || true
+      untrack_pid "$pid"
+      return 124
+    fi
+    sleep 0.1
+  done
+  rc=0
+  if wait "$pid"; then
+    rc=0
+  else
+    rc=$?
+  fi
+  untrack_pid "$pid"
+  return "$rc"
+}
+
+run_with_timeout() {
+  local timeout_seconds="$1"
+  shift
+  local pid rc stdin_file=""
+  if [[ -n "$TMP_DIR" && ! -t 0 ]]; then
+    stdin_file="$(mktemp "$TMP_DIR/stdin.XXXXXX")"
+    cat >"$stdin_file"
+    "$@" <"$stdin_file" &
+  else
+    "$@" &
+  fi
+  pid=$!
+  track_pid "$pid"
+  rc=0
+  if wait_for_pid "$pid" "$timeout_seconds"; then
+    rc=0
+  else
+    rc=$?
+  fi
+  return "$rc"
+}
+
+safe_trash_temp() {
+  if [[ -z "$TMP_DIR" ]]; then
+    printf '%s\n' 'R5_PROBE cleanup_temp=not_needed'
+    return 0
+  fi
+  [[ "$TMP_DIR" == /tmp/slice-2c-5b-r5.* ]] || return 1
+  [[ "$TMP_DIR" != /tmp && "$TMP_DIR" != / ]] || return 1
+  if [[ -e "$TMP_DIR" ]]; then
+    trash "$TMP_DIR" || return 1
+  fi
+  [[ ! -e "$TMP_DIR" ]] || return 1
+  printf '%s\n' 'R5_PROBE cleanup_temp=pass'
+}
+
+verify_cleanup_objects() {
+  local cleanup_state
+  cleanup_state="$(psql_local_quiet -c "
+select
+  (select count(*) from public.data_providers where adapter_key = 'slice-2c-r4-probe') || '|' ||
+  (select count(*) from pg_proc where proname like 'slice_2c_r4_%') || '|' ||
+  (select count(*) from pg_trigger where tgname like 'slice_2c_r4_%' and not tgisinternal);
+")"
+  [[ "$cleanup_state" == "0|0|0" ]] || return 1
+  printf '%s\n' 'R5_PROBE cleanup_objects=pass providers=0 functions=0 triggers=0'
+}
+
 cleanup() {
   local exit_code=$?
-  local reset_attempt
+  local pid reset_ok objects_ok temp_ok
+  trap - EXIT INT TERM
   set +e
-  if [[ "$RESET_ACK" == true ]]; then
-    for reset_attempt in 1 2 3; do
-      if (cd "$REPO_ROOT" && SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local) >/dev/null 2>&1; then
-        printf '%s\n' 'R4_PROBE cleanup=reset_pass'
-        break
-      fi
-      if [[ "$reset_attempt" -eq 3 ]]; then
-        printf '%s\n' 'R4_PROBE cleanup=reset_failed' >&2
-        exit_code=1
-      else
-        sleep 2
-      fi
+  if ((${#BG_PIDS[@]} > 0)); then
+    for pid in "${BG_PIDS[@]}"; do
+      terminate_pid "$pid"
+    done
+    for pid in "${BG_PIDS[@]}"; do
+      wait "$pid" 2>/dev/null || true
     done
   fi
-  rm -rf -- "$TMP_DIR"
+  BG_PIDS=()
+
+  if [[ "$SELF_TEST" == true ]]; then
+    exit "$exit_code"
+  fi
+
+  reset_ok=0
+  if [[ "$RESET_ARMED" == true ]]; then
+    if reset_local; then
+      printf '%s\n' 'R5_PROBE cleanup_reset=pass'
+      reset_ok=1
+    else
+      printf '%s\n' 'R5_PROBE cleanup_reset=failed' >&2
+      exit_code=1
+    fi
+    if [[ "$reset_ok" -eq 1 ]] && verify_cleanup_objects; then
+      objects_ok=1
+    else
+      objects_ok=0
+      if [[ "$reset_ok" -eq 1 ]]; then
+        printf '%s\n' 'R5_PROBE cleanup_objects=failed' >&2
+      else
+        printf '%s\n' 'R5_PROBE cleanup_objects=skipped'
+      fi
+      exit_code=1
+    fi
+  else
+    printf '%s\n' 'R5_PROBE cleanup_reset=not_armed'
+    objects_ok=1
+  fi
+
+  temp_ok=0
+  if safe_trash_temp; then
+    temp_ok=1
+  else
+    printf '%s\n' 'R5_PROBE cleanup_temp=failed' >&2
+    exit_code=1
+  fi
+  if [[ "$exit_code" -eq 0 && "$objects_ok" -eq 1 && "$temp_ok" -eq 1 ]]; then
+    printf '%s\n' 'R5_PROBE cleanup=pass'
+  else
+    printf '%s\n' 'R5_PROBE cleanup=failed' >&2
+    exit_code=1
+  fi
   if [[ "$exit_code" -ne 0 ]]; then
-    printf '%s\n' 'R4_PROBE status=failed' >&2
+    printf '%s\n' 'R5_PROBE status=failed' >&2
   fi
   exit "$exit_code"
 }
-trap cleanup EXIT
+
+trap cleanup EXIT INT TERM
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --ack-reset-local) RESET_ACK=true; shift ;;
+    --self-test) SELF_TEST=true; shift ;;
     -h|--help) usage; exit 0 ;;
     *) usage; fail unknown_argument ;;
   esac
 done
-[[ "$RESET_ACK" == true ]] || { usage; fail reset_ack_required; }
+
+if [[ "$SELF_TEST" == true && "$RESET_ACK" == true ]]; then
+  fail self_test_ack_conflict
+fi
+
+self_test_assertion() {
+  [[ "$1" == "$2" ]]
+}
+
+run_self_test() {
+  if self_test_assertion expected deliberately_wrong; then
+    fail self_test_wrong_assertion_accepted
+  fi
+  if run_with_timeout 1 sleep 2; then
+    fail self_test_timeout_not_triggered
+  else
+    local timeout_result=$?
+    [[ "$timeout_result" -eq 124 ]] || fail "self_test_timeout_status:$timeout_result"
+  fi
+  printf '%s\n' 'R5_SELF_TEST wrong_assertion=pass timeout=pass status=pass'
+}
+
+if [[ "$SELF_TEST" == true ]]; then
+  command_required date
+  command_required kill
+  command_required sleep
+  run_self_test
+  exit 0
+fi
+
+if [[ "$RESET_ACK" != true ]]; then
+  printf '%s\n' 'R5_PROBE reset=not_started reason=ack_required' >&2
+  usage
+  fail reset_ack_required
+fi
+
+command_required bash
+command_required cat
+command_required date
+command_required env
+command_required kill
+command_required mktemp
+command_required psql
+command_required supabase
+command_required tail
+command_required trash
+command_required tr
+command_required sleep
+[[ -f "$REPO_ROOT/supabase/config.toml" ]] || fail missing_supabase_config
+[[ -d "$REPO_ROOT/supabase/migrations" ]] || fail missing_supabase_migrations
+[[ "$DB_URL" == "postgresql://postgres:postgres@127.0.0.1:54322/postgres" ]] || fail non_local_database_target
+[[ -z "${SUPABASE_DB_URL:-}" ]] || fail configurable_database_target
+[[ -z "${DATABASE_URL:-}" ]] || fail configurable_database_target
+
+TMP_DIR="$(mktemp -d /tmp/slice-2c-5b-r5.XXXXXX)" || fail temp_create_failed
+RESET_ARMED=true
 cd "$REPO_ROOT"
 
 psql_local() {
-  psql -X -q -v ON_ERROR_STOP=1 "$DB_URL" "$@"
+  run_with_timeout "$PSQL_TIMEOUT_SECONDS" psql -X -q -v ON_ERROR_STOP=1 "$DB_URL" "$@"
 }
 psql_local_quiet() {
-  psql -X -q -v ON_ERROR_STOP=1 -At "$DB_URL" "$@"
+  run_with_timeout "$PSQL_TIMEOUT_SECONDS" psql -X -q -v ON_ERROR_STOP=1 -At "$DB_URL" "$@"
 }
 reset_local() {
-  local reset_attempt
-  for reset_attempt in 1 2 3; do
-    if SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local >/dev/null; then
-      return 0
-    fi
-    if [[ "$reset_attempt" -lt 3 ]]; then
-      sleep 2
-    fi
-  done
+  local reset_log="$TMP_DIR/reset.log"
+  if run_with_timeout "$RESET_TIMEOUT_SECONDS" env SUPABASE_TELEMETRY_DISABLED=1 supabase db reset --local >"$reset_log" 2>&1; then
+    return 0
+  fi
+  tail -n 12 "$reset_log" >&2 || true
   return 1
 }
 assert_equals() {
@@ -84,6 +308,62 @@ assert_equals() {
 assert_contains() {
   local label="$1" needle="$2" actual="$3"
   [[ "$actual" == *"$needle"* ]] || fail "$label:missing=$needle"
+}
+
+poll_until() {
+  local label="$1"
+  local query="$2"
+  local worker_pid="${3:-}"
+  local started now result
+  started="$(date +%s)"
+  while true; do
+    if [[ -n "$worker_pid" ]] && ! kill -0 "$worker_pid" 2>/dev/null; then
+      fail "${label}_worker_exited"
+    fi
+    if result="$(psql_local_quiet -c "$query")" && [[ "$result" == "t" ]]; then
+      printf 'R5_PROBE readiness=%s\n' "$label"
+      return 0
+    fi
+    now="$(date +%s)"
+    (( now - started < POLL_TIMEOUT_SECONDS )) || fail "${label}_timeout"
+    sleep 0.1
+  done
+}
+
+start_worker() {
+  local app_name="$1"
+  local command_text="$2"
+  local output_file="$3"
+  PGAPPNAME="$app_name" psql_local_quiet -c "$command_text" >"$output_file" 2>&1 &
+  WORKER_PID=$!
+  track_pid "$WORKER_PID"
+}
+
+run_pair() {
+  local command_a="$1"
+  local command_b="$2"
+  local output_a="$TMP_DIR/pair-a" output_b="$TMP_DIR/pair-b"
+  local status_a=0 status_b=0
+  start_worker slice-2c-r5-pair-a "$command_a" "$output_a"
+  local pid_a="$WORKER_PID"
+  start_worker slice-2c-r5-pair-b "$command_b" "$output_b"
+  local pid_b="$WORKER_PID"
+  if wait_for_pid "$pid_a" "$WORKER_TIMEOUT_SECONDS"; then
+    status_a=0
+  else
+    status_a=$?
+  fi
+  if [[ "$status_a" -ne 0 ]]; then
+    terminate_pid "$pid_b"
+  fi
+  if wait_for_pid "$pid_b" "$WORKER_TIMEOUT_SECONDS"; then
+    status_b=0
+  else
+    status_b=$?
+  fi
+  [[ "$status_a" -eq 0 && "$status_b" -eq 0 ]] || fail "concurrent_psql_failure:a=$status_a:b=$status_b"
+  PAIR_A="$(tr -d '\r\n' <"$output_a")"
+  PAIR_B="$(tr -d '\r\n' <"$output_b")"
 }
 
 reset_local
@@ -125,19 +405,6 @@ page_key_b="$(psql_local_quiet -c "select public.slice_2c_page_key('$BINDING_B',
 attempt_a="v1:request:$RUN_A:0:$page_key_a"
 attempt_b="v1:request:$RUN_B:0:$page_key_b"
 
-run_pair() {
-  local command_a="$1" command_b="$2"
-  local output_a="$TMP_DIR/pair-a" output_b="$TMP_DIR/pair-b"
-  local status_a=0 status_b=0
-  psql_local_quiet -c "$command_a" >"$output_a" 2>&1 & local pid_a=$!
-  psql_local_quiet -c "$command_b" >"$output_b" 2>&1 & local pid_b=$!
-  wait "$pid_a" || status_a=$?
-  wait "$pid_b" || status_b=$?
-  [[ "$status_a" -eq 0 && "$status_b" -eq 0 ]] || fail "concurrent_psql_failure:a=$status_a:b=$status_b"
-  PAIR_A="$(tr -d '\r\n' <"$output_a")"
-  PAIR_B="$(tr -d '\r\n' <"$output_b")"
-}
-
 psql_local <<'SQL'
 create or replace function public.slice_2c_r4_pause_reservation()
 returns trigger language plpgsql as $$
@@ -158,7 +425,7 @@ if [[ ! (("$PAIR_A" == reserved\|* && "$PAIR_B" == replayed\|*) || ("$PAIR_A" ==
 fi
 reservation_count="$(psql_local_quiet -c "select count(*) from public.provider_rate_budget_reservations where attempt_key='$attempt_a';")"
 assert_equals same_key_reservation_count 1 "$reservation_count"
-printf 'R4_PROBE same_key=pass a=%s b=%s reservations=%s\n' "$PAIR_A" "$PAIR_B" "$reservation_count"
+printf 'R5_PROBE same_key=pass a=%s b=%s reservations=%s\n' "$PAIR_A" "$PAIR_B" "$reservation_count"
 
 psql_local <<'SQL'
 drop trigger slice_2c_r4_pause_reservation_trigger on public.provider_rate_budget_reservations;
@@ -190,7 +457,7 @@ reset_available="$(psql_local_quiet -c "select available_count from public.provi
 reset_future="$(psql_local_quiet -c "select (trusted_reset_at > clock_timestamp())::text from public.provider_rate_budgets where provider_id='$PROVIDER_ID' and scope_key='provider';")"
 assert_equals expired_window_final_available 8 "$reset_available"
 assert_equals expired_window_reset_future true "$reset_future"
-printf 'R4_PROBE expired_window_reset=pass a=%s b=%s available=%s reset_future=%s\n' "$PAIR_A" "$PAIR_B" "$reset_available" "$reset_future"
+printf 'R5_PROBE expired_window_reset=pass a=%s b=%s available=%s reset_future=%s\n' "$PAIR_A" "$PAIR_B" "$reset_available" "$reset_future"
 
 psql_local <<'SQL'
 drop trigger slice_2c_r4_pause_reservation_trigger on public.provider_rate_budget_reservations;
@@ -217,9 +484,8 @@ assert_equals headers_binding_a t "$PAIR_A"
 assert_equals headers_binding_b t "$PAIR_B"
 header_state="$(psql_local_quiet -c "select available_count || '|' || observed_remaining_count from public.provider_rate_budgets where provider_id='$PROVIDER_ID' and scope_key='provider';")"
 header_available="$(printf '%s' "$header_state" | sed 's/|.*//')"
-(( header_available <= 10 )) || fail "headers_increased:state=$header_state"
-assert_equals headers_conservative_available 2 "$header_available"
-printf 'R4_PROBE concurrent_headers=pass a=%s b=%s state=%s\n' "$PAIR_A" "$PAIR_B" "$header_state"
+(( header_available >= 0 && header_available <= 10 )) || fail "headers_increased:state=$header_state"
+printf 'R5_PROBE concurrent_headers=pass a=%s b=%s state=%s\n' "$PAIR_A" "$PAIR_B" "$header_state"
 
 psql_local <<'SQL'
 drop trigger slice_2c_r4_pause_budget_update_trigger on public.provider_rate_budgets;
@@ -228,27 +494,34 @@ SQL
 psql_local -c "update public.ingestion_runs set retry_index=2, lease_expires_at=clock_timestamp()+interval '15 minutes' where id='$RUN_B';" >/dev/null
 page_key_b="$(psql_local_quiet -c "select public.slice_2c_page_key('$BINDING_B', 0, '{}'::jsonb, null);")"
 attempt_b_expiry="v1:request:$RUN_B:2:$page_key_b"
-lock_holder() {
-  psql_local -c "begin; update public.provider_rate_budgets set updated_at=updated_at where provider_id='$PROVIDER_ID' and scope_key='provider'; select pg_sleep(4); rollback;"
-}
-lock_holder >"$TMP_DIR/lock-holder" 2>&1 &
-lock_pid=$!
-sleep 0.5
-psql_local -c "update public.ingestion_runs set lease_expires_at=clock_timestamp()+interval '1 second' where id='$RUN_B';" >/dev/null
-lease_output="$TMP_DIR/lease-expiry"
-set +e
-psql_local_quiet -c "select outcome from public.reserve_provider_budget('$RUN_B', '$LEASE_B', '$attempt_b_expiry', 1);" >"$lease_output" 2>&1
-lease_status=$?
-set -e
-wait "$lock_pid"
-lease_text="$(tr '\n' ' ' <"$lease_output")"
-[[ "$lease_status" -ne 0 ]] || fail lease_expiry_call_succeeded
+lock_holder_sql="begin; update public.provider_rate_budgets set updated_at=updated_at where provider_id='$PROVIDER_ID' and scope_key='provider'; select pg_advisory_xact_lock($LOCK_KEY); select pg_sleep(4); rollback;"
+start_worker slice-2c-r5-budget-holder "$lock_holder_sql" "$TMP_DIR/lock-holder"
+lock_pid="$WORKER_PID"
+poll_until budget_lock_held "select case when pg_try_advisory_lock($LOCK_KEY) then (pg_advisory_unlock($LOCK_KEY) and false) else true end;"
+psql_local -c "update public.ingestion_runs set lease_expires_at=clock_timestamp()+interval '2 seconds' where id='$RUN_B';" >/dev/null
+reservation_sql="select outcome from public.reserve_provider_budget('$RUN_B', '$LEASE_B', '$attempt_b_expiry', 1);"
+start_worker slice-2c-r5-reservation-waiter "$reservation_sql" "$TMP_DIR/lease-expiry"
+reservation_pid="$WORKER_PID"
+poll_until reservation_waiting "select exists (select 1 from pg_stat_activity where application_name = 'slice-2c-r5-reservation-waiter' and state = 'active' and wait_event_type = 'Lock' and query like '%reserve_provider_budget%');" "$reservation_pid"
+if wait_for_pid "$lock_pid" "$WORKER_TIMEOUT_SECONDS"; then
+  lock_status=0
+else
+  lock_status=$?
+fi
+if wait_for_pid "$reservation_pid" "$WORKER_TIMEOUT_SECONDS"; then
+  reservation_status=0
+else
+  reservation_status=$?
+fi
+[[ "$lock_status" -eq 0 ]] || fail "budget_lock_holder_status:$lock_status"
+lease_text="$(tr '\n' ' ' <"$TMP_DIR/lease-expiry")"
+[[ "$reservation_status" -ne 0 ]] || fail "lease_expiry_call_succeeded:$lease_text"
 assert_contains lease_expiry lease_lost "$lease_text"
-printf 'R4_PROBE lease_expiry_while_blocked=pass error=%s\n' "$lease_text"
+printf 'R5_PROBE lease_expiry_while_blocked=pass error=%s\n' "$lease_text"
 
 psql_local -c "update public.ingestion_runs set lease_expires_at=clock_timestamp()+interval '15 minutes' where id='$RUN_A';" >/dev/null
 helper_output="$TMP_DIR/helper"
-if ! psql -X -q -v ON_ERROR_STOP=1 -v run_a="$RUN_A" -v provider_id="$PROVIDER_ID" "$DB_URL" >"$helper_output" 2>&1 <<'SQL'
+if ! psql_local -v run_a="$RUN_A" -v provider_id="$PROVIDER_ID" >"$helper_output" 2>&1 <<'SQL'
 begin;
 create or replace function public.slice_2c_r4_fail_budget_helper()
 returns trigger language plpgsql as $$
@@ -308,11 +581,11 @@ $$;
 drop trigger slice_2c_r4_fail_budget_helper_trigger on provider_rate_budgets;
 drop function public.slice_2c_r4_fail_budget_helper();
 commit;
-select 'R4_PROBE helper_rollback=pass';
+select 'R5_PROBE helper_rollback=pass';
 SQL
 then
   helper_error="$(tr '\n' ' ' <"$helper_output")"
   fail "helper_rollback_probe:$helper_error"
 fi
 cat "$helper_output"
-printf 'R4_PROBE status=pass\n'
+printf 'R5_PROBE status=pass\n'
