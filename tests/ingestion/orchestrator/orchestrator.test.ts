@@ -1,16 +1,19 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { ProviderBatch, NormalizedObservation, JsonObject } from "@/lib/ingestion/contracts";
-import { RunLedgerRepositoryError, type ClaimedIngestionRun, type RunLedgerRepository } from "@/lib/ingestion/orchestrator/run-ledger-repository";
+import { computeIngestionPageKey, RunLedgerRepositoryError, type ClaimedIngestionRun, type RunLedgerRepository } from "@/lib/ingestion/orchestrator/run-ledger-repository";
 import { createIngestionOrchestrator, effectiveBindingMode } from "@/lib/ingestion/orchestrator/orchestrator";
 import type { OrchestratorDependencies } from "@/lib/ingestion/orchestrator/ports";
 import type { ProviderAdapter } from "@/lib/ingestion/providers/provider-adapter";
+import { createAttemptKey } from "@/lib/ingestion/rate-limit/attempt-key";
+
+const RUN_ID = "40000000-0000-4000-8000-000000000001";
 
 const runDefaults: ClaimedIngestionRun = {
-  runId: "run-1",
+  runId: RUN_ID,
   bindingId: "10000000-0000-4000-8000-000000000001",
   claimKey: "v1:schedule:binding:g1",
-  claimRequestKey: "automated:v1:run-1",
+  claimRequestKey: `automated:v1:${RUN_ID}`,
   claimGeneration: 1,
   retryIndex: 0,
   checkpointGeneration: 0,
@@ -91,9 +94,9 @@ const batchFor = (observations: NormalizedObservation[], overrides: Partial<Prov
 const makeLedger = (overrides: Partial<RunLedgerRepository> = {}) => ({
   claimDue: vi.fn(),
   claimManual: vi.fn(),
-  start: vi.fn().mockResolvedValue({ run_id: "run-1", status: "running", started_at: "2026-10-10T18:00:00.000Z" }),
-  renew: vi.fn().mockResolvedValue({ run_id: "run-1", lease_expires_at: "2026-10-10T18:10:00.000Z" }),
-  recordResponse: vi.fn().mockResolvedValue({ run_id: "run-1", recorded: true }),
+  start: vi.fn().mockResolvedValue({ run_id: RUN_ID, status: "running", started_at: "2026-10-10T18:00:00.000Z" }),
+  renew: vi.fn().mockResolvedValue({ run_id: RUN_ID, lease_expires_at: "2026-10-10T18:10:00.000Z" }),
+  recordResponse: vi.fn().mockResolvedValue({ run_id: RUN_ID, recorded: true }),
   reclaimExpired: vi.fn(),
   commitPage: vi.fn().mockImplementation(async (input: {
     runId: string;
@@ -110,7 +113,7 @@ const makeLedger = (overrides: Partial<RunLedgerRepository> = {}) => ({
     providerEtag: input.responseEtag ?? input.expectedEtag ?? null,
   })),
   finish: vi.fn().mockResolvedValue({
-    run_id: "run-1",
+    run_id: RUN_ID,
     status: "succeeded",
     health_status: "healthy",
     next_poll_at: null,
@@ -197,7 +200,7 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(dependencies.evidence.record).not.toHaveBeenCalled();
     expect(dependencies.structural.projectObservation).not.toHaveBeenCalled();
     expect(dependencies.result.project).not.toHaveBeenCalled();
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "canceled", dataChanged: false }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "canceled", dataChanged: false, nextPollAt: null }));
   });
 
   it("retains evidence and skips projectors in effective shadow mode", async () => {
@@ -222,12 +225,32 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "rate_limited", nextRetryAt: "2026-10-10T18:05:00.000Z", nextPollAt: "2026-10-10T18:05:00.000Z" }));
   });
 
+  it("reserves each provider request with its run, lease, cost, and canonical attempt key", async () => {
+    const { dependencies } = makeDependencies();
+
+    await execute(dependencies);
+
+    const pageKey = computeIngestionPageKey({
+      bindingId: runDefaults.bindingId,
+      expectedCheckpointGeneration: runDefaults.checkpointGeneration,
+      expectedCursor: runDefaults.providerCursor,
+      expectedEtag: runDefaults.providerEtag ?? undefined,
+    });
+    expect(dependencies.budget.reserve).toHaveBeenCalledWith({
+      runId: RUN_ID,
+      leaseToken: runDefaults.leaseToken,
+      attemptKey: createAttemptKey({ runId: RUN_ID, retryIndex: 0, pageKey }),
+      requestedAt: "2026-10-10T18:00:00.000Z",
+      cost: 1,
+    });
+  });
+
   it("fails closed for a missing credential", async () => {
     const { dependencies, adapter, ledger } = makeDependencies();
     const result = await execute(dependencies, { ...runDefaults, credentialRef: null });
 
     expect(result.status).toBe("failed");
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed", failureCode: "system:missing_credential", nextPollAt: expect.any(String) }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "failed", failureCode: "system:missing_credential", nextPollAt: null }));
     expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
     expect(adapter.pull).not.toHaveBeenCalled();
   });
@@ -240,7 +263,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result.status).toBe("failed");
     expect(dependencies.budget.reserve).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:invalid_request", nextPollAt: expect.any(String) }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:invalid_request", nextPollAt: null }));
   });
 
   it("requires the registry adapter key to match the claimed key", async () => {
@@ -251,7 +274,7 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result.status).toBe("failed");
     expect(dependencies.budget.reserve).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:adapter_mismatch", nextPollAt: expect.any(String) }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:adapter_mismatch", nextPollAt: null }));
   });
 
   it.each([
@@ -298,7 +321,10 @@ describe("provider-neutral ingestion orchestration", () => {
       classifyError: vi.fn<ProviderAdapter["classifyError"]>(() => ({ code: "permanent", retry: "never", message: "ceremony failure", details: {} })),
     };
     (dependencies.adapters.get as ReturnType<typeof vi.fn>).mockImplementation((key: string) => key === "synthetic-sports" ? sportsAdapter : ceremonyAdapter);
-    const result = await execute(dependencies, { ...runDefaults, runId: `${adapterKey}-run`, adapterKey });
+    const runId = adapterKey === "synthetic-sports"
+      ? "40000000-0000-4000-8000-000000000002"
+      : "40000000-0000-4000-8000-000000000003";
+    const result = await execute(dependencies, { ...runDefaults, runId, adapterKey });
     expect(result.status).toBe(expected === "projected" ? "succeeded" : "failed");
     expect((adapterKey === "synthetic-sports" ? sportsAdapter : ceremonyAdapter).pull).toHaveBeenCalledTimes(1);
     expect(seen).toHaveLength(1);
@@ -336,13 +362,13 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(result.status).toBe("failed");
     expect(dependencies.ledger.recordResponse).not.toHaveBeenCalled();
     expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
-    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response", nextPollAt: expect.any(String) }));
+    expect(dependencies.ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "provider:invalid_response", nextPollAt: null }));
     expect(adapter.classifyError).not.toHaveBeenCalled();
   });
 
   it("records rate-limit metadata and renews before provider and page operations", async () => {
     const { dependencies, adapter, ledger } = makeDependencies();
-    (ledger.renew as ReturnType<typeof vi.fn>).mockResolvedValue({ run_id: "run-1", lease_expires_at: "2026-10-10T18:00:30.000Z" });
+    (ledger.renew as ReturnType<typeof vi.fn>).mockResolvedValue({ run_id: RUN_ID, lease_expires_at: "2026-10-10T18:00:30.000Z" });
     (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([sportsObservation], {
       rateLimit: { limit: 10, remaining: 9, resetAt: "2026-10-10T19:00:00.000Z", retryAfterAt: "2026-10-10T18:01:00.000Z" },
     }));
@@ -492,7 +518,7 @@ describe("provider-neutral ingestion orchestration", () => {
       failureCode: "system:page_commit_failed",
       dataChanged: true,
       metadata: { stage: "page_commit_outcome" },
-      nextPollAt: expect.any(String),
+      nextPollAt: null,
     }));
   });
 
@@ -533,7 +559,7 @@ describe("provider-neutral ingestion orchestration", () => {
       failureCode: "system:page_commit_failed",
       dataChanged: true,
       metadata: { stage: "page_commit_outcome" },
-      nextPollAt: expect.any(String),
+      nextPollAt: null,
     }));
   });
 
@@ -753,7 +779,7 @@ describe("provider-neutral ingestion orchestration", () => {
       failureCode: "system:page_commit_failed",
       dataChanged: true,
       metadata: { stage: "page_commit_outcome" },
-      nextPollAt: expect.any(String),
+      nextPollAt: null,
     }));
   });
 
@@ -777,6 +803,11 @@ describe("provider-neutral ingestion orchestration", () => {
 
     expect(result.status).toBe("partial");
     expect(adapter.pull).toHaveBeenCalledTimes(25);
+    expect(dependencies.budget.reserve).toHaveBeenCalledTimes(25);
+    const attemptKeys = (dependencies.budget.reserve as ReturnType<typeof vi.fn>).mock.calls
+      .map(([input]) => (input as { attemptKey: string }).attemptKey);
+    expect(new Set(attemptKeys)).toHaveLength(25);
+    expect(attemptKeys.every((key) => key.startsWith(`v1:request:${RUN_ID}:0:`))).toBe(true);
     expect(ledger.commitPage).toHaveBeenCalledTimes(25);
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: "partial", nextPollAt: "2026-10-10T18:00:00.000Z" }));
   });
@@ -802,6 +833,21 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(result.status).toBe("succeeded");
     expect(adapter.pull).toHaveBeenCalledTimes(25);
     expect(ledger.commitPage).toHaveBeenCalledTimes(25);
+  });
+
+  it("unschedules a successfully consumed complete-phase binding", async () => {
+    const { dependencies, ledger, adapter } = makeDependencies({
+      phaseResolver: { resolve: vi.fn().mockReturnValue("complete") },
+    });
+    (adapter.pull as ReturnType<typeof vi.fn>).mockResolvedValue(batchFor([]));
+
+    const result = await execute(dependencies);
+
+    expect(result.status).toBe("succeeded");
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: "succeeded",
+      nextPollAt: null,
+    }));
   });
 
   it("rejects unsafe raw page ETags before dispatch or checkpoint commit", async () => {
@@ -873,7 +919,11 @@ describe("provider-neutral ingestion orchestration", () => {
 
     const result = await execute(dependencies);
     expect(result.status).toBe(status);
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ outcome: status, failureCode: `provider:${code}`, nextPollAt: expect.any(String) }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: status,
+      failureCode: `provider:${code}`,
+      nextPollAt: retry === "never" ? null : expect.any(String),
+    }));
     if (status === "rate_limited" || retry === "backoff") expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ nextRetryAt: expect.any(String) }));
   });
 
@@ -924,7 +974,7 @@ describe("provider-neutral ingestion orchestration", () => {
       expect(result.status).toBe("failed");
       expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
         failureCode: "system:invalid_binding_mode",
-        nextPollAt: expect.any(String),
+        nextPollAt: null,
       }));
       expect(dependencies.budget.reserve).not.toHaveBeenCalled();
       expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
@@ -951,7 +1001,7 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(result.status).toBe("rate_limited");
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
       failureCode: "system:invalid_budget_decision",
-      nextPollAt: expect.any(String),
+      nextPollAt: null,
     }));
     expect(dependencies.credentials.resolve).not.toHaveBeenCalled();
     expect(adapter.pull).not.toHaveBeenCalled();
@@ -1048,7 +1098,7 @@ describe("provider-neutral ingestion orchestration", () => {
     const result = await execute(dependencies, nearExpiry);
 
     expect(result.status).toBe("failed");
-    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: expectedCode, nextPollAt: expect.any(String) }));
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: expectedCode, nextPollAt: null }));
     if (_name === "response repository") expect(adapter.pull).toHaveBeenCalledTimes(1);
     else expect(adapter.pull).not.toHaveBeenCalled();
     expect(dependencies.ledger.commitPage).not.toHaveBeenCalled();
@@ -1069,7 +1119,7 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(dependencies.evidence.record).not.toHaveBeenCalled();
   });
 
-  it("finishes controlled terminal outcomes with a non-null terminal hold", async () => {
+  it("unschedules controlled terminal outcomes until an operator explicitly reschedules them", async () => {
     const cases: Array<[
       string,
       Partial<OrchestratorDependencies>,
@@ -1087,7 +1137,7 @@ describe("provider-neutral ingestion orchestration", () => {
         (adapter.classifyError as ReturnType<typeof vi.fn>).mockReturnValue({ code: "permanent", retry: "never", message: "secret", details: {} });
       }
       await execute(dependencies, { ...runDefaults, ...runOverride });
-      expect(ledger.finish, name).toHaveBeenCalledWith(expect.objectContaining({ nextPollAt: expect.any(String) }));
+      expect(ledger.finish, name).toHaveBeenCalledWith(expect.objectContaining({ nextPollAt: null }));
     }
   });
 

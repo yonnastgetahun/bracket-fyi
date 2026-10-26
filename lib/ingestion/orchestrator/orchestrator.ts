@@ -15,6 +15,7 @@ import {
 } from "@/lib/ingestion/errors";
 import { classifyFailure, sanitizeFailure } from "@/lib/ingestion/orchestrator/failure-policy";
 import {
+  computeIngestionPageKey,
   RunLedgerRepositoryError,
   type ClaimedIngestionRun,
 } from "@/lib/ingestion/orchestrator/run-ledger-repository";
@@ -35,6 +36,7 @@ import type {
 } from "@/lib/ingestion/orchestrator/ports";
 import type { ProviderCredential } from "@/lib/ingestion/providers/provider-adapter";
 import { providerPullRequestSchema, type ProviderPullRequest } from "@/lib/ingestion/providers/provider-adapter";
+import { createAttemptKey } from "@/lib/ingestion/rate-limit/attempt-key";
 
 const pollPhaseSchema = z.enum(["distant", "pregame", "live", "postgame", "complete"]);
 const bindingModeSchema = z.enum(["disabled", "shadow", "write"]);
@@ -139,9 +141,6 @@ const emptyCounts = (): Omit<RunExecutionOutcome, "runId" | "status"> => ({
   failedCount: 0,
 });
 
-const terminalHoldAt = (finishedAt: string): string =>
-  new Date(Date.parse(finishedAt) + 300_000).toISOString();
-
 const systemFailureMessage = (code: string): string => `Ingestion execution failed: ${code.replace(/^system:/u, "")}`;
 
 const providerFailureMessage = (code: ProviderFailure["code"]): string => `Provider execution failed: ${code}`;
@@ -201,7 +200,7 @@ export function createIngestionOrchestrator(
     counts: Omit<RunExecutionOutcome, "runId" | "status">,
     options: Readonly<{
       nextPollAt?: string | null;
-      nextRetryAt?: string | null;
+      nextRetryAt?: string;
       dataChanged?: boolean;
       failureCode?: string;
       errorMessage?: string;
@@ -216,8 +215,8 @@ export function createIngestionOrchestrator(
       leaseToken: run.leaseToken,
       outcome: status,
       finishedAt,
-      ...(options.nextPollAt ? { nextPollAt: options.nextPollAt } : {}),
-      ...(options.nextRetryAt ? { nextRetryAt: options.nextRetryAt } : {}),
+      ...(options.nextPollAt !== undefined ? { nextPollAt: options.nextPollAt } : {}),
+      ...(options.nextRetryAt !== undefined ? { nextRetryAt: options.nextRetryAt } : {}),
       dataChanged: options.dataChanged ?? counts.projectedCount > 0,
       ...(options.failureCode ? { failureCode: options.failureCode } : {}),
       ...(options.errorMessage ? { errorMessage: options.errorMessage } : {}),
@@ -231,14 +230,14 @@ export function createIngestionOrchestrator(
     code: string,
     counts: Omit<RunExecutionOutcome, "runId" | "status"> = emptyCounts(),
     metadata: JsonObject = {},
-    nextPollAt?: string,
+    nextPollAt: string | null = null,
   ): Promise<RunExecutionOutcome> => {
     const finishedAt = nowIso(dependencies.clock);
     return finish(run, "failed", counts, {
       finishedAt,
       failureCode: code,
       errorMessage: systemFailureMessage(code),
-      nextPollAt: nextPollAt ?? terminalHoldAt(finishedAt),
+      nextPollAt,
       metadata,
     });
   };
@@ -313,7 +312,7 @@ export function createIngestionOrchestrator(
         const finishedAt = nowIso(dependencies.clock);
         return finish(run, "canceled", emptyCounts(), {
           finishedAt,
-          nextPollAt: terminalHoldAt(finishedAt),
+          nextPollAt: null,
           dataChanged: false,
         });
       }
@@ -359,7 +358,7 @@ export function createIngestionOrchestrator(
         const finishedAt = nowIso(dependencies.clock);
         return finish(run, "failed", aggregate, {
           finishedAt,
-          nextPollAt: terminalHoldAt(finishedAt),
+          nextPollAt: null,
           failureCode: "provider:invalid_response",
           errorMessage: providerFailureMessage("invalid_response"),
           metadata,
@@ -397,9 +396,16 @@ export function createIngestionOrchestrator(
 
         let rawBudget: unknown;
         try {
+          const pageKey = computeIngestionPageKey({
+            bindingId: run.bindingId,
+            expectedCheckpointGeneration: checkpointGeneration,
+            expectedCursor: currentCursor,
+            ...(currentEtag === null ? {} : { expectedEtag: currentEtag }),
+          });
           rawBudget = await dependencies.budget.reserve({
             runId: run.runId,
             leaseToken: run.leaseToken,
+            attemptKey: createAttemptKey({ runId: run.runId, retryIndex: run.retryIndex, pageKey }),
             requestedAt: request.requestedAt,
             cost: 1,
           });
@@ -412,7 +418,7 @@ export function createIngestionOrchestrator(
           const finishedAt = nowIso(dependencies.clock);
           return finish(run, "rate_limited", aggregate, {
             finishedAt,
-            nextPollAt: terminalHoldAt(finishedAt),
+            nextPollAt: null,
             dataChanged,
             failureCode: "system:invalid_budget_decision",
             errorMessage: systemFailureMessage("system:invalid_budget_decision"),
@@ -423,7 +429,7 @@ export function createIngestionOrchestrator(
         const budget = budgetResult.data;
         if (!budget.allowed) {
           const finishedAt = nowIso(dependencies.clock);
-          const scheduledAt = budget.retryAt ?? pollAtFor(mode, phase, policy, request.requestedAt) ?? terminalHoldAt(finishedAt);
+          const scheduledAt = budget.reason === "exhausted" ? budget.retryAt ?? null : null;
           return finish(run, "rate_limited", aggregate, {
             finishedAt,
             nextPollAt: scheduledAt,
@@ -478,7 +484,7 @@ export function createIngestionOrchestrator(
             claimKey: run.claimKey,
           });
           const finishedAt = nowIso(dependencies.clock);
-          const nextPoll = retry.retryAt ?? pollAtFor(mode, phase, policy, finishedAt) ?? terminalHoldAt(finishedAt);
+          const nextPoll = retry.retryAt ?? null;
           return finish(run, failure.code === "rate_limited" ? "rate_limited" : "failed", aggregate, {
             finishedAt,
             nextPollAt: nextPoll,
@@ -677,7 +683,7 @@ export function createIngestionOrchestrator(
         const scheduledAt = pagination.action === "yield"
           ? finishedAt
           : pollAtFor(mode, phase, policy, finishedAt)
-            ?? (status === "partial" ? terminalHoldAt(finishedAt) : null);
+            ?? null;
         return finish(run, status, aggregate, {
           finishedAt,
           nextPollAt: scheduledAt,

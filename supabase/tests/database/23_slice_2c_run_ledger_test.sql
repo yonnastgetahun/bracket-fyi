@@ -101,14 +101,19 @@ select is((select provider_etag from advanced_claim_replay), 'etag-1', 'advanced
 select ok((select lease_token is null from advanced_claim_replay), 'competing advanced replay remains tokenless while exposing checkpoint state');
 create temporary table null_poll_claim as
 select * from claim_due_ingestion_run('future-ordinary-poll', now(), 'null-worker', 900);
-select is((select binding_id from null_poll_claim), 'c2000000-0000-4000-8000-000000000009'::uuid, 'future ordinary binding is skipped while null next_poll_at is eligible');
+select is((select count(*) from null_poll_claim), 0::bigint, 'future and NULL ordinary schedules are not due');
+update provider_bindings
+set next_poll_at = now()
+where id = 'c2000000-0000-4000-8000-000000000009';
+insert into null_poll_claim
+select * from claim_due_ingestion_run('explicit-null-poll-reenable', now(), 'null-worker', 900);
 select lives_ok(
   $$ select * from start_ingestion_run((select run_id from null_poll_claim), (select lease_token from null_poll_claim), now()) $$,
-  'null-poll claim follows the explicit start transition'
+  'explicitly rescheduled binding follows the start transition'
 );
 select lives_ok(
   $$ select * from finish_ingestion_run((select run_id from null_poll_claim), (select lease_token from null_poll_claim), 'canceled', now(), now() + interval '1 day', null, false, null, null, '{}'::jsonb) $$,
-  'null-poll claim can finish after starting'
+  'explicitly rescheduled claim can finish after starting'
 );
 
 create temporary table replay_page as

@@ -196,7 +196,7 @@ export interface RunLedgerRepository {
     leaseToken: string;
     outcome: "succeeded" | "partial" | "failed" | "rate_limited" | "canceled";
     finishedAt: string;
-    nextPollAt?: string;
+    nextPollAt?: string | null;
     nextRetryAt?: string;
     dataChanged: boolean;
     failureCode?: string;

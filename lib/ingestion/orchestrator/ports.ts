@@ -37,6 +37,7 @@ export interface AdapterRegistry {
 export type BudgetReservation = Readonly<{
   runId: string;
   leaseToken: string;
+  attemptKey: string;
   requestedAt: string;
   cost: number;
 }>;
