@@ -151,7 +151,7 @@ Implement schema-validated provider capabilities, pull context, normalized obser
 
 ### Slice 2B: identity, ordering, and canonical projection
 
-**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. Slice 2C.1 and 2C.2 are locally accepted; Slice 2C.3 is implemented through R2 and accepted for local mocked/synthetic evidence, Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic evidence ceiling through R2, and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R7 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R6 was implemented and recorded on 2026-10-20, R5 was implemented and recorded on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted.
+**Status:** Slice 2B accepted for local/synthetic evidence on 2026-10-08; provider, hosted, deployment, beta, device, and production acceptance remain unverified. The provider-neutral Slice 2C implementation completed local synthetic replay and disposable-local database acceptance on 2026-10-26. Recorded-provider and live-provider evidence remain behind G2.
 
 Execution packet: [`implementation/slice-2b-identity-ordering-and-projection-execution-packet.md`](implementation/slice-2b-identity-ordering-and-projection-execution-packet.md).
 
@@ -169,12 +169,10 @@ Implement reviewed external-ID mappings, exact alias candidates, quarantine for 
 
 ### Slice 2C: orchestrator and run ledger
 
-**Status:** Slice 2C.1 accepted for local/synthetic evidence. Slice 2C.2 accepted for local/synthetic and
-disposable-local database evidence through R2/R3. Slice 2C.3 implemented through R2 and accepted for local,
-mocked, and synthetic TypeScript evidence; Slice 2C.4A is independently accepted at the local pure-TypeScript/synthetic
-evidence ceiling through R2,
-and Slice 2C.4B is accepted through R2 at the local mocked/synthetic TypeScript evidence ceiling. Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/synthetic evidence ceiling; Slice 2C.5B-R7 is implemented as of 2026-10-20 with disposable-local database verification complete and independent acceptance review pending; R6 was implemented and recorded on 2026-10-20, R5 was implemented and recorded on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. Slice 2C.5C remains gated and unstarted. Provider, hosted,
-deployment, beta, device, production, and external scheduler validation remain unverified.
+**Status:** Local provider-neutral implementation is complete through Slice 2C.6 as of 2026-10-26. Synthetic
+sports and ceremony replay, run-ledger, checkpoint, rate-budget, scheduling, health, rollback, and full database
+acceptance are green. Provider, recorded-provider, hosted, deployment, beta, device, production, and external
+scheduler validation remain unverified behind their stated gates.
 
 Execution packet: [`implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md`](implementation/slice-2c-orchestrator-and-run-ledger-execution-packet.md).
 
