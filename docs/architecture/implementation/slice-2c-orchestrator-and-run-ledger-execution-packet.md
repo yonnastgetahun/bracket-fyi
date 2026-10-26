@@ -12,8 +12,9 @@ Slice 2C.5A is independently accepted through R2 at the local pure-TypeScript/sy
 Slice 2C.5B-R7 is implemented as of 2026-10-20 with disposable-local database verification complete and
 independent acceptance review pending; R6 was implemented and recorded on 2026-10-20, R5 was implemented and
 recorded on 2026-10-20, and R4 was implemented and recorded on 2026-10-17. Slice 2C.5C was implemented on
-2026-10-26 with focused TypeScript and disposable-local database acceptance green; final packet acceptance is
-deferred to the separately gated 2C.6 replay/full-suite closeout.
+2026-10-26 with TypeScript and disposable-local database acceptance green. Slice 2C.6 synthetic replay and
+full-suite acceptance completed on 2026-10-26. Provider, recorded-fixture, hosted, deployment, beta, device,
+and production acceptance remain separately gated.
 
 **Baseline:** `60735ef334086a30818addff3140ae56587c7810` (`docs: define slice 2c execution plan`)
 

@@ -1,7 +1,7 @@
 # Slice 2C.6 Synthetic Replay Evidence
 
 **Date:** 2026-10-26  
-**Status:** TypeScript acceptance green; disposable-local DB rerun blocked by local Docker/Postgres availability
+**Status:** TypeScript and disposable-local database acceptance green
 
 ## Covered
 
@@ -18,6 +18,7 @@
 | Production build/typecheck | Passed |
 | Lint | 0 errors; 10 pre-existing warnings |
 | `git diff --check` | Passed |
-| DB test 26 | Authored; execution blocked because local Postgres timed out after the earlier Supabase reset exited 137 |
+| DB test 26 | 12 tests passed |
+| Full database suite | 26 files, 676 tests passed |
 
 No live provider, credential, hosted scheduler, deployment, beta, notification, or production action occurred.

@@ -7,7 +7,7 @@ values ('c6000000-0000-4000-8000-000000000001', 'slice-2c-6-synthetic', 'Slice 2
 insert into organizations (id, organization_key, name, kind)
 values ('c6000000-0000-4000-8000-000000000002', 'slice-2c-6-org', 'Slice 2C.6 Organization', 'league');
 insert into competitions (id, organization_id, competition_key, name, domain)
-values ('c6000000-0000-4000-8000-000000000003', 'c6000000-0000-4000-8000-000000000002', 'slice-2c-6-event', 'Slice 2C.6 Event', 'hybrid');
+values ('c6000000-0000-4000-8000-000000000003', 'c6000000-0000-4000-8000-000000000002', 'slice-2c-6-event', 'Slice 2C.6 Event', 'sport');
 insert into event_editions (id, competition_id, edition_key, name, season_label)
 values ('c6000000-0000-4000-8000-000000000004', 'c6000000-0000-4000-8000-000000000003', '2026', 'Slice 2C.6 2026', '2026');
 insert into provider_bindings (

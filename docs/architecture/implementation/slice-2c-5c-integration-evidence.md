@@ -23,9 +23,9 @@
 | Expanded scheduling/health test 25 | 24 tests passed |
 | Rollback SQL application | Passed |
 | Forward migration reapplication | Passed |
-| Full DB suite | 643/646; three pre-existing service-role immutability grant assertions in test 12 fail independently of migration 00007 |
+| Full DB suite | 676 tests passed after forward repair of pre-existing service-role default grants |
 
-The local Supabase stack became intermittently unavailable after a reset exited 137. Migrations were restored and the rollback/forward pair applied successfully; a clean full-suite rerun remains part of Slice 2C.6 closeout.
+The local Supabase stack became intermittently unavailable after a reset exited 137. It recovered without a Docker restart; migrations were restored, the rollback/forward pair applied successfully, and the complete database suite subsequently passed.
 
 ## Scope exclusions
 
@@ -33,4 +33,4 @@ No provider endpoint, credential, hosted scheduler, deployment, notification del
 
 ## Verdict
 
-The 2C.5C behavior is implemented and focused acceptance is green. Final packet acceptance is deferred to the 2C.6 replay/full-suite gate.
+The 2C.5C behavior is implemented and local acceptance is green.
