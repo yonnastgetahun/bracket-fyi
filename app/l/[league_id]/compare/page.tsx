@@ -8,6 +8,7 @@ import {
   getPickResults,
   getParticipants,
 } from "@/lib/league-data";
+import JoinPrompt from "@/components/JoinPrompt";
 import CompareLive from "@/components/CompareLive";
 
 export default async function ComparePage(
@@ -20,6 +21,9 @@ export default async function ComparePage(
 
   const league = await getLeagueWithTemplate(league_id);
   if (!league) notFound();
+  if (!(league.locked_at && new Date(league.locked_at) <= new Date())) {
+    return <JoinPrompt leagueName={league.name} />;
+  }
 
   const [participants, allPicks, teamRegistry, matches] = await Promise.all([
     getParticipants(league_id),

@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
-import { getAdminClient } from "@/lib/supabase/admin";
 import {
   getLeagueWithTemplate,
+  getParticipantByMagicToken,
   getPickResults,
   getTeamRegistry,
   getTemplateMatches,
@@ -20,12 +20,7 @@ export default async function BracketPage(
   const params = await props.params;
   const { league_id, magic_token } = params;
 
-  const { data: participant } = await getAdminClient()
-    .from("participants")
-    .select("id, display_name, emoji, league_id")
-    .eq("magic_token", magic_token)
-    .eq("league_id", league_id)
-    .single();
+  const participant = await getParticipantByMagicToken(league_id, magic_token);
 
   if (!participant) notFound();
 

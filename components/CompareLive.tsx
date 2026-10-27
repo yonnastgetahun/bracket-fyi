@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { cn } from "@/lib/ui";
 import type {
@@ -92,12 +91,11 @@ export default function CompareLive({
   const [picks, setPicks] = useState(initialPicks);
 
   const refetch = useCallback(async () => {
-    const supabase = getBrowserClient();
-    const { data } = await supabase
-      .from("v_pick_results")
-      .select("*")
-      .eq("league_id", leagueId);
-    if (data) setPicks(data as PickResultRow[]);
+    const response = await fetch(`/l/${leagueId}/data`, { cache: "no-store" }).catch(() => null);
+    if (response?.ok) {
+      const { picks } = await response.json();
+      setPicks(picks as PickResultRow[]);
+    }
   }, [leagueId]);
 
   useLiveRefresh(refetch);

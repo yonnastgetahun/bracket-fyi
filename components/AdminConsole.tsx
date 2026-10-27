@@ -10,7 +10,6 @@ interface ParticipantRow {
   id: string;
   display_name: string;
   emoji: string | null;
-  magic_token: string;
   created_at: string;
 }
 
@@ -537,10 +536,34 @@ function ParticipantRowItem({
   const [confirming, setConfirming] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const magicLink =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/l/${leagueId}/p/${participant.magic_token}`
-      : `/l/${leagueId}/p/${participant.magic_token}`;
+  const [magicLink, setMagicLink] = useState("");
+  const [recoveryError, setRecoveryError] = useState("");
+  const [recovering, setRecovering] = useState(false);
+
+  async function toggleRecovery() {
+    if (showLink) {
+      setShowLink(false);
+      setMagicLink("");
+      return;
+    }
+    setRecovering(true);
+    setRecoveryError("");
+    try {
+      const response = await fetch("/api/admin/participant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leagueId, participantId: participant.id }),
+      });
+      if (!response.ok) throw new Error("Recovery unavailable");
+      const { recoveryPath } = await response.json();
+      setMagicLink(window.location.origin + recoveryPath);
+      setShowLink(true);
+    } catch {
+      setRecoveryError("Could not recover this link. Please try again.");
+    } finally {
+      setRecovering(false);
+    }
+  }
 
   async function submitRename() {
     const trimmed = nameInput.trim();
@@ -610,7 +633,8 @@ function ParticipantRowItem({
                 Rename
               </button>
               <button
-                onClick={() => setShowLink((v) => !v)}
+                onClick={toggleRecovery}
+                disabled={recovering}
                 className="text-xs text-secondary hover:text-primary transition-colors px-1"
                 title="Reshare invite link"
               >
@@ -644,6 +668,7 @@ function ParticipantRowItem({
         </div>
       </div>
 
+      {recoveryError && <p role="alert" className="text-xs text-wrong">{recoveryError}</p>}
       {showLink && (
         <div className="flex items-center gap-2 mt-1 bg-canvas rounded px-2 py-1.5">
           <span className="text-xs text-secondary truncate flex-1 font-mono">{magicLink}</span>

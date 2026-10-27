@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { getBrowserClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/ui";
 import { useLiveRefresh } from "./useLiveRefresh";
 import type { LeaderboardRow, ChampionStatusRow, PickResultRow, League, ScoringConfig } from "@/lib/types";
@@ -280,15 +279,13 @@ export default function LeaderboardLive({
   }, [league.id]);
 
   const refetch = useCallback(async () => {
-    const supabase = getBrowserClient();
-    const [lbRes, champsRes, picksRes] = await Promise.all([
-      supabase.from("v_leaderboard").select("*").eq("league_id", leagueId).order("rank"),
-      supabase.from("v_champion_status").select("*").eq("league_id", leagueId),
-      supabase.from("v_pick_results").select("*").eq("league_id", leagueId),
-    ]);
-    if (lbRes.data) setRows(lbRes.data as LeaderboardRow[]);
-    if (champsRes.data) setChampions(champsRes.data as ChampionStatusRow[]);
-    if (picksRes.data) setPicks(picksRes.data as PickResultRow[]);
+    const response = await fetch(`/l/${leagueId}/data`, { cache: "no-store" }).catch(() => null);
+    if (response?.ok) {
+      const { rows, champions, picks } = await response.json();
+      setRows(rows);
+      setChampions(champions);
+      setPicks(picks);
+    }
   }, [leagueId]);
 
   useLiveRefresh(refetch);

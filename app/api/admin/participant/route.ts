@@ -107,3 +107,24 @@ export async function DELETE(request: NextRequest) {
 
   return NextResponse.json({ success: true });
 }
+
+// Recovery is an explicit, single-participant operation, never a bulk page prop.
+export async function POST(request: NextRequest) {
+  const parsed = await readJsonObject<{ leagueId?: unknown; participantId?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
+  const { leagueId, participantId } = parsed.body;
+  if (typeof leagueId !== "string" || typeof participantId !== "string" ||
+      !UUID_RE.test(leagueId) || !UUID_RE.test(participantId)) {
+    return NextResponse.json({ error: "Invalid identifiers" }, { status: 400 });
+  }
+  const authorization = await authorizeOrganizer(request, leagueId);
+  if (!authorization.ok) return authorization.response;
+  const { data, error } = await authorization.supabase.from("participants")
+    .select("magic_token").eq("league_id", leagueId).eq("id", participantId).maybeSingle();
+  if (error) return NextResponse.json({ error: "Recovery unavailable" }, { status: 500 });
+  if (!data) return NextResponse.json({ error: "Participant not found in league" }, { status: 404 });
+  return NextResponse.json(
+    { recoveryPath: `/l/${leagueId}/p/${data.magic_token}` },
+    { headers: { "Cache-Control": "no-store" } }
+  );
+}

@@ -1,8 +1,13 @@
 export const dynamic = "force-dynamic";
 
+import { cookies } from "next/headers";
+import JoinPrompt from "@/components/JoinPrompt";
 import { notFound } from "next/navigation";
 import {
   getLeagueWithTemplate,
+  scopedCookieToken,
+  validateLeagueCredential,
+  getParticipantByMagicToken,
   getTeamRegistry,
   getTemplateMatches,
   getEffectiveResults,
@@ -19,6 +24,15 @@ export default async function MatchesPage(
 
   const league = await getLeagueWithTemplate(league_id);
   if (!league) notFound();
+  if (!(league.locked_at && new Date(league.locked_at) <= new Date())) {
+    const store = await cookies();
+    const token = scopedCookieToken(league_id, store.get("bfyi_participant")?.value);
+    const allowed =
+      (token && await getParticipantByMagicToken(league_id, token)) ||
+      await validateLeagueCredential(league_id, store.get("bfyi_league")?.value, "join") ||
+      await validateLeagueCredential(league_id, store.get("bfyi_organizer")?.value, "organizer");
+    if (!allowed) return <JoinPrompt leagueName={league.name} />;
+  }
 
   const [teamRegistry, matches, effectiveResults] = await Promise.all([
     league.template_id ? getTeamRegistry(league.template_id) : Promise.resolve([]),
