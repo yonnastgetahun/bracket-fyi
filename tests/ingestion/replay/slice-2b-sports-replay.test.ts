@@ -22,7 +22,7 @@ describe("synthetic sports replay", () => {
       externalId: "sports-team-a",
       aliasCandidates: [{ canonicalId: "canonical-team-a", source: "exact_alias", explanation: "synthetic exact alias" }],
       fuzzyCandidates: [],
-    })).toMatchObject({ status: "automatic", canonicalId: "canonical-team-a" });
+    })).toMatchObject({ status: "unresolved", quarantineCode: "mapping_ambiguous" });
 
     const resultObservation = batch.observations.find(
       (observation): observation is Extract<(typeof batch.observations)[number], { entityKind: "result" }> => observation.entityKind === "result",

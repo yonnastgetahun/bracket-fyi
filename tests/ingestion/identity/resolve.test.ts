@@ -30,16 +30,30 @@ describe("provider-neutral identity resolution", () => {
     }))).toMatchObject({ status: "reviewed", canonicalId: "canonical-1" });
   });
 
-  it("reuses an existing automatic mapping", () => {
+  it("fails closed when an existing automatic mapping lacks deterministic provenance", () => {
     expect(resolveIdentity(baseInput({
       canonicalRef: { status: "automatic", canonicalId: "canonical-1" },
-    }))).toMatchObject({ status: "automatic", canonicalId: "canonical-1", candidates: [{ source: "automatic" }] });
+    }))).toMatchObject({ status: "unresolved", quarantineCode: "mapping_ambiguous" });
   });
 
-  it("accepts exactly one exact alias candidate as automatic", () => {
+  it("rejects caller-asserted bootstrap provenance until a trusted bootstrap exists", () => {
+    expect(resolveIdentity(baseInput({
+      canonicalRef: {
+        status: "automatic",
+        canonicalId: "canonical-1",
+        provenance: { kind: "deterministic_bootstrap", policyVersion: "bootstrap-v1" },
+      },
+    }))).toMatchObject({ status: "unresolved", quarantineCode: "mapping_ambiguous" });
+  });
+
+  it("keeps even a sole exact alias candidate advisory", () => {
     expect(resolveIdentity(baseInput({
       aliasCandidates: [candidate("canonical-1", "exact_alias")],
-    }))).toMatchObject({ status: "automatic", canonicalId: "canonical-1", candidates: [{ canonicalId: "canonical-1" }] });
+    }))).toMatchObject({
+      status: "unresolved",
+      quarantineCode: "mapping_ambiguous",
+      candidates: [{ canonicalId: "canonical-1", source: "exact_alias" }],
+    });
   });
 
   it("quarantines missing, ambiguous, and fuzzy-only identity", () => {
@@ -66,7 +80,15 @@ describe("provider-neutral identity resolution", () => {
   it("resolves result identity only through contest and winner-entry mappings", () => {
     expect(resolveResultIdentities({
       contest: baseInput({ entityKind: "contest", canonicalRef: { status: "reviewed", canonicalId: "contest-1" } }),
-      winnerEntry: baseInput({ entityKind: "event_entry", canonicalRef: { status: "automatic", canonicalId: "entry-1" } }),
+      winnerEntry: baseInput({ entityKind: "event_entry", canonicalRef: {
+        status: "automatic",
+        canonicalId: "entry-1",
+        provenance: { kind: "deterministic_bootstrap", policyVersion: "bootstrap-v1" },
+      } }),
+    })).toMatchObject({ status: "quarantined" });
+    expect(resolveResultIdentities({
+      contest: baseInput({ entityKind: "contest", canonicalRef: { status: "reviewed", canonicalId: "contest-1" } }),
+      winnerEntry: baseInput({ entityKind: "event_entry", canonicalRef: { status: "reviewed", canonicalId: "entry-1" } }),
     })).toMatchObject({ status: "resolved", contestId: "contest-1", winnerEntryId: "entry-1" });
     expect(resolveResultIdentities({
       contest: baseInput({ entityKind: "contest", canonicalRef: { status: "reviewed", canonicalId: "contest-1" } }),

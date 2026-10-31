@@ -1,0 +1,32 @@
+{
+  "head": "13ed21e0fe3f148b107ae1421e28de3a2bcbffef",
+  "branch": "agent/bracket-roadmap-20261026",
+  "preserved_docs": {
+    "docs/architecture/bracket-fyi-master-spec.md": "51088a545016d59b8c1519bbd23aeea07bf637d9760951b3b4ef2577d2bc2a3b",
+    "docs/architecture/bracket-fyi-spec-v1.0.md": "4f3bee14261669907c55d2f3e756d2371b60ae19fbd7723763086a33af9cd7f2",
+    "docs/architecture/implementation/competitor-stage-coverage-20261027.md": "16067657804d0a7331bdbece3f237bbbab16db21fe71aed305750ac382b78c5f",
+    "docs/architecture/implementation/full-master-architecture-review.md": "b930b1a66256bbe43e89e2a0aad0fbd41fb0f9216057ecd8d81b9f003cbd4e54",
+    "docs/architecture/implementation/full-master-product-review.md": "54d6569192f4d08cfb28aea0aebb1b41b1403b497bc0fef2274c212251002730",
+    "docs/architecture/implementation/full-master-security-review.md": "00b3d7bef8eeef67e759247332e8bdb69b24dd92b4caa63db08004041529dd11",
+    "docs/architecture/implementation/full-master-spec-review.md": "7a9cd58e65803ea3a2f5a77e4748dc231a3648279ac357bea620f7ec6513de47",
+    "docs/architecture/implementation/full-master-verification-review.md": "6027fd280c5d87a237b48193ed540fd7a6a30a9034a55af26c738e4510faeef3",
+    "docs/architecture/implementation/full-roadmap-execution-contract.md": "218ab6f74fd35c824fe6536a533e83735db2b4630ef95b585d41f927b072cb10",
+    "docs/architecture/implementation/full-roadmap-issue-reconciliation.md": "c80ed652a681c37c168bb05b67150660e9dbd6291684f661f2433a265fa593eb",
+    "docs/architecture/implementation/full-roadmap-provider-contracts.md": "4a5783d9cb851bc1022c337ed71e624a554aeab44fa6990f4263c48c26c1afb3",
+    "docs/architecture/implementation/full-roadmap-template-manifests.md": "de4dc2073125579e2649c94305e9ec1c05a96729b4f8af3c267b349125cf97d6",
+    "docs/architecture/implementation/m3-spec-first-pilot.md": "4a59afa95e6419cfe127e5c4cbcd122c8b691e597b07daf41f8c97a1598ea79e",
+    "docs/architecture/implementation/m3-spec-review.md": "00bd186f18890b3d2ce8590a7ef4e9b092b433b5afd413fde400f556bf2fbe81",
+    "docs/architecture/implementation/phase-2-orchestrated-execution-plan.md": "a0b2880c2ccc88620e947736fda4eb46a8cefa336268ca70a3d2537e18b6a5ae",
+    "docs/architecture/implementation/ucl-observed-field-mapping.md": "9e5013233fbf1f3806738c667ac562d122e7cbd66277d24fbce3885308c928c8",
+    "docs/architecture/implementation/v1-architecture-review.md": "e9f3a0dea5a3caae13e5b5815bef1447428ce8d5901965268053ae40b6b5ed2a",
+    "docs/architecture/implementation/v1-product-review.md": "c391db9cd578df8597ae81813ee2b90abea1807d9f4b8e16bdd3e81a57877ea0",
+    "docs/architecture/implementation/v1-security-review.md": "ca55c6f2a96bf02d74df932b3dbe37df40b81b35059c6ca1d2015ce06fda36f7",
+    "docs/architecture/implementation/v1-verification-review.md": "2dcea68de17911745c4dc15b415ea701e5e77f70c3312c67beeda614ec7a6d0a",
+    "docs/case-studies/boyz-wc2026.md": "62a1c5aa1017df775051fdc34ca11025b072c4feeae5ac89215fd9e80c80b392",
+    "docs/architecture/tournament-ingestion-architecture-plan.md": "9f4fa71913a1d308d9ec62ebc0cdf14cb35b3867cd708adddf85dbbe2562bf6d",
+    "docs/architecture/tournament-ingestion-implementation-plan.md": "c3ef7665a04caa4700b946d3243df1d1a644e9014f13d894f06331125438910e",
+    "docs/architecture/tournament-ingestion-qa-plan.md": "320ea428548ff0ef6c3662687cc15fa67f5096210a9f8ee5e61f18cd0a80b3de",
+    "docs/architecture/tournament-provider-and-event-roadmap.md": "60aab94c778d93793a6992354a7b8a48c37f7249713b68e1708348ee0b7589d4",
+    "docs/plans/2026-07-25-feat-p3b-push-notify-edge-function-pwa-nudge-plan.md": "42bffa55e52c531142221eff4a2e59d11f27d01600ef59cc9d117a6303e78a7e"
+  }
+}

@@ -1,0 +1,753 @@
+{
+  "scope": "Builder runtime evidence; parent independent acceptance required",
+  "browserPath": "tmp/browser-acceptance/seven-family-2026-10-30T23-59-49.048Z/results.json",
+  "browser": {
+    "scope": "Seven UI-created complete manual parent-market journeys; series children and qualification persistence are separate integration evidence.",
+    "allSevenComplete": true,
+    "seriesChildPersistenceVerified": false,
+    "qualificationPersistenceVerified": true,
+    "reports": [
+      {
+        "key": "nfl-2026-postseason",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 13,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-nfl-2026-postseason:market:afc.wild-card.1",
+          "synthetic-nfl-2026-postseason:market:afc.wild-card.2",
+          "synthetic-nfl-2026-postseason:market:afc.wild-card.3",
+          "synthetic-nfl-2026-postseason:market:afc.divisional.1",
+          "synthetic-nfl-2026-postseason:market:afc.divisional.2",
+          "synthetic-nfl-2026-postseason:market:afc.conference-final",
+          "synthetic-nfl-2026-postseason:market:nfc.wild-card.1",
+          "synthetic-nfl-2026-postseason:market:nfc.wild-card.2",
+          "synthetic-nfl-2026-postseason:market:nfc.wild-card.3",
+          "synthetic-nfl-2026-postseason:market:nfc.divisional.1",
+          "synthetic-nfl-2026-postseason:market:nfc.divisional.2",
+          "synthetic-nfl-2026-postseason:market:nfc.conference-final",
+          "synthetic-nfl-2026-postseason:market:super-bowl"
+        ],
+        "checks": [
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px",
+          "changed-predicted-opponent-retains-downstream-credit"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-nfl-2026-postseason:market:super-bowl",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 13,
+            "maximum": 13,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 11,
+            "maximum": 11,
+            "wrong": 2,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 12,
+            "maximum": 12,
+            "wrong": 1,
+            "rank": 1
+          },
+          {
+            "earned": 10,
+            "maximum": 10,
+            "wrong": 3,
+            "rank": 2
+          }
+        ]
+      },
+      {
+        "key": "ncaa-men-2027",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 63,
+        "expectedStructural": 12,
+        "covered": [
+          "synthetic-ncaa-men-2027:market:east.opening-11",
+          "synthetic-ncaa-men-2027:market:east.opening-12",
+          "synthetic-ncaa-men-2027:market:east.opening-16",
+          "synthetic-ncaa-men-2027:market:west.opening-11",
+          "synthetic-ncaa-men-2027:market:west.opening-12",
+          "synthetic-ncaa-men-2027:market:west.opening-16",
+          "synthetic-ncaa-men-2027:market:south.opening-11",
+          "synthetic-ncaa-men-2027:market:south.opening-12",
+          "synthetic-ncaa-men-2027:market:south.opening-16",
+          "synthetic-ncaa-men-2027:market:midwest.opening-11",
+          "synthetic-ncaa-men-2027:market:midwest.opening-12",
+          "synthetic-ncaa-men-2027:market:midwest.opening-16",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.1",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.2",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.3",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.4",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.5",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.6",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.7",
+          "synthetic-ncaa-men-2027:market:east.round-of-64.8",
+          "synthetic-ncaa-men-2027:market:east.round-of-32.1",
+          "synthetic-ncaa-men-2027:market:east.round-of-32.2",
+          "synthetic-ncaa-men-2027:market:east.round-of-32.3",
+          "synthetic-ncaa-men-2027:market:east.round-of-32.4",
+          "synthetic-ncaa-men-2027:market:east.sweet-16.1",
+          "synthetic-ncaa-men-2027:market:east.sweet-16.2",
+          "synthetic-ncaa-men-2027:market:east.elite-8.1",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.1",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.2",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.3",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.4",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.5",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.6",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.7",
+          "synthetic-ncaa-men-2027:market:west.round-of-64.8",
+          "synthetic-ncaa-men-2027:market:west.round-of-32.1",
+          "synthetic-ncaa-men-2027:market:west.round-of-32.2",
+          "synthetic-ncaa-men-2027:market:west.round-of-32.3",
+          "synthetic-ncaa-men-2027:market:west.round-of-32.4",
+          "synthetic-ncaa-men-2027:market:west.sweet-16.1",
+          "synthetic-ncaa-men-2027:market:west.sweet-16.2",
+          "synthetic-ncaa-men-2027:market:west.elite-8.1",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.1",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.2",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.3",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.4",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.5",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.6",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.7",
+          "synthetic-ncaa-men-2027:market:south.round-of-64.8",
+          "synthetic-ncaa-men-2027:market:south.round-of-32.1",
+          "synthetic-ncaa-men-2027:market:south.round-of-32.2",
+          "synthetic-ncaa-men-2027:market:south.round-of-32.3",
+          "synthetic-ncaa-men-2027:market:south.round-of-32.4",
+          "synthetic-ncaa-men-2027:market:south.sweet-16.1",
+          "synthetic-ncaa-men-2027:market:south.sweet-16.2",
+          "synthetic-ncaa-men-2027:market:south.elite-8.1",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.1",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.2",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.3",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.4",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.5",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.6",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.7",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-64.8",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-32.1",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-32.2",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-32.3",
+          "synthetic-ncaa-men-2027:market:midwest.round-of-32.4",
+          "synthetic-ncaa-men-2027:market:midwest.sweet-16.1",
+          "synthetic-ncaa-men-2027:market:midwest.sweet-16.2",
+          "synthetic-ncaa-men-2027:market:midwest.elite-8.1",
+          "synthetic-ncaa-men-2027:market:semi-final.1",
+          "synthetic-ncaa-men-2027:market:semi-final.2",
+          "synthetic-ncaa-men-2027:market:final"
+        ],
+        "checks": [
+          "reviewed-actual-qualification-ui",
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-ncaa-men-2027:market:final",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 63,
+            "maximum": 63,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 62,
+            "maximum": 62,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 62,
+            "maximum": 62,
+            "wrong": 1,
+            "rank": 2
+          },
+          {
+            "earned": 63,
+            "maximum": 63,
+            "wrong": 0,
+            "rank": 1
+          }
+        ]
+      },
+      {
+        "key": "nba-play-in-2027",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 6,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-nba-play-in-2027:market:east.seven-eight",
+          "synthetic-nba-play-in-2027:market:east.nine-ten",
+          "synthetic-nba-play-in-2027:market:east.eighth-seed-decider",
+          "synthetic-nba-play-in-2027:market:west.seven-eight",
+          "synthetic-nba-play-in-2027:market:west.nine-ten",
+          "synthetic-nba-play-in-2027:market:west.eighth-seed-decider"
+        ],
+        "checks": [
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px",
+          "changed-predicted-opponent-retains-downstream-credit"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-nba-play-in-2027:market:west.eighth-seed-decider",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 6,
+            "maximum": 6,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 5,
+            "maximum": 5,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 5,
+            "maximum": 5,
+            "wrong": 1,
+            "rank": 1
+          },
+          {
+            "earned": 4,
+            "maximum": 4,
+            "wrong": 2,
+            "rank": 2
+          }
+        ]
+      },
+      {
+        "key": "nba-2027",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 15,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-nba-2027:market:east.first-round.1",
+          "synthetic-nba-2027:market:east.first-round.2",
+          "synthetic-nba-2027:market:east.first-round.3",
+          "synthetic-nba-2027:market:east.first-round.4",
+          "synthetic-nba-2027:market:east.conference-semi-final.1",
+          "synthetic-nba-2027:market:east.conference-semi-final.2",
+          "synthetic-nba-2027:market:east.conference-final.1",
+          "synthetic-nba-2027:market:west.first-round.1",
+          "synthetic-nba-2027:market:west.first-round.2",
+          "synthetic-nba-2027:market:west.first-round.3",
+          "synthetic-nba-2027:market:west.first-round.4",
+          "synthetic-nba-2027:market:west.conference-semi-final.1",
+          "synthetic-nba-2027:market:west.conference-semi-final.2",
+          "synthetic-nba-2027:market:west.conference-final.1",
+          "synthetic-nba-2027:market:finals"
+        ],
+        "checks": [
+          "reviewed-actual-qualification-ui",
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-nba-2027:market:finals",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 15,
+            "maximum": 15,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 14,
+            "maximum": 14,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 14,
+            "maximum": 14,
+            "wrong": 1,
+            "rank": 2
+          },
+          {
+            "earned": 15,
+            "maximum": 15,
+            "wrong": 0,
+            "rank": 1
+          }
+        ]
+      },
+      {
+        "key": "mlb-2027",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 11,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-mlb-2027:market:al.wild-card.1",
+          "synthetic-mlb-2027:market:al.wild-card.2",
+          "synthetic-mlb-2027:market:al.division.1",
+          "synthetic-mlb-2027:market:al.division.2",
+          "synthetic-mlb-2027:market:al.championship",
+          "synthetic-mlb-2027:market:nl.wild-card.1",
+          "synthetic-mlb-2027:market:nl.wild-card.2",
+          "synthetic-mlb-2027:market:nl.division.1",
+          "synthetic-mlb-2027:market:nl.division.2",
+          "synthetic-mlb-2027:market:nl.championship",
+          "synthetic-mlb-2027:market:world-series"
+        ],
+        "checks": [
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-mlb-2027:market:world-series",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 11,
+            "maximum": 11,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 10,
+            "maximum": 10,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 10,
+            "maximum": 10,
+            "wrong": 1,
+            "rank": 2
+          },
+          {
+            "earned": 11,
+            "maximum": 11,
+            "wrong": 0,
+            "rank": 1
+          }
+        ]
+      },
+      {
+        "key": "cfp-2026-27",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 11,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-cfp-2026-27:market:first-round.1",
+          "synthetic-cfp-2026-27:market:quarter-final.1",
+          "synthetic-cfp-2026-27:market:first-round.2",
+          "synthetic-cfp-2026-27:market:quarter-final.2",
+          "synthetic-cfp-2026-27:market:first-round.3",
+          "synthetic-cfp-2026-27:market:quarter-final.3",
+          "synthetic-cfp-2026-27:market:first-round.4",
+          "synthetic-cfp-2026-27:market:quarter-final.4",
+          "synthetic-cfp-2026-27:market:semi-final.1",
+          "synthetic-cfp-2026-27:market:semi-final.2",
+          "synthetic-cfp-2026-27:market:final"
+        ],
+        "checks": [
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-cfp-2026-27:market:final",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 11,
+            "maximum": 11,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 10,
+            "maximum": 10,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 10,
+            "maximum": 10,
+            "wrong": 1,
+            "rank": 2
+          },
+          {
+            "earned": 11,
+            "maximum": 11,
+            "wrong": 0,
+            "rank": 1
+          }
+        ]
+      },
+      {
+        "key": "oscars-2027",
+        "status": "passed",
+        "phase": "complete",
+        "expectedScored": 3,
+        "expectedStructural": 0,
+        "covered": [
+          "synthetic-oscars-2027:category:Picture:market",
+          "synthetic-oscars-2027:category:Directing:market",
+          "synthetic-oscars-2027:category:Actor%20in%20a%20Leading%20Role:market"
+        ],
+        "checks": [
+          "ui-create-two-joins-all-picks",
+          "open-picks-private",
+          "full-window-lock-disabled",
+          "every-manual-required-market",
+          "literal-earned-max-wrong-rank",
+          "correction-reopen-recomplete",
+          "locked-picks-immutable",
+          "anonymous-390px"
+        ],
+        "lastPostStatus": 200,
+        "currentMarket": "synthetic-oscars-2027:category:Actor%20in%20a%20Leading%20Role:market",
+        "playerIndex": 1,
+        "complete": [
+          {
+            "earned": 3,
+            "maximum": 3,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 2,
+            "maximum": 2,
+            "wrong": 1,
+            "rank": 2
+          }
+        ],
+        "corrected": [
+          {
+            "earned": 3,
+            "maximum": 3,
+            "wrong": 0,
+            "rank": 1
+          },
+          {
+            "earned": 3,
+            "maximum": 3,
+            "wrong": 0,
+            "rank": 1
+          }
+        ]
+      }
+    ]
+  },
+  "browserSourceHashes": {
+    "scripts/verify-event-families-browser.mjs": "eb70a4ba5bfdedaef6168a575806bf3a342f8b55e0266c9a48fac4195ec64b01",
+    "scripts/browser/family-completion-plan.mjs": "525d1d3df4feceae6e13422453654ec20f34c3fa6a7d8f799d88dc86a08d5c74",
+    "scripts/browser/family-browser-evidence.mjs": "4523573c1416b6a3700a796e365b3687f2be82d5d8d38eb595ffce81ce9dbce6",
+    "scripts/browser/family-browser-evidence.test.mjs": "64c8989e0941ce95896b35858aa3cc4190c30eded2f7cb5d72846787c6b289ba",
+    "scripts/browser/family-completion-plan.test.mjs": "af8c58f1b08fd8d87256fe963b199a3ce38cd23db285c33758b164b43e2b48d5",
+    "scripts/browser/family-qualification-plan.mjs": "e80343399ba0e514e313e939c2a69d9f33b638febcf724ea97504de1916d0108",
+    "scripts/browser/family-qualification-plan.test.mjs": "1997fdafa011340182c2eca57be6d7dce877ad0f32ccd46e320fa5b0447f01be",
+    "app/events/page.tsx": "c88eeaa7357d3afdaf6ff34fceb408acf048d2bd06702adc2495d478b3e46d80",
+    "app/events/creator.tsx": "8878b988c557c91234f0861e867f06d2df4cd1da49340f9e9d418a90059056c0",
+    "app/events/[id]/window-picks.tsx": "d584b76ab78433b81c741355ab6f4a36ba38a764105e8048d8fb8d472fd06c20",
+    "app/events/[id]/room.tsx": "69aba88d9644036594ed08b1b70cc6297063ae6d80b7380b5b3e6b0b67bd953a",
+    "app/events/[id]/own-recovery.tsx": "69439d7a20fbe5d4ae8a315aa55d004d9dff03918c05ea022f31c9964cf4a6ab",
+    "app/events/[id]/review-pairings.tsx": "9b25ba86283b9310f7f3ee053f8c1fe413192185edd7c15e22240c690a02d779",
+    "app/events/[id]/page.tsx": "6d9d705990d23bd87f852f0188b8cbc5570732da95513b33ff4d6c88e9d90042",
+    "app/events/create/route.ts": "11509b47c9720c92448aa75cecda35abbac67832f0503debcc65e0d2aeaf7710",
+    "app/events/[id]/recovery/route.ts": "e5caac9ed87d59a6e782a31a0469fe2b34132f7424eff9c1bb0f17aa7eeaeab8",
+    "app/events/[id]/data/route.ts": "a670c69408695fdc27d4e2545fca25458f31c761605d7dab50146bbd2338ade8",
+    "lib/events/application-manifest.ts": "2c97edcd68bcffb63e98bb3e71d623f242e1bc01c494ddc9400b340c46134b03"
+  },
+  "browserFinalChecks": {
+    "allSevenComplete": true,
+    "scored": 122,
+    "structural": 12,
+    "sourceDrift": [],
+    "privateMarkers": false,
+    "evidence": "tmp/browser-acceptance/seven-family-2026-10-30T23-59-49.048Z/results.json"
+  },
+  "sqlPath": "tmp/family-runtime/1793404968355922000-sql.json",
+  "sql": {
+    "before": {
+      "lib/ingestion/providers/balldontlie-ncaaf.ts": "2075cd30af125e024ac36509c121844b1f3b7be19063c0b42e9e8da0c98ff7b6",
+      "lib/ingestion/providers/balldontlie-mlb.ts": "cc271743c4b5445a59ad4f7ee5b13453fd05eb85de95520efcc2f46f68589967",
+      "lib/ingestion/providers/balldontlie-ncaab.ts": "017539df0f0be357191b0ccf4334176494adad394974270915ebe56ef77dbae9",
+      "lib/ingestion/providers/balldontlie-family.ts": "e93cb19ea547fa5a3d6c8c34d2961e609969d0cb9637105adcf35a9bba078dd5",
+      "lib/ingestion/providers/balldontlie-router.ts": "4d2cc3594146d9638b94fc2eef2f3cd148c28580e511c48dec2539a920871b7b",
+      "lib/ingestion/providers/balldontlie-nfl.ts": "40b63482b18b57ca3ee69ef7c6c319dd44a55adec4215b035a577edc524c38f7",
+      "lib/ingestion/providers/balldontlie.ts": "d6f23481bc83952263cd29de8cc4e04c9ba1588490f32f6041deba0510dc1ba5",
+      "lib/ingestion/providers/balldontlie-nba.ts": "918c066d49188733a401832dda56b23e95f845071bbb0b66d231842d7f724cea",
+      "supabase/migrations/20261027000014_reviewed_series.sql": "1e19ee72a821d9b0322b59e3e29d3b572301641016715fc30fc0f2bad403cade",
+      "supabase/migrations/20261027000015_structural_qualifiers.sql": "8edabbaf8b7e8aa65d9043847a277dfeeaabbf8e34a0cdde41fe670913aa340a",
+      "tests/events/provider-four-family-vertical-db.test.ts": "65eab3f10fd53b9788cf242169e3b0811711a0b91aaaacc2a2dfdc20f57fe0b7"
+    },
+    "exit": 1,
+    "after": {
+      "lib/ingestion/providers/balldontlie-ncaaf.ts": "2075cd30af125e024ac36509c121844b1f3b7be19063c0b42e9e8da0c98ff7b6",
+      "lib/ingestion/providers/balldontlie-mlb.ts": "cc271743c4b5445a59ad4f7ee5b13453fd05eb85de95520efcc2f46f68589967",
+      "lib/ingestion/providers/balldontlie-ncaab.ts": "017539df0f0be357191b0ccf4334176494adad394974270915ebe56ef77dbae9",
+      "lib/ingestion/providers/balldontlie-family.ts": "e93cb19ea547fa5a3d6c8c34d2961e609969d0cb9637105adcf35a9bba078dd5",
+      "lib/ingestion/providers/balldontlie-router.ts": "4d2cc3594146d9638b94fc2eef2f3cd148c28580e511c48dec2539a920871b7b",
+      "lib/ingestion/providers/balldontlie-nfl.ts": "40b63482b18b57ca3ee69ef7c6c319dd44a55adec4215b035a577edc524c38f7",
+      "lib/ingestion/providers/balldontlie.ts": "d6f23481bc83952263cd29de8cc4e04c9ba1588490f32f6041deba0510dc1ba5",
+      "lib/ingestion/providers/balldontlie-nba.ts": "918c066d49188733a401832dda56b23e95f845071bbb0b66d231842d7f724cea",
+      "supabase/migrations/20261027000014_reviewed_series.sql": "1e19ee72a821d9b0322b59e3e29d3b572301641016715fc30fc0f2bad403cade",
+      "supabase/migrations/20261027000015_structural_qualifiers.sql": "8edabbaf8b7e8aa65d9043847a277dfeeaabbf8e34a0cdde41fe670913aa340a",
+      "tests/events/provider-four-family-vertical-db.test.ts": "65eab3f10fd53b9788cf242169e3b0811711a0b91aaaacc2a2dfdc20f57fe0b7"
+    },
+    "databases": [
+      "bracket_family_vertical_008280a757a5",
+      "bracket_family_vertical_101c41ad1b31",
+      "bracket_family_vertical_3fdc4d411721",
+      "bracket_family_vertical_4ecca69dab32",
+      "bracket_family_vertical_9ddecacce7df"
+    ],
+    "stopped": {
+      "bracket_family_vertical_008280a757a5": true,
+      "bracket_family_vertical_101c41ad1b31": true,
+      "bracket_family_vertical_3fdc4d411721": true,
+      "bracket_family_vertical_4ecca69dab32": true,
+      "bracket_family_vertical_9ddecacce7df": true
+    },
+    "counts": {
+      "numPassedTests": 13,
+      "numFailedTests": 2,
+      "numPendingTests": 0
+    },
+    "tests": [
+      {
+        "name": "'nba'/'playoffs' bounded production vertical Four-family vertical fixture contracts (no DB) has a reviewed bounded game manifest with an independent winner oracle",
+        "status": "passed"
+      },
+      {
+        "name": "'nba'/'playoffs' bounded production vertical Four-family vertical fixture contracts (no DB) original synthetic HTTP is accepted without manufacturing correction authority",
+        "status": "passed"
+      },
+      {
+        "name": "'nba'/'playoffs' bounded production vertical Four-family \u2192 SQL \u2192 real scorer bounded game proof stops, ingests reviewed synthetic HTTP, scores, replays, quarantines untrusted correction and rejects unmapped IDs",
+        "status": "failed"
+      },
+      {
+        "name": "'nba'/'playin' bounded production vertical Four-family vertical fixture contracts (no DB) has a reviewed bounded game manifest with an independent winner oracle",
+        "status": "passed"
+      },
+      {
+        "name": "'nba'/'playin' bounded production vertical Four-family vertical fixture contracts (no DB) original synthetic HTTP is accepted without manufacturing correction authority",
+        "status": "passed"
+      },
+      {
+        "name": "'nba'/'playin' bounded production vertical Four-family \u2192 SQL \u2192 real scorer bounded game proof stops, ingests reviewed synthetic HTTP, scores, replays, quarantines untrusted correction and rejects unmapped IDs",
+        "status": "passed"
+      },
+      {
+        "name": "'mlb'/'postseason' bounded production vertical Four-family vertical fixture contracts (no DB) has a reviewed bounded game manifest with an independent winner oracle",
+        "status": "passed"
+      },
+      {
+        "name": "'mlb'/'postseason' bounded production vertical Four-family vertical fixture contracts (no DB) original synthetic HTTP is accepted without manufacturing correction authority",
+        "status": "passed"
+      },
+      {
+        "name": "'mlb'/'postseason' bounded production vertical Four-family \u2192 SQL \u2192 real scorer bounded game proof stops, ingests reviewed synthetic HTTP, scores, replays, quarantines untrusted correction and rejects unmapped IDs",
+        "status": "failed"
+      },
+      {
+        "name": "'ncaab'/'tournament' bounded production vertical Four-family vertical fixture contracts (no DB) has a reviewed bounded game manifest with an independent winner oracle",
+        "status": "passed"
+      },
+      {
+        "name": "'ncaab'/'tournament' bounded production vertical Four-family vertical fixture contracts (no DB) original synthetic HTTP is accepted without manufacturing correction authority",
+        "status": "passed"
+      },
+      {
+        "name": "'ncaab'/'tournament' bounded production vertical Four-family \u2192 SQL \u2192 real scorer bounded game proof stops, ingests reviewed synthetic HTTP, scores, replays, quarantines untrusted correction and rejects unmapped IDs",
+        "status": "passed"
+      },
+      {
+        "name": "'ncaaf'/'cfp' bounded production vertical Four-family vertical fixture contracts (no DB) has a reviewed bounded game manifest with an independent winner oracle",
+        "status": "passed"
+      },
+      {
+        "name": "'ncaaf'/'cfp' bounded production vertical Four-family vertical fixture contracts (no DB) original synthetic HTTP is accepted without manufacturing correction authority",
+        "status": "passed"
+      },
+      {
+        "name": "'ncaaf'/'cfp' bounded production vertical Four-family \u2192 SQL \u2192 real scorer bounded game proof stops, ingests reviewed synthetic HTTP, scores, replays, quarantines untrusted correction and rejects unmapped IDs",
+        "status": "passed"
+      }
+    ]
+  },
+  "runtimeAudit": {
+    "familyDatabases": [
+      {
+        "database": "bracket_family_vertical_008280a757a5",
+        "state": "complete",
+        "edition": "nba-play-in-2027",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_101c41ad1b31",
+        "state": "complete",
+        "edition": "ncaa-men-2027",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_3fdc4d411721",
+        "state": "complete",
+        "edition": "cfp-2026-27",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_4ecca69dab32",
+        "state": "locked",
+        "edition": "nba-2027",
+        "stopped": true,
+        "providerAttempts": 1,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_9ddecacce7df",
+        "state": "locked",
+        "edition": "mlb-2027",
+        "stopped": true,
+        "providerAttempts": 1,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_a7b1437419c3",
+        "state": "locked",
+        "edition": "nba-2027",
+        "stopped": true,
+        "providerAttempts": 1,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_cda3117a72a8",
+        "state": "complete",
+        "edition": "cfp-2026-27",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_de7155520917",
+        "state": "complete",
+        "edition": "ncaa-men-2027",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_e17a0a552beb",
+        "state": "locked",
+        "edition": "mlb-2027",
+        "stopped": true,
+        "providerAttempts": 1,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      },
+      {
+        "database": "bracket_family_vertical_f768fdb2726b",
+        "state": "complete",
+        "edition": "nba-play-in-2027",
+        "stopped": true,
+        "providerAttempts": 5,
+        "realSendsEnabled": false,
+        "notificationAttempts": 0,
+        "notificationsEnabled": false
+      }
+    ],
+    "httpRuntime": {
+      "database": "bracket_http_439610679a15",
+      "through": "20261027000015",
+      "stopped": true,
+      "realSendsEnabled": false,
+      "notificationAttempts": 0,
+      "notificationsEnabled": false
+    },
+    "migrationHashesCurrent": true,
+    "appMirrorCurrent": true
+  }
+}

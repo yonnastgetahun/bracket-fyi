@@ -1,6 +1,8 @@
 begin;
+-- Explicit synthetic fixture activation; production remains stopped by default.
+update event_runtime_control set global_stopped=false;
 
-select plan(51);
+select plan(52);
 
 select ok(to_regprocedure('public.record_provider_observation(uuid,uuid,text,text,text,timestamptz,timestamptz,integer,jsonb,jsonb)') is not null, 'observation evidence boundary exists');
 select ok(to_regprocedure('public.project_structural_observation(uuid)') is not null, 'structural projection boundary exists');
@@ -52,9 +54,18 @@ $sql$, 'shadow mode retains observation evidence');
 select is((select outcome from project_structural_observation((select id from provider_observations where external_object_id = 'entry-shadow'))), 'skipped_non_write', 'shadow structural projection skips canonical mutation');
 select is((select count(*) from event_entries where id = 'a0000000-0000-4000-8000-000000000008'), 1::bigint, 'shadow structural projection does not add canonical rows');
 
+-- Explicit synthetic mapping-review authority; the legacy uncredentialed RPC stays denied.
+insert into event_operator_principals(id) values ('a0000000-0000-4000-8000-000000000099');
+insert into event_operator_credentials(credential_hash,principal_id,expires_at)
+values (encode(extensions.digest('db20-synthetic-mapping-review-only','sha256'),'hex'),
+ 'a0000000-0000-4000-8000-000000000099','infinity');
+insert into event_operator_grants(principal_id,environment,event_edition_id,action)
+values ('a0000000-0000-4000-8000-000000000099','local','a0000000-0000-4000-8000-000000000004','mapping.review');
 select lives_ok($sql$
-  select * from upsert_provider_entity_mapping(
-    'a0000000-0000-4000-8000-000000000009', 'competitor', 'competitor-global', 'a0000000-0000-4000-8000-000000000007', 'reviewed', 1, 'test', now(), '{}'::jsonb
+  select event_operator_command(
+    'db20-synthetic-mapping-review-only','local','a0000000-0000-4000-8000-000000000004',
+    'mapping.review',0,'synthetic global competitor mapping',
+    '{"bindingId":"a0000000-0000-4000-8000-000000000009","entityKind":"competitor","externalId":"competitor-global","canonicalId":"a0000000-0000-4000-8000-000000000007","status":"reviewed"}'::jsonb
   )
 $sql$, 'global competitor mapping does not require an edition entry');
 
@@ -127,7 +138,14 @@ values
   ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'contest', 'lifecycle-contest', 'a0000000-0000-4000-8000-000000000006', 'reviewed', 'test', now()),
   ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'event_entry', 'lifecycle-entry', 'a0000000-0000-4000-8000-000000000008', 'reviewed', 'test', now());
 insert into provider_entity_refs (binding_id, provider_id, event_edition_id, entity_kind, external_id, canonical_id, resolution_status, reviewed_by, reviewed_at)
-values ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'competitor', 'competitor-global-new', 'a0000000-0000-4000-8000-000000000023', 'automatic', null, null);
+values ('a0000000-0000-4000-8000-000000000013', 'a0000000-0000-4000-8000-000000000001', 'a0000000-0000-4000-8000-000000000004', 'competitor', 'competitor-global-new', 'a0000000-0000-4000-8000-000000000023', 'reviewed', 'test', now());
+
+-- Explicit operator provisioning replaces the former implicit automatic bootstrap.
+insert into event_entries (id,event_edition_id,competitor_id,role,status)
+values ('a0000000-0000-4000-8000-000000000024','a0000000-0000-4000-8000-000000000004','a0000000-0000-4000-8000-000000000023','team','invited');
+insert into provider_entity_refs (binding_id,provider_id,event_edition_id,entity_kind,external_id,canonical_id,resolution_status,reviewed_by,reviewed_at) values
+  ('a0000000-0000-4000-8000-000000000013','a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000004','event_entry','entry-from-global-competitor','a0000000-0000-4000-8000-000000000024','reviewed','test',now()),
+  ('a0000000-0000-4000-8000-000000000013','a0000000-0000-4000-8000-000000000001','a0000000-0000-4000-8000-000000000004','event_edition','edition','a0000000-0000-4000-8000-000000000004','reviewed','test',now());
 
 create temporary table slice_2b_remediation_observations (name text primary key, observation_id uuid);
 insert into slice_2b_remediation_observations
@@ -148,9 +166,9 @@ select is((select outcome from project_structural_observation((select observatio
 select is((select competitor_key from competitors where id='a0000000-0000-4000-8000-000000000007'),'remediation-team','competitor canonical key is never provider-generated or mutated');
 insert into slice_2b_remediation_observations
 select 'entry-from-global-competitor', observation_id from record_provider_observation('a0000000-0000-4000-8000-000000000014','a0000000-0000-4000-8000-000000000013','event_entry','entry-from-global-competitor','entry-1','2026-10-08T20:04:30Z','2026-10-08T20:04:31Z',1,'{"fixture":"global-competitor"}'::jsonb,jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','remediation-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','root-edition','competitorExternalId','competitor-global-new','role','team','status','confirmed','metadata',jsonb_build_object()),'semanticHash',repeat('f',64)));
-select is((select outcome from project_structural_observation((select observation_id from slice_2b_remediation_observations where name='entry-from-global-competitor'))),'projected','event entry is created from a resolved global competitor');
-select is((select count(*) from event_entries where event_edition_id='a0000000-0000-4000-8000-000000000004' and competitor_id='a0000000-0000-4000-8000-000000000023'),1::bigint,'edition entry projection creates the missing scoped entry');
-select is((select resolution_status from provider_entity_refs where binding_id='a0000000-0000-4000-8000-000000000013' and entity_kind='event_entry' and external_id='entry-from-global-competitor'),'automatic','event entry mapping is created atomically with the entry');
+select is((select outcome from project_structural_observation((select observation_id from slice_2b_remediation_observations where name='entry-from-global-competitor'))),'projected','reviewed event entry projects from a reviewed global competitor');
+select is((select count(*) from event_entries where event_edition_id='a0000000-0000-4000-8000-000000000004' and competitor_id='a0000000-0000-4000-8000-000000000023'),1::bigint,'edition entry projection retains exactly one scoped entry');
+select is((select resolution_status from provider_entity_refs where binding_id='a0000000-0000-4000-8000-000000000013' and entity_kind='event_entry' and external_id='entry-from-global-competitor'),'reviewed','event entry projection preserves explicit reviewed authority');
 
 insert into event_editions (id, competition_id, edition_key, name, season_label)
 values ('a0000000-0000-4000-8000-000000000015','a0000000-0000-4000-8000-000000000003','2027','Remediation Cup 2027','2027');
@@ -237,6 +255,8 @@ select is((select count(*) from notification_outbox where intent_type='result_fi
 insert into slice_2b_remediation_observations
 select 'matrix-illegal-provisional', observation_id from record_provider_observation('a0000000-0000-4000-8000-000000000014','a0000000-0000-4000-8000-000000000013','result','matrix-final','matrix-final-3','2026-10-10T18:00:00Z','2026-10-10T18:01:00Z',1,'{"fixture":"matrix","correction":true}'::jsonb,jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','remediation-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','correctionProvenance','synthetic-operator','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition','contestExternalId','matrix-final','resultStatus','provisional','outcomeType','pending','resultData',jsonb_build_object(),'correctionReason','illegal regression','providerEffectiveAt','2026-10-10T18:00:00Z'),'semanticHash',repeat('f',64)));
 select is((select outcome from project_provider_result((select observation_id from slice_2b_remediation_observations where name='matrix-illegal-provisional'))),'quarantined','terminal to provisional remains illegal');
+
+select is((select status from event_entries where id='a0000000-0000-4000-8000-000000000024'),'confirmed','reviewed entry projection updates the provisioned invited state');
 
 select * from finish();
 rollback;

@@ -284,3 +284,39 @@ describe("provider-neutral contracts", () => {
     expect(() => providerBatchSchema.parse({ ...batch, rateLimit: { limit: 1, remaining: 2 } })).toThrow();
   });
 });
+
+describe("typed nomination winner sets", () => {
+  const base = {
+    eventEditionExternalId: "awards-2027",
+    contestExternalId: "best-performance",
+    resultStatus: "awarded",
+    outcomeType: "winner_set",
+    winnerNominationExternalIds: ["nomination-person-work-a", "nomination-person-work-b"],
+    resultData: {},
+  };
+  it("keeps distinct nomination identities sharing a credited person", () => {
+    expect(normalizedResultSchema.parse(base)).toEqual(base);
+    expect(normalizedResultSchema.parse({ ...base, resultStatus: "final" })).toEqual({ ...base, resultStatus: "final" });
+  });
+  it.each([
+    { winnerNominationExternalIds: [] },
+    { winnerNominationExternalIds: undefined },
+    { winnerNominationExternalIds: ["same", " same "] },
+    { winnerNominationExternalIds: [" "] },
+    { winnerEventEntryExternalId: "arbitrary-person" },
+    { resultStatus: "provisional" },
+    { resultStatus: "unresolved" },
+    { resultStatus: "void" },
+    { resultStatus: "canceled" },
+    { outcomeType: "draw", resultStatus: "final" },
+    { outcomeType: "winner", winnerEventEntryExternalId: "person" },
+    { winnerNominationExternalIds: undefined, resultData: { winnerNominationExternalIds: ["hidden"] } },
+  ])("rejects invalid set state %j", (change) => {
+    expect(normalizedResultSchema.safeParse({ ...base, ...change }).success).toBe(false);
+  });
+  it("accepts a singleton nomination set without inventing an event-entry winner", () => {
+    const result = normalizedResultSchema.parse({ ...base, winnerNominationExternalIds: ["nomination-a"] });
+    expect(result.winnerEventEntryExternalId).toBeUndefined();
+    expect(result.outcomeType).toBe("winner_set");
+  });
+});

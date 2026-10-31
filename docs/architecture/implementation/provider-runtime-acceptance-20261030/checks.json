@@ -1,0 +1,10 @@
+[
+  {
+    "command": "npx --no-install eslint lib/ingestion/providers/balldontlie-nfl.ts tests/ingestion/providers/balldontlie-nfl.test.ts tests/events/provider-bdl-vertical-db.test.ts tests/events/provider-vertical-db.test.ts",
+    "exitCode": 0
+  },
+  {
+    "command": "npx --no-install tsc --noEmit --incremental false --pretty false",
+    "exitCode": 0
+  }
+]

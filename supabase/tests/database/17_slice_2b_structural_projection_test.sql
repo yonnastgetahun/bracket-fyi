@@ -1,6 +1,8 @@
 begin;
+-- Explicit synthetic fixture activation; production remains stopped by default.
+update event_runtime_control set global_stopped=false;
 
-select plan(21);
+select plan(23);
 
 select has_table('public', 'canonical_structural_projection_state', 'structural projection records observation provenance');
 select is((select relrowsecurity from pg_class where oid = 'public.canonical_structural_projection_state'::regclass), true, 'structural provenance is protected by RLS');
@@ -25,6 +27,26 @@ insert into provider_entity_refs (binding_id,provider_id,event_edition_id,entity
   ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','competitor','team-b','97000000-0000-4000-8000-000000000006','reviewed','structural-operator',now());
 select is((select count(*) from provider_entity_refs where entity_kind='event_edition'),1::bigint,'root event edition mapping is pre-provisioned');
 
+-- Canonical identity is operator-provisioned; observations only project reviewed structures.
+insert into stages (id,event_edition_id,stage_key,name,kind,ordinal)
+values ('97000000-0000-4000-8000-000000000011','97000000-0000-4000-8000-000000000004','knockout','Provisioned stage','knockout',1);
+insert into rounds (id,event_edition_id,stage_id,round_key,name,ordinal)
+values ('97000000-0000-4000-8000-000000000012','97000000-0000-4000-8000-000000000004','97000000-0000-4000-8000-000000000011','round-1','Provisioned round',1);
+insert into contests (id,event_edition_id,stage_id,contest_key,name,kind) values
+  ('97000000-0000-4000-8000-000000000013','97000000-0000-4000-8000-000000000004','97000000-0000-4000-8000-000000000011','game-1','Provisioned game 1','game'),
+  ('97000000-0000-4000-8000-000000000014','97000000-0000-4000-8000-000000000004','97000000-0000-4000-8000-000000000011','game-2','Provisioned game 2','game');
+-- A reviewed target admits the invalid graph to cycle validation; its new natural key
+-- must still never create a partial row (nor mutate this provisioned target).
+insert into brackets (id,event_edition_id,bracket_key,name,kind)
+values ('97000000-0000-4000-8000-000000000015','97000000-0000-4000-8000-000000000004','approved-bracket','Provisioned bracket','knockout');
+insert into provider_entity_refs (binding_id,provider_id,event_edition_id,entity_kind,external_id,canonical_id,resolution_status,reviewed_by,reviewed_at) values
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','event_entry','entry-a','97000000-0000-4000-8000-000000000007','reviewed','structural-operator',now()),
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','event_entry','entry-b','97000000-0000-4000-8000-000000000008','reviewed','structural-operator',now()),
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','round','round-1','97000000-0000-4000-8000-000000000012','reviewed','structural-operator',now()),
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','contest','contest-1','97000000-0000-4000-8000-000000000013','reviewed','structural-operator',now()),
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','contest','contest-2','97000000-0000-4000-8000-000000000014','reviewed','structural-operator',now()),
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','bracket','cycle-bracket','97000000-0000-4000-8000-000000000015','reviewed','structural-operator',now());
+
 create temporary table slice_2b_structural_observations (name text primary key, observation_id uuid);
 
 insert into slice_2b_structural_observations
@@ -39,7 +61,7 @@ select 'entry-b', observation_id from record_provider_observation(
 );
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='entry-a'))),'projected','edition-scoped event entry projects atomically');
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='entry-b'))),'projected','second event entry projects atomically');
-select is((select count(*) from provider_entity_refs where entity_kind='event_entry'),2::bigint,'event entry mappings are created with their structures');
+select is((select count(*) from provider_entity_refs where entity_kind='event_entry'),2::bigint,'reviewed event entry mappings remain associated with their structures');
 
 insert into slice_2b_structural_observations
 select 'round-before-stage', observation_id from record_provider_observation(
@@ -47,6 +69,10 @@ select 'round-before-stage', observation_id from record_provider_observation(
   jsonb_build_object('contractVersion','slice-2a-v1','adapterKey','structural-fixture','adapterConfigVersion',1,'normalizationPolicyVersion','identity-normalization-v1','completeness','full','normalizedEntity',jsonb_build_object('eventEditionExternalId','edition-1','stageExternalId','stage-1','roundKey','round-1','name','Round 1','ordinal',1,'metadata',jsonb_build_object('synthetic',true)),'semanticHash',repeat('3',64))
 );
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='round-before-stage'))),'quarantined','child arriving before its stage is quarantined');
+
+-- The missing parent association is explicitly reviewed before dependency replay.
+insert into provider_entity_refs (binding_id,provider_id,event_edition_id,entity_kind,external_id,canonical_id,resolution_status,reviewed_by,reviewed_at) values
+  ('97000000-0000-4000-8000-000000000009','97000000-0000-4000-8000-000000000001','97000000-0000-4000-8000-000000000004','stage','stage-1','97000000-0000-4000-8000-000000000011','reviewed','structural-operator',now());
 
 insert into slice_2b_structural_observations
 select 'stage-1', observation_id from record_provider_observation(
@@ -101,6 +127,9 @@ select 'cycle-bracket', observation_id from record_provider_observation(
 );
 select is((select outcome from project_structural_observation((select observation_id from slice_2b_structural_observations where name='cycle-bracket'))),'quarantined','cyclic bracket structure is quarantined before writes');
 select is((select count(*) from brackets where bracket_key='cycle'),0::bigint,'cyclic bracket projection leaves no partial bracket row');
+
+select is((select issue_code from ingestion_quarantine where observation_id=(select observation_id from slice_2b_structural_observations where name='cycle-bracket')),'unsupported_shape','reviewed bracket reaches graph validation rather than identity rejection');
+select is((select name from brackets where id='97000000-0000-4000-8000-000000000015'),'Provisioned bracket','cyclic projection preserves the reviewed bracket target');
 
 select * from finish();
 rollback;

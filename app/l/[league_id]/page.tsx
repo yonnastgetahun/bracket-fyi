@@ -61,7 +61,7 @@ export default async function LeaguePage(
         ? getTemplateMatches(league.template_id)
         : Promise.resolve([]),
       league.template_id
-        ? getTeamRegistry(league.template_id)
+        ? getTeamRegistry(league.template_id, league.id)
         : Promise.resolve([]),
     ]);
 
@@ -92,7 +92,7 @@ export default async function LeaguePage(
       getChampionStatus(leagueId),
       getPickResults(leagueId),
       league.template_id
-        ? getTeamRegistry(league.template_id)
+        ? getTeamRegistry(league.template_id, league.id)
         : Promise.resolve([]),
     ]);
     const teamRegistryMap: Record<string, string> = {};

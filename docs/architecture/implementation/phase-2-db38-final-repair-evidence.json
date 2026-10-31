@@ -1,0 +1,453 @@
+{
+  "status": "passed",
+  "scope": "DB38 bounded repair; no numeric acceptance claim",
+  "head": "3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8",
+  "sources": {
+    "supabase/migrations/20261027000014_reviewed_series.sql": "aa0a8be7505dce48a3e288ec2ee8c302244718c5b2b5c19f1e6603b49732f46a",
+    "supabase/tests/database/DB38_http_business_conflicts_test.sql": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+  },
+  "fullSQL": {
+    "prefixTests": {
+      "20261027000012": {
+        "count": 14,
+        "passed": true,
+        "sha256": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+      },
+      "20261027000013": {
+        "count": 14,
+        "passed": true,
+        "sha256": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+      },
+      "20261027000014": {
+        "count": 15,
+        "passed": true,
+        "sha256": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+      },
+      "20261027000015": {
+        "count": 15,
+        "passed": true,
+        "sha256": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+      }
+    },
+    "database": "bracket_db38_1793407089368602000",
+    "container": "supabase_db_bracket-fyi",
+    "through": "20261027000015",
+    "steps": [],
+    "migrations": {
+      "20260724000001_initial_schema.sql": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+      "20260724000002_rls_policies.sql": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+      "20260724000003_scoring_views.sql": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+      "20260725000004_pickem_views.sql": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+      "20260725000005_vapid_rpc.sql": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+      "20261006000001_canonical_event_domain.sql": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+      "20261006000002_ingestion_evidence_and_delivery.sql": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+      "20261008000001_effective_result_compatibility.sql": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+      "20261009000000_slice_2b_observation_evidence.sql": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+      "20261009000001_slice_2b_structural_projection.sql": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+      "20261009000002_slice_2b_atomic_result_projection.sql": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+      "20261009000003_slice_2b_acceptance_remediation.sql": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+      "20261009000004_slice_2b_r2_acceptance.sql": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+      "20261009000005_slice_2b_r3_provenance_grants.sql": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+      "20261010000000_slice_2c_run_ledger.sql": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+      "20261010000001_slice_2c_2_acceptance_remediation.sql": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+      "20261010000002_slice_2c_2_clock_remediation.sql": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+      "20261010000003_slice_2c_2_claim_checkpoint_contract.sql": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+      "20261010000004_slice_2c_rate_budget.sql": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+      "20261010000005_slice_2c_5b_acceptance_remediation.sql": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+      "20261010000006_slice_2c_5b_r2_header_semantics.sql": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+      "20261010000007_slice_2c_5_scheduling_health.sql": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+      "20261010000008_immutable_evidence_grants.sql": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+      "20261027000001_typed_outcomes.sql": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+      "20261027000002_prediction_windows.sql": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+      "20261027000003_window_integrity_repair.sql": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+      "20261027000004_security_boundary_repair.sql": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0",
+      "20261027000005_window_incarnation_history.sql": "a3be839db1aaed9f7a7efb9b641b8f023a627eb4a98ece4a178dd3de26e05429",
+      "20261027000006_event_lifecycle.sql": "55bbb1f26e926041c71ed869ad290d91b5757a5cc11865ba9c1daea67f2362d2",
+      "20261027000007_event_notifications.sql": "36f453a18b35756f2cb52e0e03ad9dce4107dcae7e1d9827ec02b529638c9f2b",
+      "20261027000008_event_operator_controls.sql": "441dfc54f7f704ac2cfd86f98068fedbc472c6b452590e226d67900da3debe55",
+      "20261027000009_window_lifecycle_repairs.sql": "0fb324e02359ca8f002ab0558f1bfa416fc7b076e02b8a9a835e6d24c7f2e721",
+      "20261027000010_reviewed_pairings.sql": "6826386256c8c90eed4351fc57ab027be573e3d0a2c97efdc10f06fc09416a10",
+      "20261027000011_notification_operator_authority_repair.sql": "efc5c242e3c6f05430dc4b620165d0b9eabb156331ca15f5c6571000403a404c",
+      "20261027000012_http_business_conflicts.sql": "5819c05f98db7de2f5394f35994769a2792a57aafa2ea161116f12b9056c5ac8",
+      "20261027000013_league_competitor_names.sql": "abd03dd9af4379a3ce6f186e91b77d3553d81b7731ab3d345d19b460ea012fbd",
+      "20261027000014_reviewed_series.sql": "aa0a8be7505dce48a3e288ec2ee8c302244718c5b2b5c19f1e6603b49732f46a",
+      "20261027000015_structural_qualifiers.sql": "8edabbaf8b7e8aa65d9043847a277dfeeaabbf8e34a0cdde41fe670913aa340a"
+    },
+    "tests": {
+      "01_provider_registry_test.sql": {
+        "sha256": "40bc90d7398669eae60ca1bf79ac74a7b51e58ad400c0b4dcd5371b4877c196b",
+        "count": 1,
+        "passed": true
+      },
+      "02_event_edition_identity_test.sql": {
+        "sha256": "6dfeccdf29e6dda1893239819dd4ccabc9d8445741cf8ebcce8907376ecc1121",
+        "count": 4,
+        "passed": true
+      },
+      "03_competitor_identity_test.sql": {
+        "sha256": "7431907092a6503339928be2d49142ad2ad514e535a4a3cdf501acafce019185",
+        "count": 4,
+        "passed": true
+      },
+      "04_contest_structure_test.sql": {
+        "sha256": "3b6bb2beaa3eb6343661671e4141f92ac64d3dda70534b35781b94d1ee5ad051",
+        "count": 4,
+        "passed": true
+      },
+      "05_bracket_graph_test.sql": {
+        "sha256": "97192f21335eeda4e59bd5c809d72405f76bd6fd85b508e78469430a43617437",
+        "count": 5,
+        "passed": true
+      },
+      "06_template_compatibility_test.sql": {
+        "sha256": "132b44be308d6ee7296a4df16701e604655d234b6d44ff02e810717c8f2dee80",
+        "count": 6,
+        "passed": true
+      },
+      "07_canonical_schema_security_test.sql": {
+        "sha256": "bf168842ebba9f62c6a7bc53a925992c85577efcb630a94aedceb44f29a8acce",
+        "count": 3,
+        "passed": true
+      },
+      "08_provider_binding_and_run_test.sql": {
+        "sha256": "a242e276b4a333ad621f228e22a14087c53e3b131dcd4518fff549a56e46bb7b",
+        "count": 6,
+        "passed": true
+      },
+      "09_provider_observation_and_quarantine_test.sql": {
+        "sha256": "a6d3f883de685baabf2f69e3aa4652813f67a9f031249e1d708628331e97d2f6",
+        "count": 14,
+        "passed": true
+      },
+      "10_canonical_result_history_test.sql": {
+        "sha256": "6b334f756bb5ae054b3664be0c8d7fe23cf249ac0a81a2c0ecac8f8004f8bc17",
+        "count": 11,
+        "passed": true
+      },
+      "11_audit_hold_and_outbox_test.sql": {
+        "sha256": "de96bee0d4a2e105e018871a37af5858651cd80f0b32dff5979343fffd08e646",
+        "count": 22,
+        "passed": true
+      },
+      "12_ingestion_schema_security_test.sql": {
+        "sha256": "7b94f4602bee089fc24e6caa2b82ddc6773f644e33c652234c31d3f5fbc037db",
+        "count": 35,
+        "passed": true
+      },
+      "13_effective_result_compatibility_test.sql": {
+        "sha256": "3167c9aba903fede48486b1f885f74079ea9ec3747ac37b91baa354e350c269e",
+        "count": 8,
+        "passed": true
+      },
+      "14_legacy_result_backfill_test.sql": {
+        "sha256": "5e236ffe8d4a904399dd76f885c5a6fe7504540cbba730f46dde9deb61e354be",
+        "count": 5,
+        "passed": true
+      },
+      "15_result_compatibility_security_test.sql": {
+        "sha256": "7dd9e28908e56ebd5bf60876dd094537d55462aa6827bb8e66b65c55f34d27ee",
+        "count": 5,
+        "passed": true
+      },
+      "16_slice_2b_identity_persistence_test.sql": {
+        "sha256": "fabaa58eccfca192b63e5e3f4bf7a9776ff2d1e1334bc7cec89ecf08394d887c",
+        "count": 26,
+        "passed": true
+      },
+      "17_slice_2b_structural_projection_test.sql": {
+        "sha256": "3aae75f50aba357a5bb9ab77be65fa665013b90120745ff821619324a3af1fff",
+        "count": 23,
+        "passed": true
+      },
+      "18_slice_2b_atomic_result_projection_test.sql": {
+        "sha256": "7817a1237a977cc1015423a112dd2d117dbf18a5cc903b6a2bd4212d80483123",
+        "count": 39,
+        "passed": true
+      },
+      "19_slice_2b_replay_acceptance_test.sql": {
+        "sha256": "3155df9e655c78cada1953065ceb981377d6da2165c4506c5500103e4f9bebf1",
+        "count": 21,
+        "passed": true
+      },
+      "20_slice_2b_acceptance_remediation_test.sql": {
+        "sha256": "55a34c72757c65ef49c2fd23baf6f5ccac24a1fe520dd977435b4d59ea3bb9f1",
+        "count": 52,
+        "passed": true
+      },
+      "21_slice_2b_r2_acceptance_test.sql": {
+        "sha256": "fd4c59dca8a6293924ee61307d7c238938aa02b71e6a123eabb035ae9bf8e2b0",
+        "count": 66,
+        "passed": true
+      },
+      "22_slice_2b_r3_provenance_grants_test.sql": {
+        "sha256": "7dfec834f8a270690ce2ba854c5fb1b00bfc7bbf05e9aa9459d0362da8f42262",
+        "count": 27,
+        "passed": true
+      },
+      "23_slice_2c_run_ledger_test.sql": {
+        "sha256": "a52cd8c2b156aa56c860582dbe4ea35abd905ad78c852257c63afc75282c386c",
+        "count": 99,
+        "passed": true
+      },
+      "24_slice_2c_rate_budget_and_health_test.sql": {
+        "sha256": "91d26f9c49f29af8ac62c7591b7cbe6b2ef40ba48f1127a310982a212d01c6a0",
+        "count": 157,
+        "passed": true
+      },
+      "25_slice_2c_scheduling_health_test.sql": {
+        "sha256": "204bbba545ed90a57b54c49c8820795075512bc39f4cbe963ab327e436c2031f",
+        "count": 24,
+        "passed": true
+      },
+      "26_slice_2c_orchestrator_replay_test.sql": {
+        "sha256": "7cb038480f2782487a8718de583077b489ba4db24ab77cc9515d97b74c10621c",
+        "count": 12,
+        "passed": true
+      },
+      "27_typed_outcomes_test.sql": {
+        "sha256": "014c0ba9f1b2e7fbee1b34512456547a4f01051811bb3db1003beb77e16afb82",
+        "count": 56,
+        "passed": true
+      },
+      "28_prediction_windows_test.sql": {
+        "sha256": "6f9998127b262fbdbd27e1929812406933ddfd06ea5145c64ea493b202c16cd8",
+        "count": 25,
+        "passed": true
+      },
+      "30_security_boundary_test.sql": {
+        "sha256": "2d559eab9079bf88d6f86573d2b17a0a9450fcbfd7648eb1a317f034d756a5b0",
+        "count": 54,
+        "passed": true
+      },
+      "DB29_window_integrity_test.sql": {
+        "sha256": "f66f0e0a0c8b1304a83803b51d42258e266bd376fbaf7629c425082a18533469",
+        "count": 47,
+        "passed": true
+      },
+      "DB31_window_incarnation_history_test.sql": {
+        "sha256": "e908c2959b5be9c3347752a9871b63a75f6c193659cdca2ff99458c10562985c",
+        "count": 68,
+        "passed": true
+      },
+      "DB32_event_lifecycle_test.sql": {
+        "sha256": "86ddf7110e846cc347e0b5ea059a8371050eef6fbe09d59673c3c89ccad5a548",
+        "count": 46,
+        "passed": true
+      },
+      "DB33_event_notifications_test.sql": {
+        "sha256": "17e7e6fd2bee28fac06b55b4a06266fdf69a28a01ffa6f13b8cb391e99863746",
+        "count": 54,
+        "passed": true
+      },
+      "DB34_event_operator_controls_test.sql": {
+        "sha256": "7d64d1afb0b4b5496b6b6d1bb2e64f012cccd05d429e8e6713f82201ebde9ba8",
+        "count": 45,
+        "passed": true
+      },
+      "DB35_window_lifecycle_repair_test.sql": {
+        "sha256": "dfa05e1fb0b054b0f8073fb972ab2e1370623f78b4a8198a4d5ba16b1cec4b70",
+        "count": 26,
+        "passed": true
+      },
+      "DB36_reviewed_pairings_test.sql": {
+        "sha256": "522d5761e8942c1d0c5a1448c0596ca4d0742edbecb6ed187612dc9f5bd3a8eb",
+        "count": 23,
+        "passed": true
+      },
+      "DB37_notification_operator_authority_test.sql": {
+        "sha256": "b98c661547c281bd3bc35ff6f894fb02fd98afeade1cd16317e74b678f3617e3",
+        "count": 17,
+        "passed": true
+      },
+      "DB38_http_business_conflicts_test.sql": {
+        "sha256": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f",
+        "count": 15,
+        "passed": true
+      },
+      "DB39_league_competitor_names_test.sql": {
+        "sha256": "0fbda958bc7b6fc501dd078b2e87aed603e14459f95dc6b0462196ab2aff5d89",
+        "count": 11,
+        "passed": true
+      }
+    },
+    "safety": "t|f|f|0",
+    "status": "passed"
+  },
+  "transitions": {
+    "path": "supabase/tests/transitions/evidence-20261031T003830Z_ee7366.json",
+    "sha256": "2abe834fc247d460a12eb9341b6b3d86a14d6f191b08be487a551b0169ef1cb1",
+    "summary": {
+      "status": "passed",
+      "evidence": "/Users/yonnasgetahun/bracket-fyi/supabase/tests/transitions/evidence-20261031T003830Z_ee7366.json",
+      "databases": [
+        "bracket_transition_20261031t003830z_ee7366_fresh",
+        "bracket_transition_20261031t003830z_ee7366_legacy",
+        "bracket_transition_20261031t003830z_ee7366_current"
+      ],
+      "assertions": 2429,
+      "failure": null
+    },
+    "assertionsPassed": 2429,
+    "failedAssertions": 0,
+    "manifest": {
+      "supabase/migrations/20260724000001_initial_schema.sql": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+      "supabase/migrations/20260724000002_rls_policies.sql": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+      "supabase/migrations/20260724000003_scoring_views.sql": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+      "supabase/migrations/20260725000004_pickem_views.sql": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+      "supabase/migrations/20260725000005_vapid_rpc.sql": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+      "supabase/migrations/20261006000001_canonical_event_domain.sql": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+      "supabase/migrations/20261006000002_ingestion_evidence_and_delivery.sql": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+      "supabase/migrations/20261008000001_effective_result_compatibility.sql": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+      "supabase/migrations/20261009000000_slice_2b_observation_evidence.sql": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+      "supabase/migrations/20261009000001_slice_2b_structural_projection.sql": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+      "supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+      "supabase/migrations/20261009000003_slice_2b_acceptance_remediation.sql": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+      "supabase/migrations/20261009000004_slice_2b_r2_acceptance.sql": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+      "supabase/migrations/20261009000005_slice_2b_r3_provenance_grants.sql": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+      "supabase/migrations/20261010000000_slice_2c_run_ledger.sql": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+      "supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+      "supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+      "supabase/migrations/20261010000003_slice_2c_2_claim_checkpoint_contract.sql": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+      "supabase/migrations/20261010000004_slice_2c_rate_budget.sql": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+      "supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+      "supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+      "supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+      "supabase/migrations/20261010000008_immutable_evidence_grants.sql": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+      "supabase/migrations/20261027000001_typed_outcomes.sql": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+      "supabase/migrations/20261027000002_prediction_windows.sql": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+      "supabase/migrations/20261027000003_window_integrity_repair.sql": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+      "supabase/migrations/20261027000004_security_boundary_repair.sql": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0",
+      "supabase/migrations/20261027000005_window_incarnation_history.sql": "a3be839db1aaed9f7a7efb9b641b8f023a627eb4a98ece4a178dd3de26e05429",
+      "supabase/migrations/20261027000006_event_lifecycle.sql": "55bbb1f26e926041c71ed869ad290d91b5757a5cc11865ba9c1daea67f2362d2",
+      "supabase/migrations/20261027000007_event_notifications.sql": "36f453a18b35756f2cb52e0e03ad9dce4107dcae7e1d9827ec02b529638c9f2b",
+      "supabase/migrations/20261027000008_event_operator_controls.sql": "441dfc54f7f704ac2cfd86f98068fedbc472c6b452590e226d67900da3debe55",
+      "supabase/migrations/20261027000009_window_lifecycle_repairs.sql": "0fb324e02359ca8f002ab0558f1bfa416fc7b076e02b8a9a835e6d24c7f2e721",
+      "supabase/migrations/20261027000010_reviewed_pairings.sql": "6826386256c8c90eed4351fc57ab027be573e3d0a2c97efdc10f06fc09416a10",
+      "supabase/migrations/20261027000011_notification_operator_authority_repair.sql": "efc5c242e3c6f05430dc4b620165d0b9eabb156331ca15f5c6571000403a404c",
+      "supabase/migrations/20261027000012_http_business_conflicts.sql": "5819c05f98db7de2f5394f35994769a2792a57aafa2ea161116f12b9056c5ac8",
+      "supabase/migrations/20261027000013_league_competitor_names.sql": "abd03dd9af4379a3ce6f186e91b77d3553d81b7731ab3d345d19b460ea012fbd",
+      "supabase/migrations/20261027000014_reviewed_series.sql": "aa0a8be7505dce48a3e288ec2ee8c302244718c5b2b5c19f1e6603b49732f46a",
+      "supabase/migrations/20261027000015_structural_qualifiers.sql": "8edabbaf8b7e8aa65d9043847a277dfeeaabbf8e34a0cdde41fe670913aa340a"
+    },
+    "repairs": {
+      "supabase/rollbacks/20261027000001_typed_outcomes_forward_repair.sql": "345ee1c0de64523c30caa36c57069fc35fda74f1e0a73c9f690e074ad5648531",
+      "supabase/rollbacks/20261027000002_prediction_windows_forward_repair.sql": "d13228406104997bc052e4a19a038d8a927c59b23f17a3f669feac2c3ba57205",
+      "supabase/rollbacks/20261027000003_window_integrity_forward_repair.sql": "df170eac3c4cfdbce01ad4e03e1051a405d71e6b60eb75cd176ff04c76af579d",
+      "supabase/rollbacks/20261027000004_security_boundary_forward_repair.sql": "7a592d70b48f2192d28eb6f8ce000e21d96b9543e66bf491b7714614d441383e",
+      "supabase/rollbacks/20261027000005_window_incarnation_history_forward_repair.sql": "0b95f4a016dd57dd821fa28617b5bd5433d262f2ea903a3ec40f6097aee53434",
+      "supabase/rollbacks/20261027000006_event_lifecycle_forward_repair.sql": "9275cdbde3012490f2d03f1d5298e89866ebb57a80c1217a75551b77961b01e7",
+      "supabase/rollbacks/20261027000007_event_notifications_forward_repair.sql": "4425cc70fd5ee23c17854dc966abaf7efddce4329562ff0a5ffa2b681c47e5d6",
+      "supabase/rollbacks/20261027000008_event_operator_controls_forward_repair.sql": "7e9092a281e924a110e2fddbf562e604bbdb2d0ef51a58126b9bbd9efe8d641f",
+      "supabase/rollbacks/20261027000009_window_lifecycle_repairs_forward_repair.sql": "6ff07808bec84a2112cb5733010747cb6ccccdaa5021b7b1df23d4e5125b1bf6",
+      "supabase/rollbacks/20261027000010_reviewed_pairings_forward_repair.sql": "c9ac11a596322e8971d7c8a701e372d2eb4a649b3ad319d760690fcbedffdaf6",
+      "supabase/rollbacks/20261027000011_notification_operator_authority_forward_repair.sql": "efc5c242e3c6f05430dc4b620165d0b9eabb156331ca15f5c6571000403a404c",
+      "supabase/rollbacks/20261027000012_http_business_conflicts_forward_repair.sql": "5819c05f98db7de2f5394f35994769a2792a57aafa2ea161116f12b9056c5ac8",
+      "supabase/rollbacks/20261027000013_league_competitor_names_forward_repair.sql": "7898615a1ba9d8598174b6ab058d87ddbdee3df5d6b43262a9e02ac5342791eb",
+      "supabase/rollbacks/20261027000014_reviewed_series_forward_repair.sql": "4d2b285d263c4ce72d6b8048b319ab5481a3c9bf53c1ec20f0f836f45666d184",
+      "supabase/rollbacks/20261027000015_structural_qualifiers_forward_repair.sql": "676b5546274fe61f220164cf33defc81a6af112dc1b72e08cb9ad1079dfc5dea"
+    }
+  },
+  "safety": {
+    "supabase_db_bracket-fyi:bracket_db38_1793407089368602000": "t|f|f|0",
+    "supabase_db_bracket-fyi:bracket_final_1793406820453880000": "t|f|f|0",
+    "bracket-p11-db-9bd170c85c0f:bracket_transition_20261031t003830z_ee7366_fresh": "t|f|f|1",
+    "bracket-p11-db-9bd170c85c0f:bracket_transition_20261031t003830z_ee7366_legacy": "t|f|f|1",
+    "bracket-p11-db-9bd170c85c0f:bracket_transition_20261031t003830z_ee7366_current": "t|f|f|1"
+  },
+  "preservedBaseline": {
+    "docs/architecture/bracket-fyi-master-spec.md": "51088a545016d59b8c1519bbd23aeea07bf637d9760951b3b4ef2577d2bc2a3b",
+    "docs/architecture/bracket-fyi-spec-v1.0.md": "4f3bee14261669907c55d2f3e756d2371b60ae19fbd7723763086a33af9cd7f2",
+    "docs/architecture/implementation/competitor-stage-coverage-20261027.md": "16067657804d0a7331bdbece3f237bbbab16db21fe71aed305750ac382b78c5f",
+    "docs/architecture/implementation/full-master-architecture-review.md": "b930b1a66256bbe43e89e2a0aad0fbd41fb0f9216057ecd8d81b9f003cbd4e54",
+    "docs/architecture/implementation/full-master-product-review.md": "54d6569192f4d08cfb28aea0aebb1b41b1403b497bc0fef2274c212251002730",
+    "docs/architecture/implementation/full-master-security-review.md": "00b3d7bef8eeef67e759247332e8bdb69b24dd92b4caa63db08004041529dd11",
+    "docs/architecture/implementation/full-master-spec-review.md": "7a9cd58e65803ea3a2f5a77e4748dc231a3648279ac357bea620f7ec6513de47",
+    "docs/architecture/implementation/full-master-verification-review.md": "6027fd280c5d87a237b48193ed540fd7a6a30a9034a55af26c738e4510faeef3",
+    "docs/architecture/implementation/full-roadmap-execution-contract.md": "218ab6f74fd35c824fe6536a533e83735db2b4630ef95b585d41f927b072cb10",
+    "docs/architecture/implementation/full-roadmap-issue-reconciliation.md": "c80ed652a681c37c168bb05b67150660e9dbd6291684f661f2433a265fa593eb",
+    "docs/architecture/implementation/full-roadmap-provider-contracts.md": "4a5783d9cb851bc1022c337ed71e624a554aeab44fa6990f4263c48c26c1afb3",
+    "docs/architecture/implementation/full-roadmap-template-manifests.md": "de4dc2073125579e2649c94305e9ec1c05a96729b4f8af3c267b349125cf97d6",
+    "docs/architecture/implementation/m3-spec-first-pilot.md": "4a59afa95e6419cfe127e5c4cbcd122c8b691e597b07daf41f8c97a1598ea79e",
+    "docs/architecture/implementation/m3-spec-review.md": "00bd186f18890b3d2ce8590a7ef4e9b092b433b5afd413fde400f556bf2fbe81",
+    "docs/architecture/implementation/phase-2-orchestrated-execution-plan.md": "a0b2880c2ccc88620e947736fda4eb46a8cefa336268ca70a3d2537e18b6a5ae",
+    "docs/architecture/implementation/ucl-observed-field-mapping.md": "9e5013233fbf1f3806738c667ac562d122e7cbd66277d24fbce3885308c928c8",
+    "docs/architecture/implementation/v1-architecture-review.md": "e9f3a0dea5a3caae13e5b5815bef1447428ce8d5901965268053ae40b6b5ed2a",
+    "docs/architecture/implementation/v1-product-review.md": "c391db9cd578df8597ae81813ee2b90abea1807d9f4b8e16bdd3e81a57877ea0",
+    "docs/architecture/implementation/v1-security-review.md": "ca55c6f2a96bf02d74df932b3dbe37df40b81b35059c6ca1d2015ce06fda36f7",
+    "docs/architecture/implementation/v1-verification-review.md": "2dcea68de17911745c4dc15b415ea701e5e77f70c3312c67beeda614ec7a6d0a",
+    "docs/case-studies/boyz-wc2026.md": "62a1c5aa1017df775051fdc34ca11025b072c4feeae5ac89215fd9e80c80b392",
+    "docs/architecture/tournament-ingestion-architecture-plan.md": "9f4fa71913a1d308d9ec62ebc0cdf14cb35b3867cd708adddf85dbbe2562bf6d",
+    "docs/architecture/tournament-ingestion-implementation-plan.md": "c3ef7665a04caa4700b946d3243df1d1a644e9014f13d894f06331125438910e",
+    "docs/architecture/tournament-ingestion-qa-plan.md": "320ea428548ff0ef6c3662687cc15fa67f5096210a9f8ee5e61f18cd0a80b3de",
+    "docs/architecture/tournament-provider-and-event-roadmap.md": "60aab94c778d93793a6992354a7b8a48c37f7249713b68e1708348ee0b7589d4",
+    "docs/plans/2026-07-25-feat-p3b-push-notify-edge-function-pwa-nudge-plan.md": "42bffa55e52c531142221eff4a2e59d11f27d01600ef59cc9d117a6303e78a7e"
+  },
+  "independentReview": {
+    "runId": "eb93cf91-0be1-4e7b-8e42-f4ecd3ac2fdc",
+    "verdict": "accept; no blocking findings",
+    "reviewedSources": {
+      "supabase/migrations/20261027000014_reviewed_series.sql": "aa0a8be7505dce48a3e288ec2ee8c302244718c5b2b5c19f1e6603b49732f46a",
+      "supabase/tests/database/DB38_http_business_conflicts_test.sql": "8c70443d2eba1bf7b98bad3243183ccdd44123552292968e34fd476b25c2863f"
+    }
+  },
+  "artifacts": {
+    "tmp/db38-final-repair/01_provider_registry_test.tap": "a01ae53b508110b4a8ab3ebefb7ae13290b473637d39c50f7e4045be8b07b494",
+    "tmp/db38-final-repair/02_event_edition_identity_test.tap": "86f40165a002c1ea18a70ef6cca847b3acab8f9631de5fa845e832d187a380e7",
+    "tmp/db38-final-repair/03_competitor_identity_test.tap": "b5e14bba33c0ae4a71c78ed887f1ef3641ecf48e6916cf1de7f7345bcaf269de",
+    "tmp/db38-final-repair/04_contest_structure_test.tap": "060eff8ddb1071bcdc8eaac6b86ea1ec091a6fe9d45bf1a5fa92366970b08b49",
+    "tmp/db38-final-repair/05_bracket_graph_test.tap": "b2f6643f224aff9cd36246753593cce6bf7a28225c52f535f8ccc7d2322de4c5",
+    "tmp/db38-final-repair/06_template_compatibility_test.tap": "8f6094abf3fd9f7a23899f7c5bfdb59c68f0e9671391a0fa96c0922d2a78a51b",
+    "tmp/db38-final-repair/07_canonical_schema_security_test.tap": "1711c5a6ef5d7673348ff5da292ebe7013200207c78310b34c71b3c46cabef87",
+    "tmp/db38-final-repair/08_provider_binding_and_run_test.tap": "d86526e1b1ddb6564cd3f9f852157048172063aff22589fc218e8559355090d2",
+    "tmp/db38-final-repair/09_provider_observation_and_quarantine_test.tap": "18818e8f819f86ad7ed3126e0a28b88d315853c626dd7f8d1b65319686b7d3b6",
+    "tmp/db38-final-repair/10_canonical_result_history_test.tap": "0a1a8e5e89f081e7f6b6081bdb5c2fb59fd750f063239ee2fd5e5fefdb56c28c",
+    "tmp/db38-final-repair/11_audit_hold_and_outbox_test.tap": "732c2d050f87321b2a82a98de6d54bed70029ea174f7a008e7ae76f6dc41ab9b",
+    "tmp/db38-final-repair/12_ingestion_schema_security_test.tap": "9126a4400aaf29fb1b78baa267de76aa5d1ac887fcb43c5b7e4f080a2d042f36",
+    "tmp/db38-final-repair/13_effective_result_compatibility_test.tap": "696d1c0b422cd9a9a76d167e68020ed497cffa84d0b9614874f1b13a5327ce39",
+    "tmp/db38-final-repair/14_legacy_result_backfill_test.tap": "fe72689d04c44250b23ef072c13b19c0dd4ad5a92125b55910b3424b3fc5ca58",
+    "tmp/db38-final-repair/15_result_compatibility_security_test.tap": "3b39e515db5b4a775aa54c5e5a6045e7b6ce22259aea491aa0b4d0afd9217723",
+    "tmp/db38-final-repair/16_slice_2b_identity_persistence_test.tap": "bceda3aa1a994cbc550bc27c4476ae9eb42bc2a63c081118d80ffe22552805c7",
+    "tmp/db38-final-repair/17_slice_2b_structural_projection_test.tap": "99f030476afc7d89a3d77cb706dd3be2befb9285194d48e75ca5ef64366cb92b",
+    "tmp/db38-final-repair/18_slice_2b_atomic_result_projection_test.tap": "44cb12dd7d58ca527d777f04777d0e4c5200549525ae36b7cdd2ab3fc8b87e3e",
+    "tmp/db38-final-repair/19_slice_2b_replay_acceptance_test.tap": "fed7c860cc231cb2722bf631022f83d062ea7909908c9bdede383d03c2cddaba",
+    "tmp/db38-final-repair/20_slice_2b_acceptance_remediation_test.tap": "da51b66ac13c0ff3f91716ec4f5e43a41602baca908fbedebb42ba69a6b58cc1",
+    "tmp/db38-final-repair/21_slice_2b_r2_acceptance_test.tap": "1b1fe0c081cd7058bbefd089c460c0101f82892ff9ea42ad027f626a63e77a46",
+    "tmp/db38-final-repair/22_slice_2b_r3_provenance_grants_test.tap": "0b5e34913a27894cf3a8b94d8d74829cc24728887c440f5015cb245d097cf4a7",
+    "tmp/db38-final-repair/23_slice_2c_run_ledger_test.tap": "db744130f18a6c2b67223740d5e6503b79f87aaec91511707dae9f503a62c120",
+    "tmp/db38-final-repair/24_slice_2c_rate_budget_and_health_test.tap": "7bd96f466cc6db3438f560d564002f0a6e2b9209fb8f7ec111dffc89438bd0a0",
+    "tmp/db38-final-repair/25_slice_2c_scheduling_health_test.tap": "cc758584df4e50372d9049f6d2561dd91a797132b8294630e897312ee86fc77c",
+    "tmp/db38-final-repair/26_slice_2c_orchestrator_replay_test.tap": "7a5b8c7c454952f334b7cdcf549499c71c649eae11df16ea29a727e0380a889f",
+    "tmp/db38-final-repair/27_typed_outcomes_test.tap": "3a982c6a03a8b22962dc1fc2fcbdffc6c3f1b541ad70690f1fa86858927f1e89",
+    "tmp/db38-final-repair/28_prediction_windows_test.tap": "b4e8329036d6e541e7fd17cf012e276852882280927cac1fcb42a4ed0a230918",
+    "tmp/db38-final-repair/30_security_boundary_test.tap": "add344dfdd68e364c0294dd501181d13d1916468d7d28921b98b076e9a2d846a",
+    "tmp/db38-final-repair/DB29_window_integrity_test.tap": "0229f8ffa2fa87be7946c199970143c8e62388e9ef462f723dbad9a6eaa6ad03",
+    "tmp/db38-final-repair/DB31_window_incarnation_history_test.tap": "962675f14fd7d6d033ca500e3c710c8d286194a4201c359bb0750ef72e880bb7",
+    "tmp/db38-final-repair/DB32_event_lifecycle_test.tap": "ad1d59a846d9be51d78eb736eef489fee5fa5a934d26160b00b55e6b31429b63",
+    "tmp/db38-final-repair/DB33_event_notifications_test.tap": "474386142c834bce8e3c703f56ae2a2330c0e1e6796aa9f9af14b96ba7220d59",
+    "tmp/db38-final-repair/DB34_event_operator_controls_test.tap": "df566e7d0e46479b89a9b9c5a9777e351d08704223ad689d33e48732343dde26",
+    "tmp/db38-final-repair/DB35_window_lifecycle_repair_test.tap": "89f6a1d9049857f2229ba649cd48e4689fa8fe383da8e22604132434ef1a7f05",
+    "tmp/db38-final-repair/DB36_reviewed_pairings_test.tap": "55850b9334ed132c8ef3e29be43ae08ee06e459cb84619a0db529d1eccc501af",
+    "tmp/db38-final-repair/DB37_notification_operator_authority_test.tap": "5e3839b0ec9c6684bb4ab4c296f2094d9b9e2960dd95c33a56f8cac4e44b4f8e",
+    "tmp/db38-final-repair/DB38_http_business_conflicts_test.tap": "3f805cbae015b233badaaf5721c112e628232585216bace43bf0354e7e10b1c3",
+    "tmp/db38-final-repair/DB39_league_competitor_names_test.tap": "5c2aa3549a4a7db2d9bb29c4cb2337dd2590c3de933b16a5b45e327157f14d2e",
+    "tmp/db38-final-repair/baseline-before.json": "9bd47ebf3cc38525d798dd4c1289f3199e81b8fec9ae9e62ff2d43801e6e99df",
+    "tmp/db38-final-repair/close.py": "0fe5757c8c0bb779dceffcfc6899c1b7530c924a8ffebbe9768171d09b7e2bc9",
+    "tmp/db38-final-repair/db-evidence.json": "f13342e679fd18b9c93016a6ca3069c07a992b8cf72408288ce311c90dd22176",
+    "tmp/db38-final-repair/install-commit-event-series.sql": "5d496cb34d5c69a0fc5e78f0fa879e01cc21cb34edcfe008bf3e97dc5deb5ac0",
+    "tmp/db38-final-repair/original-red.tap": "e06f4fb0737f6ed66aa04876009727a0bb3aa43eb4d21601fbef1ace5a915975",
+    "tmp/db38-final-repair/prefix-20261027000012.tap": "22d1086ae5850fbfc4bb1ff615e4582aafec13f6f2a8a51f803c6cb16951aa71",
+    "tmp/db38-final-repair/prefix-20261027000013.tap": "22d1086ae5850fbfc4bb1ff615e4582aafec13f6f2a8a51f803c6cb16951aa71",
+    "tmp/db38-final-repair/prefix-20261027000014.tap": "3f805cbae015b233badaaf5721c112e628232585216bace43bf0354e7e10b1c3",
+    "tmp/db38-final-repair/prefix-20261027000015.tap": "3f805cbae015b233badaaf5721c112e628232585216bace43bf0354e7e10b1c3",
+    "tmp/db38-final-repair/regression-green.tap": "3f805cbae015b233badaaf5721c112e628232585216bace43bf0354e7e10b1c3",
+    "tmp/db38-final-repair/regression-red-corrected.tap": "196c34c5a7494808a3f6e9cd2b671468aab1d9f289ca23542a24467c58225400",
+    "tmp/db38-final-repair/regression-red.tap": "b3bd4974f2515c3cba0a1f73ed7bd730db942fcff0d4096eb69b8a8c7f67ce14",
+    "tmp/db38-final-repair/run-db.py": "891570ad2d5ad34f652c1e7698f5e13f3c0db7afd6c3b89e8d5e3a896997ec1c",
+    "tmp/db38-final-repair/transitions.log": "4cf4b11eceda1f85d40c8c805f31018b3487f6bdbd3d52a3e7aff4ec67f2b933",
+    "supabase/tests/transitions/evidence-20261031T003830Z_ee7366.json": "2abe834fc247d460a12eb9341b6b3d86a14d6f191b08be487a551b0169ef1cb1"
+  },
+  "retention": "All named disposable DBs retained; no container changes, numeric runs, commits, push, deploy, live calls or spend.",
+  "safetyExplanation": "SQL verification DBs have zero attempts. Each transition DB retains exactly one pre-seeded synthetic fake attempt (deterministic ID/idempotency key, sent/finished, exact synthetic/fake metadata verified); no transport ran.",
+  "closeoutCorrection": "Initial zero-attempt assertion rejected intended transition fixture history; corrected to assert the exact fake fixture without row changes.",
+  "reportSHA256": "2332c1f4ecb1039966a5712fb51be7537f0f9b892ccc04706f1245c9f8293ef6"
+}

@@ -28,7 +28,7 @@ export default async function ComparePage(
   const [participants, allPicks, teamRegistry, matches] = await Promise.all([
     getParticipants(league_id),
     getPickResults(league_id),
-    league.template_id ? getTeamRegistry(league.template_id) : Promise.resolve([]),
+    league.template_id ? getTeamRegistry(league.template_id, league.id) : Promise.resolve([]),
     league.template_id ? getTemplateMatches(league.template_id) : Promise.resolve([]),
   ]);
 

@@ -84,13 +84,22 @@ export async function getTemplateMatches(templateId: string): Promise<TemplateMa
   return (data ?? []).map(row => displayDTO<TemplateMatch>(row, MATCH_FIELDS));
 }
 
-export async function getTeamRegistry(templateId: string): Promise<TeamEntry[]> {
+export async function getTeamRegistry(templateId: string, leagueId?: string): Promise<TeamEntry[]> {
   const { data } = await getAdminClient()
     .from("templates")
     .select("team_registry")
     .eq("id", templateId)
     .single();
-  return (data?.team_registry as TeamEntry[]) ?? [];
+  const registry = (data?.team_registry as TeamEntry[]) ?? [];
+  if (!leagueId) return registry;
+  const { data: overrides, error } = await getAdminClient()
+    .from("league_competitor_names")
+    .select("team_id, name")
+    .eq("league_id", leagueId)
+    .eq("template_id", templateId);
+  if (error) throw new Error("Could not load league competitor names");
+  const names = new Map<string, string>((overrides ?? []).map(row => [row.team_id, row.name]));
+  return registry.map(team => names.has(team.id) ? { ...team, name: names.get(team.id)! } : team);
 }
 
 export async function getEffectiveResults(

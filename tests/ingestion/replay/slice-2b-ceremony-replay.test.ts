@@ -29,7 +29,8 @@ describe("synthetic ceremony replay", () => {
         eventEditionId: "ceremony-edition",
         entityKind: "event_entry",
         externalId: result.winnerEventEntryExternalId!,
-        canonicalRef: { status: "automatic", canonicalId: "canonical-ceremony-entry" },
+        // Explicit reviewed association; name-only/unverified automatic refs quarantine under P3.
+        canonicalRef: { status: "reviewed", canonicalId: "canonical-ceremony-entry" },
         aliasCandidates: [],
         fuzzyCandidates: [],
       },

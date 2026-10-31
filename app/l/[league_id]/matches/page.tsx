@@ -35,7 +35,7 @@ export default async function MatchesPage(
   }
 
   const [teamRegistry, matches, effectiveResults] = await Promise.all([
-    league.template_id ? getTeamRegistry(league.template_id) : Promise.resolve([]),
+    league.template_id ? getTeamRegistry(league.template_id, league.id) : Promise.resolve([]),
     league.template_id ? getTemplateMatches(league.template_id) : Promise.resolve([]),
     league.template_id
       ? getEffectiveResults(league_id, league.template_id)

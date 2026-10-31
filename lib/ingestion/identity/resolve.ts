@@ -13,7 +13,8 @@ export type IdentityCandidate = Readonly<{
 }>;
 
 export type CanonicalRef =
-  | Readonly<{ status: "automatic" | "reviewed"; canonicalId: string }>
+  | Readonly<{ status: "automatic"; canonicalId: string; provenance?: Readonly<{ kind: "deterministic_bootstrap"; policyVersion: string }> }>
+  | Readonly<{ status: "reviewed"; canonicalId: string }>
   | Readonly<{ status: "rejected" | "unresolved" }>;
 
 export type IdentityResolutionInput = Readonly<{
@@ -82,35 +83,21 @@ export function resolveIdentity(input: IdentityResolutionInput): IdentityDecisio
   }
 
   if (input.canonicalRef?.status === "automatic") {
+    // No trusted bootstrap verifier exists yet. Keep legacy proposals fail-closed.
     return {
-      status: "automatic",
-      canonicalId: input.canonicalRef.canonicalId,
-      candidates: [{
-        canonicalId: input.canonicalRef.canonicalId,
-        source: "automatic",
-        explanation: "Existing automatic provider mapping is reused",
-      }],
-      reason: "Existing automatic provider mapping is reused",
+      status: "unresolved",
+      candidates: uniqueCandidates([...exactCandidates, ...fuzzyCandidates]),
+      quarantineCode: "mapping_ambiguous",
+      reason: "Automatic provider mappings require review; caller provenance is not authoritative",
     };
   }
 
-  if (exactCandidates.length === 1) {
-    return {
-      status: "automatic",
-      canonicalId: exactCandidates[0].canonicalId,
-      candidates: exactCandidates,
-      reason: "One exact normalized alias candidate is unambiguous",
-    };
-  }
-
-  if (exactCandidates.length > 1 || fuzzyCandidates.length > 0) {
+  if (exactCandidates.length > 0 || fuzzyCandidates.length > 0) {
     return {
       status: "unresolved",
       candidates: [...exactCandidates, ...fuzzyCandidates],
       quarantineCode: "mapping_ambiguous",
-      reason: exactCandidates.length > 1
-        ? "Multiple exact normalized alias candidates are ambiguous"
-        : "Fuzzy candidates are advisory and require review",
+      reason: "Exact and fuzzy name candidates are advisory and require review",
     };
   }
 

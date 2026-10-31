@@ -82,9 +82,15 @@ type RefRow = {
 };
 
 const toCanonicalRef = (row: RefRow): CanonicalRef => {
-  if (row.resolution_status === "automatic" || row.resolution_status === "reviewed") {
+  if (row.resolution_status === "automatic") {
     if (!row.canonical_id) throw new Error("Resolved provider mapping did not return a canonical ID");
-    return { status: row.resolution_status, canonicalId: row.canonical_id };
+    // Stored metadata is caller-controlled evidence, never bootstrap authority.
+    return { status: "automatic", canonicalId: row.canonical_id };
+  }
+
+  if (row.resolution_status === "reviewed") {
+    if (!row.canonical_id) throw new Error("Resolved provider mapping did not return a canonical ID");
+    return { status: "reviewed", canonicalId: row.canonical_id };
   }
   return { status: row.resolution_status };
 };
@@ -145,7 +151,11 @@ export function createIdentityRepository(client: RpcClient): IdentityRepository 
         p_confidence: input.confidence,
         p_reviewed_by: null,
         p_reviewed_at: null,
-        p_metadata: { ...input.metadata, normalizationPolicyVersion: input.normalizationVersion },
+        p_metadata: {
+          ...input.metadata,
+          normalizationPolicyVersion: input.normalizationVersion,
+          verifiedDeterministicBootstrap: false,
+        },
       });
     },
     recordReviewed(input) {

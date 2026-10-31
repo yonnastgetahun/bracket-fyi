@@ -318,7 +318,7 @@ export const normalizedBracketSchema = z
 export type NormalizedBracket = z.infer<typeof normalizedBracketSchema>;
 
 const resultStatusSchema = z.enum(["provisional", "final", "awarded", "canceled", "void", "unresolved"]);
-const outcomeTypeSchema = z.enum(["pending", "winner", "draw", "no_contest"]);
+const outcomeTypeSchema = z.enum(["pending", "winner", "draw", "no_contest", "winner_set"]);
 
 export const normalizedResultSchema = z
   .object({
@@ -328,20 +328,28 @@ export const normalizedResultSchema = z
     outcomeType: outcomeTypeSchema,
     resultData: jsonObjectSchema,
     winnerEventEntryExternalId: externalIdSchema.optional(),
+    winnerNominationExternalIds: z.array(externalIdSchema).min(1).optional(),
     score: jsonObjectSchema.optional(),
     providerEffectiveAt: isoDateTimeSchema.optional(),
     correctionReason: nonBlankTextSchema.optional(),
   })
   .strict()
   .superRefine((value, context) => {
+    const isWinnerSet = value.outcomeType === "winner_set";
+    if (isWinnerSet !== (value.winnerNominationExternalIds !== undefined)) {
+      context.addIssue({ code: "custom", path: ["winnerNominationExternalIds"], message: "Only winner_set requires nomination IDs" });
+    }
+    if (value.winnerNominationExternalIds && !hasUniqueValues(value.winnerNominationExternalIds)) {
+      context.addIssue({ code: "custom", path: ["winnerNominationExternalIds"], message: "Winner nomination IDs must be distinct" });
+    }
     const requiresWinner = value.outcomeType === "winner";
     if (requiresWinner !== Boolean(value.winnerEventEntryExternalId)) {
       context.addIssue({ code: "custom", path: ["winnerEventEntryExternalId"], message: "Winner outcome requires exactly one winner" });
     }
     const validState =
       ((value.resultStatus === "provisional" || value.resultStatus === "unresolved") && value.outcomeType === "pending") ||
-      (value.resultStatus === "final" && ["winner", "draw"].includes(value.outcomeType)) ||
-      (value.resultStatus === "awarded" && value.outcomeType === "winner") ||
+      (value.resultStatus === "final" && ["winner", "draw", "winner_set"].includes(value.outcomeType)) ||
+      (value.resultStatus === "awarded" && ["winner", "winner_set"].includes(value.outcomeType)) ||
       (["canceled", "void"].includes(value.resultStatus) && value.outcomeType === "no_contest");
     if (!validState) {
       context.addIssue({ code: "custom", path: ["resultStatus"], message: "Result status and outcome are incompatible" });

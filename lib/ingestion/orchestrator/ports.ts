@@ -61,6 +61,8 @@ export type ObservationDispatchResult = Readonly<{
 }>;
 
 export type OrchestratorDependencies = Readonly<{
+  /** Missing control port fails closed; never use cached binding mode as issuance authority. */
+  attemptControls?: import("@/lib/events/operator-controls").ProviderAttemptControls;
   clock: { now(): Date };
   ledger: RunLedgerRepository;
   modeReader: BindingModeReader;
@@ -70,6 +72,8 @@ export type OrchestratorDependencies = Readonly<{
   credentials: CredentialResolver;
   adapters: AdapterRegistry;
   evidence: ObservationEvidenceRepository;
+  /** Required for adapter review failures; production runtime supplies the durable repository. */
+  quarantine?: import("@/lib/ingestion/quarantine/repository").QuarantineRepository;
   structural: StructuralRepository;
   result: ResultRepository;
   dispatcher?: ObservationDispatcherPort;

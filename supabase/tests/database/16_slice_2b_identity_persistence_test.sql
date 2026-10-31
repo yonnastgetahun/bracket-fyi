@@ -160,9 +160,20 @@ select is((select canonical_id from get_provider_entity_ref('96000000-0000-4000-
 select is((select outcome from upsert_provider_entity_mapping(
   '96000000-0000-4000-8000-000000000014','competitor','team-a','96000000-0000-4000-8000-000000000011','automatic',0.98,null,null,'{}'::jsonb
 )), 'conflict', 'automatic mapping cannot change to a conflicting canonical target');
-select is((select outcome from upsert_provider_entity_mapping(
-  '96000000-0000-4000-8000-000000000014','competitor','rejected-team',null,'rejected',null,'operator','2026-10-08T18:00:00Z','{}'::jsonb
-)), 'created', 'rejected mapping is created atomically');
+
+-- Synthetic registry authority; calls below remain SECURITY INVOKER.
+insert into event_operator_principals(id) values(md5('fixture-operator-16')::uuid);
+insert into event_operator_credentials values(encode(extensions.digest('fixture-scoped-operator-16','sha256'),'hex'),md5('fixture-operator-16')::uuid,true,now()+interval '1 hour');
+insert into event_operator_grants(principal_id,environment,event_edition_id,action)
+select md5('fixture-operator-16')::uuid,'local','96000000-0000-4000-8000-000000000004'::uuid,a from unnest(array['mapping.review']) a;
+create function pg_temp.review_mapping(b uuid,k text,e text,c uuid,s text) returns text language plpgsql as $$
+declare v bigint; r jsonb; begin
+ select operator_version into v from provider_bindings where id=b;
+ r:=event_operator_command('fixture-scoped-operator-16','local','96000000-0000-4000-8000-000000000004','mapping.review',v,'Synthetic reviewed fixture',
+ jsonb_build_object('bindingId',b,'entityKind',k,'externalId',e,'canonicalId',c,'status',s));
+ return r->>'outcome'; end $$;
+
+select is(pg_temp.review_mapping('96000000-0000-4000-8000-000000000014','competitor','rejected-team',null,'rejected'), 'created', 'rejected mapping is created atomically');
 select is((select outcome from upsert_provider_entity_mapping(
   '96000000-0000-4000-8000-000000000014','competitor','rejected-team','96000000-0000-4000-8000-000000000010','automatic',0.99,null,null,'{}'::jsonb
 )), 'conflict', 'automatic mapping cannot replace a rejected mapping');

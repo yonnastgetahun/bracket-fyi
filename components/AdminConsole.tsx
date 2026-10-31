@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { cn } from "@/lib/ui";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -723,7 +723,7 @@ function ParticipantsSection({
 
 // ---- Section: Edit competitors ----
 
-function CompetitorRow({
+export function CompetitorRow({
   team,
   leagueId,
   onRename,
@@ -736,24 +736,46 @@ function CompetitorRow({
   const [renaming, setRenaming] = useState(false);
   const [nameInput, setNameInput] = useState(team.name);
 
+  const [renameError, setRenameError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const inFlight = useRef(false);
+
   async function submitRename() {
+    if (inFlight.current) return;
     const trimmed = nameInput.trim();
     if (!trimmed || trimmed === team.name) {
+      setRenameError("");
       setRenaming(false);
       setNameInput(team.name);
       return;
     }
-    await fetch("/api/admin/competitor", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ leagueId, teamId: team.id, newName: trimmed }),
-    });
-    onRename(team.id, trimmed);
-    setRenaming(false);
+    inFlight.current = true;
+    setSaving(true);
+    setRenameError("");
+    try {
+      const response = await fetch("/api/admin/competitor", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ leagueId, teamId: team.id, newName: trimmed }),
+      });
+      if (!response.ok) throw new Error("Rename failed");
+      const result = await response.json();
+      if (result.success !== true || typeof result.name !== "string" || !result.name.trim()) {
+        throw new Error("Invalid rename response");
+      }
+      onRename(team.id, result.name);
+      setNameInput(result.name);
+      setRenaming(false);
+    } catch {
+      setRenameError("Could not confirm the rename. The displayed name is unchanged. Please try again.");
+    } finally {
+      inFlight.current = false;
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="flex items-center gap-3 border border-border rounded-lg px-3 py-2">
+    <div className="flex flex-wrap items-center gap-3 border border-border rounded-lg px-3 py-2">
       <span className="text-xs text-secondary font-mono w-16 shrink-0">{team.id}</span>
       {isBye ? (
         <span className="text-sm text-secondary flex-1 italic">{team.name} (bye)</span>
@@ -761,11 +783,16 @@ function CompetitorRow({
         <input
           autoFocus
           value={nameInput}
+          maxLength={60}
+          readOnly={saving}
+          aria-label={"Rename " + team.name}
+          aria-invalid={!!renameError}
           onChange={(e) => setNameInput(e.target.value)}
           onBlur={submitRename}
           onKeyDown={(e) => {
             if (e.key === "Enter") submitRename();
-            if (e.key === "Escape") {
+            if (e.key === "Escape" && !inFlight.current) {
+              setRenameError("");
               setRenaming(false);
               setNameInput(team.name);
             }
@@ -777,12 +804,14 @@ function CompetitorRow({
       )}
       {!isBye && !renaming && (
         <button
-          onClick={() => setRenaming(true)}
+          onClick={() => { setRenameError(""); setRenaming(true); }}
           className="text-xs text-secondary hover:text-primary transition-colors px-1 shrink-0"
         >
           Rename
         </button>
       )}
+      {saving && <span role="status" className="text-xs text-secondary">Saving…</span>}
+      {renameError && <p role="alert" className="w-full text-xs text-wrong">{renameError}</p>}
     </div>
   );
 }

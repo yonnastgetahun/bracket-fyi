@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { quarantineAdapterRejection } from "@/lib/ingestion/quarantine/adapter-rejection";
 
 import {
   providerBatchSchema,
@@ -395,6 +396,7 @@ export function createIngestionOrchestrator(
         leaseExpiresAt = beforeBudget.leaseExpiresAt;
 
         let rawBudget: unknown;
+        let attemptKey = "";
         try {
           const pageKey = computeIngestionPageKey({
             bindingId: run.bindingId,
@@ -402,10 +404,11 @@ export function createIngestionOrchestrator(
             expectedCursor: currentCursor,
             ...(currentEtag === null ? {} : { expectedEtag: currentEtag }),
           });
+          attemptKey = createAttemptKey({ runId: run.runId, retryIndex: run.retryIndex, pageKey });
           rawBudget = await dependencies.budget.reserve({
             runId: run.runId,
             leaseToken: run.leaseToken,
-            attemptKey: createAttemptKey({ runId: run.runId, retryIndex: run.retryIndex, pageKey }),
+            attemptKey,
             requestedAt: request.requestedAt,
             cost: 1,
           });
@@ -454,14 +457,51 @@ export function createIngestionOrchestrator(
         if (beforeProvider.failure) return beforeProvider.failure;
         leaseExpiresAt = beforeProvider.leaseExpiresAt;
 
+
+        const controls = dependencies.attemptControls;
+        let permitId: string | undefined;
+        const cancelAdmission = () => finish(run, "canceled", aggregate, {
+          finishedAt: nowIso(dependencies.clock), nextPollAt: null, dataChanged,
+        });
+        try {
+          if (!controls) return cancelAdmission();
+          const permit = await controls.admit({runId:run.runId,leaseToken:run.leaseToken,attemptKey});
+          if (!permit.allowed || !permit.permitId || !permit.startDeadline ||
+              !Number.isFinite(Date.parse(permit.startDeadline)) ||
+              Date.parse(permit.startDeadline) <= dependencies.clock.now().getTime()) return cancelAdmission();
+          permitId = permit.permitId;
+          // This is the final awaited operation before bounded adapter HTTP.
+          if (!await controls.start({permitId,runId:run.runId,leaseToken:run.leaseToken})) return cancelAdmission();
+          // A paused process or delayed RPC acknowledgement must not start late.
+          // Its durable issued state remains conservatively outstanding.
+          if (Date.parse(permit.startDeadline) <= dependencies.clock.now().getTime()) return cancelAdmission();
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          return cancelAdmission();
+        }
         let candidate: unknown;
         try {
           candidate = await adapter.pull({ ...request, credential });
         } catch (error) {
+          // Lost transport acknowledgement cannot be called canceled/drained.
+          try { await controls!.complete({permitId:permitId!,runId:run.runId,leaseToken:run.leaseToken,uncertain:true}); }
+          catch { /* Durable issued state stays outstanding if completion persistence fails. */ }
           if (isLeaseLostError(error)) throw error;
           const failure = validateFailure(adapter, error);
           if (!failure) return finishFailure(run, "system:invalid_provider_failure", aggregate, failureDetails("adapter"));
           const safe = safeFailure(failure);
+          let reviewEvidence: JsonObject | null;
+          try {
+            reviewEvidence = await quarantineAdapterRejection({
+              run, checkpointGeneration, failure, receivedAt: nowIso(dependencies.clock),
+              evidence: dependencies.evidence, quarantine: dependencies.quarantine,
+            });
+          } catch (reviewError) {
+            if (isLeaseLostError(reviewError)) throw reviewError;
+            return finishFailure(run, "system:adapter_quarantine_failed", aggregate, {
+              ...safe.details, stage: "adapter_quarantine", reviewPersistenceFailed: true,
+            });
+          }
           if (failure.httpStatus !== undefined || failure.retryAt !== undefined) {
             try {
               await dependencies.ledger.recordResponse({
@@ -492,10 +532,16 @@ export function createIngestionOrchestrator(
             dataChanged,
             failureCode: namespacedProviderCode(classification.code),
             errorMessage: providerFailureMessage(classification.code),
-            metadata: safe.details,
+            metadata: { ...safe.details, ...(reviewEvidence ? { reviewEvidence } : {}) },
           });
         }
 
+        try {
+          await controls!.complete({permitId:permitId!,runId:run.runId,leaseToken:run.leaseToken,uncertain:false});
+        } catch (error) {
+          if (isLeaseLostError(error)) throw error;
+          return cancelAdmission();
+        }
         if (!hasRawSafeEtag(candidate)) return finishInvalidResponse(failureDetails("provider_batch"));
         let batch: ProviderBatch;
         try {

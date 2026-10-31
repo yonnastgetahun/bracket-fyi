@@ -1,3 +1,4 @@
+import { getTeamRegistry } from "@/lib/league-data";
 import CreateFlow from "@/components/CreateFlow";
 import Link from "next/link";
 import { getPublicTemplates } from "@/lib/league-data";
@@ -42,7 +43,7 @@ async function fetchLeaguePrefill(leagueId: string): Promise<LeaguePrefill | nul
 
   let competitors: Array<{ id: string; name: string }> = [];
   if (isCustomTemplate && templateType === "bracket" && template?.team_registry) {
-    competitors = (template.team_registry as TeamEntry[])
+    competitors = (await getTeamRegistry(data.template_id, data.id))
       .filter((t) => !t.id.startsWith("bye-"))
       .map((t) => ({ id: t.id, name: t.name }));
   }

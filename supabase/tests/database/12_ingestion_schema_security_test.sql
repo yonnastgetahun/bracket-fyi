@@ -78,8 +78,8 @@ select ok(not has_table_privilege('service_role', 'public.ingestion_runs', 'inse
 select ok(not has_table_privilege('service_role', 'public.ingestion_runs', 'update'), 'RPC-only boundary denies direct ingestion-run updates');
 
 select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'select'), 'service_role can read provider entity references');
-select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'insert'), 'provider entity reference inserts retain the Slice 1B grant');
-select ok(has_table_privilege('service_role', 'public.provider_entity_refs', 'update'), 'provider entity reference updates retain the Slice 1B grant');
+select ok(not has_table_privilege('service_role', 'public.provider_entity_refs', 'insert'), 'scoped operator boundary denies direct provider entity reference inserts');
+select ok(not has_table_privilege('service_role', 'public.provider_entity_refs', 'update'), 'scoped operator boundary denies direct provider entity reference updates');
 select ok(has_table_privilege('service_role', 'public.provider_observations', 'select'), 'service_role can read provider observations');
 select ok(has_table_privilege('service_role', 'public.provider_observations', 'insert'), 'provider observation inserts retain the Slice 1B grant');
 select ok(not has_table_privilege('service_role', 'public.provider_observations', 'update'), 'provider observations remain immutable');
@@ -87,7 +87,7 @@ select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'se
 select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'insert'), 'ingestion quarantine inserts retain the Slice 1B grant');
 select ok(has_table_privilege('service_role', 'public.ingestion_quarantine', 'update'), 'ingestion quarantine updates retain the Slice 1B grant');
 select ok(has_table_privilege('service_role', 'public.contest_results', 'select'), 'service_role can read contest results');
-select ok(has_table_privilege('service_role', 'public.contest_results', 'insert'), 'contest result inserts retain the Slice 1B grant');
+select ok(not has_table_privilege('service_role', 'public.contest_results', 'insert'), 'scoped operator boundary denies direct contest result inserts');
 select ok(not has_table_privilege('service_role', 'public.contest_results', 'update'), 'contest results remain immutable');
 select ok(has_table_privilege('service_role', 'public.result_audit_events', 'select'), 'service_role can read result audit events');
 select ok(has_table_privilege('service_role', 'public.result_audit_events', 'insert'), 'result audit inserts retain the Slice 1B grant');

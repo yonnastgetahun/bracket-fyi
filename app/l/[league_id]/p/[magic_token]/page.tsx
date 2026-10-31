@@ -30,7 +30,7 @@ export default async function BracketPage(
   const [picks, teamRegistry, matches] = await Promise.all([
     getPickResults(league_id, participant.id),
     league.template_id
-      ? getTeamRegistry(league.template_id)
+      ? getTeamRegistry(league.template_id, league.id)
       : Promise.resolve([]),
     league.template_id
       ? getTemplateMatches(league.template_id)

@@ -10,6 +10,8 @@ const eslintConfig = [
       ".next/**",
       "out/**",
       "build/**",
+      // Disposable local previews include generated Next.js code.
+      "tmp/**",
       "next-env.d.ts",
     ],
   },

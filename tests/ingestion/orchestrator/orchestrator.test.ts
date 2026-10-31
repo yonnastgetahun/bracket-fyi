@@ -1,4 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
+import { FootballDataAdapter } from "@/lib/ingestion/providers/football-data";
+import { createEventIngestionRuntime } from "@/lib/events/runtime";
+import { createObservationEvidenceRepository } from "@/lib/ingestion/evidence/repository";
+import type { QuarantineCommand, QuarantineOutcome } from "@/lib/ingestion/quarantine/repository";
 
 import type { ProviderBatch, NormalizedObservation, JsonObject } from "@/lib/ingestion/contracts";
 import { computeIngestionPageKey, RunLedgerRepositoryError, type ClaimedIngestionRun, type RunLedgerRepository } from "@/lib/ingestion/orchestrator/run-ledger-repository";
@@ -8,6 +12,35 @@ import type { ProviderAdapter } from "@/lib/ingestion/providers/provider-adapter
 import { createAttemptKey } from "@/lib/ingestion/rate-limit/attempt-key";
 
 const RUN_ID = "40000000-0000-4000-8000-000000000001";
+
+// Original synthetic FD transport fixture, shared with no live provider capture.
+function rejectedFdFixture(reason: "unmapped_match" | "conflicting_entries" = "unmapped_match") {
+  const config = {
+    mode: "provider", season: 2026, providerCompetitionId: "2001", providerSeasonId: "2027",
+    seasonStart: "2026-07-01", seasonEnd: "2027-06-30",
+    competitionExternalId: "ucl", eventEditionExternalId: "ucl-2026-27",
+    stageMappings: { LEAGUE_STAGE: { externalId: "league", name: "League", kind: "league", ordinal: 1 } },
+    matchMappings: { "9001": { contestExternalId: "match-9001", contestKey: "ucl-match-9001", name: "Match" } },
+    teamMappings: {
+      "101": { eventEntryExternalId: "entry-a", competitorExternalId: "team-a", name: "A" },
+      "202": { eventEntryExternalId: "entry-b", competitorExternalId: "team-b", name: "B" },
+    },
+  };
+  const row = {
+    id: 9001, utcDate: "2026-10-10T17:30:00Z", status: "FINISHED", stage: "LEAGUE_STAGE",
+    competition: { id: 2001, code: "CL" },
+    season: { id: 2027, startDate: "2026-07-01", endDate: "2027-06-30" },
+    homeTeam: { id: 101 }, awayTeam: { id: 202 },
+    score: { winner: "DRAW", duration: "REGULAR", fullTime: { home: 1, away: 1 }, regularTime: { home: 1, away: 1 } },
+  };
+  const rejected = reason === "unmapped_match" ? { ...row, id: 9002 }
+    : { ...row, awayTeam: { id: 101 } };
+  const fetch = vi.fn(async () => new Response(JSON.stringify({
+    competition: { id: 2001, code: "CL" }, matches: [row, { ...rejected, raw: "DO-NOT-RETAIN" }],
+  })));
+  const adapter = new FootballDataAdapter({ fetch });
+  return { config, fetch, adapter };
+}
 
 const runDefaults: ClaimedIngestionRun = {
   runId: RUN_ID,
@@ -134,6 +167,10 @@ const makeDependencies = (overrides: Partial<OrchestratorDependencies> = {}) => 
     clock: { now: vi.fn(() => new Date("2026-10-10T18:00:00.000Z")) },
     ledger,
     modeReader: { read: vi.fn().mockResolvedValue("write") },
+    attemptControls: {
+      admit: vi.fn().mockResolvedValue({allowed:true,permitId:"synthetic-permit",startDeadline:"2099-01-01T00:00:00Z"}),
+      start: vi.fn().mockResolvedValue(true), complete:vi.fn().mockResolvedValue(undefined),
+    },
     pullWindowResolver: {
       resolve: vi.fn().mockReturnValue({ windowStart: "2026-10-10T17:00:00.000Z", windowEnd: "2026-10-10T18:00:00.000Z" }),
     },
@@ -159,6 +196,97 @@ const makeDependencies = (overrides: Partial<OrchestratorDependencies> = {}) => 
 
 const execute = (dependencies: OrchestratorDependencies, run: ClaimedIngestionRun = runDefaults) =>
   createIngestionOrchestrator(dependencies).execute(run);
+
+describe("FD04 real adapter rejection through orchestrator", () => {
+  const setup = (reason?: "unmapped_match" | "conflicting_entries") => {
+    const fd = rejectedFdFixture(reason);
+    const quarantine = {
+      open: vi.fn(async (command: QuarantineCommand): Promise<QuarantineOutcome> => ({
+        outcome: "created", record: { ...command, id: "quarantine-1", status: "open" },
+      })),
+      getByObservationIssue: vi.fn(),
+    };
+    const ports = makeDependencies({ adapters: { get: () => fd.adapter }, quarantine });
+    return { ...ports, fd, quarantine, run: { ...runDefaults, adapterKey: fd.adapter.key, adapterConfig: fd.config } };
+  };
+  it.each(["unmapped_match", "conflicting_entries"] as const)("persists %s as immutable rejection plus blocking quarantine, never a successful prefix", async reason => {
+    const { dependencies, ledger, fd, quarantine, run } = setup(reason);
+    const result = await execute(dependencies, run);
+    expect(result.status).toBe("failed");
+    expect(fd.fetch).toHaveBeenCalledTimes(1);
+    expect(dependencies.evidence.record).toHaveBeenCalledTimes(1);
+    expect(dependencies.evidence.record).toHaveBeenCalledWith(expect.objectContaining({
+      externalObjectKind: "adapter_rejection",
+      sanitizedPayload: expect.objectContaining({ reason, rowIndex: 1, fetchedCount: 2, scope: "entire_batch" }),
+    }));
+    expect(quarantine.open).toHaveBeenCalledWith(expect.objectContaining({
+      issueCode: reason === "unmapped_match" ? "mapping_missing" : "mapping_ambiguous",
+      observationId: "observation-1", ingestionRunId: run.runId, severity: "blocking",
+    }));
+    expect(dependencies.structural.projectObservation).not.toHaveBeenCalled();
+    expect(dependencies.result.project).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      outcome: "failed", nextPollAt: null, failureCode: "provider:invalid_response",
+      metadata: expect.objectContaining({ reviewEvidence: expect.objectContaining({ quarantineId: "quarantine-1" }) }),
+    }));
+    expect(JSON.stringify(vi.mocked(dependencies.evidence.record).mock.calls)).not.toContain("DO-NOT-RETAIN");
+    // Rejected diagnostics aren't normalized observations; don't falsify conserved page counts.
+    expect(result.normalizedCount).toBe(0);
+    expect(result.quarantinedCount).toBe(0);
+  });
+  it.each(["evidence", "quarantine", "missing-port"] as const)("holds fail-closed with explicit persistence failure at %s", async stage => {
+    const { dependencies, ledger, quarantine, run } = setup();
+    if (stage === "evidence") vi.mocked(dependencies.evidence.record).mockRejectedValue(new Error("PRIVATE"));
+    if (stage === "quarantine") quarantine.open.mockRejectedValue(new Error("PRIVATE"));
+    const deps = stage === "missing-port" ? { ...dependencies, quarantine: undefined } : dependencies;
+    expect((await execute(deps, run)).status).toBe("failed");
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      failureCode: "system:adapter_quarantine_failed",
+      metadata: expect.objectContaining({ reviewPersistenceFailed: true, reason: "unmapped_match" }),
+    }));
+    expect(JSON.stringify(vi.mocked(ledger.finish).mock.calls)).not.toContain("PRIVATE");
+    expect(dependencies.structural.projectObservation).not.toHaveBeenCalled();
+    expect(dependencies.result.project).not.toHaveBeenCalled();
+    expect(ledger.commitPage).not.toHaveBeenCalled();
+  });
+  it("production factory wires real evidence/quarantine RPC adapters and cannot be given a no-op quarantine port", async () => {
+    const { dependencies, quarantine, run, ledger } = setup();
+    const rpc = vi.fn(async (name: string, args: Record<string, unknown>) => {
+      if (name === "admit_event_provider_attempt") return { data: { allowed: true, permitId: RUN_ID, startDeadline: "2099-01-01T00:00:00Z" }, error: null };
+      if (name === "record_provider_observation") return { data: { outcome: "inserted", observation_id: "observation-1" }, error: null };
+      if (name === "open_ingestion_quarantine") return { data: {
+        outcome: "created", id: "quarantine-from-rpc", observation_id: args.p_observation_id,
+        ingestion_run_id: args.p_ingestion_run_id, binding_id: args.p_binding_id,
+        issue_code: args.p_issue_code, severity: args.p_severity, status: "open",
+        candidate_ids: [], details: args.p_details,
+      }, error: null };
+      return { data: true, error: null };
+    });
+    const result = await createEventIngestionRuntime({ rpc }, {
+      ...dependencies, evidence: createObservationEvidenceRepository({ rpc }),
+    }).execute(run);
+    expect(result.status).toBe("failed");
+    expect(quarantine.open).not.toHaveBeenCalled();
+    expect(rpc.mock.calls.map(([name]) => name)).toEqual([
+      "admit_event_provider_attempt", "start_event_provider_attempt", "complete_event_provider_attempt",
+      "record_provider_observation", "open_ingestion_quarantine",
+    ]);
+    expect(rpc.mock.calls[3][1]).toMatchObject({
+      p_external_object_kind: "adapter_rejection", p_provider_revision: null, p_provider_updated_at: null,
+    });
+    expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({
+      metadata: expect.objectContaining({ reviewEvidence: expect.objectContaining({ quarantineId: "quarantine-from-rpc" }) }),
+    }));
+  });
+  it("keeps shadow rejections reviewable without projection", async () => {
+    const { dependencies, quarantine, run } = setup();
+    await execute({ ...dependencies, modeReader: { read: async () => "shadow" } }, { ...run, mode: "shadow" });
+    expect(quarantine.open).toHaveBeenCalledTimes(1);
+    expect(dependencies.structural.projectObservation).not.toHaveBeenCalled();
+    expect(dependencies.result.project).not.toHaveBeenCalled();
+  });
+});
 
 describe("provider-neutral ingestion orchestration", () => {
   it("rejects an unowned or tokenless run before side effects", async () => {
@@ -1335,4 +1463,43 @@ describe("provider-neutral ingestion orchestration", () => {
     expect(ledger.commitPage).not.toHaveBeenCalled();
     expect(ledger.finish).toHaveBeenCalledWith(expect.objectContaining({ failureCode: "system:observation_dispatch_failed" }));
   });
+});
+
+describe("durable immediate provider admission", () => {
+  it("fails closed without controls", async () => {
+    const { dependencies, adapter } = makeDependencies({ attemptControls: undefined });
+    expect((await execute(dependencies)).status).toBe("canceled");
+    expect(adapter.pull).not.toHaveBeenCalled();
+  });
+  it("stop after budget reservation rejects admission without HTTP", async () => {
+    const controls = { admit: vi.fn().mockResolvedValue({allowed:false}), start:vi.fn(), complete:vi.fn() };
+    const { dependencies, adapter } = makeDependencies({attemptControls:controls});
+    expect((await execute(dependencies)).status).toBe("canceled");
+    expect(adapter.pull).not.toHaveBeenCalled();
+    expect(controls.start).not.toHaveBeenCalled();
+  });
+  it("expired or stopped permit cannot issue", async () => {
+    const controls = { admit: vi.fn().mockResolvedValue({allowed:true,permitId:"permit",startDeadline:"2026-10-10T18:00:05Z"}), start:vi.fn().mockResolvedValue(false), complete:vi.fn() };
+    const { dependencies, adapter } = makeDependencies({attemptControls:controls});
+    expect((await execute(dependencies)).status).toBe("canceled");
+    expect(adapter.pull).not.toHaveBeenCalled();
+  });
+  it("control read outage fails closed", async () => {
+    const controls = { admit: vi.fn().mockRejectedValue(new Error("private")), start:vi.fn(), complete:vi.fn() };
+    const { dependencies, adapter } = makeDependencies({attemptControls:controls});
+    expect((await execute(dependencies)).status).toBe("canceled");
+    expect(adapter.pull).not.toHaveBeenCalled();
+  });
+});
+
+it("never transports a permit whose start response arrives after its deadline", async () => {
+ let now=new Date("2026-10-10T18:00:00Z");
+ const controls={
+  admit:vi.fn().mockResolvedValue({allowed:true,permitId:"permit",startDeadline:"2026-10-10T18:00:05Z"}),
+  start:vi.fn().mockImplementation(async()=>{now=new Date("2026-10-10T18:00:06Z");return true;}),
+  complete:vi.fn(),
+ };
+ const {dependencies,adapter}=makeDependencies({attemptControls:controls,clock:{now:()=>now}});
+ expect((await execute(dependencies)).status).toBe("canceled");
+ expect(adapter.pull).not.toHaveBeenCalled();
 });

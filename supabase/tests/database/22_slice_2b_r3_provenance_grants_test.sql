@@ -1,4 +1,6 @@
 begin;
+-- Explicit synthetic fixture activation; production remains stopped by default.
+update event_runtime_control set global_stopped=false;
 
 select plan(27);
 

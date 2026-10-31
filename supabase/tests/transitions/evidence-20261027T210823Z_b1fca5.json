@@ -1,0 +1,187 @@
+{
+  "run": "20261027T210823Z_b1fca5",
+  "container": "supabase_db_bracket-fyi",
+  "through": "20261027000004",
+  "scope": "infrastructure only; not full P12/product acceptance",
+  "steps": [
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "empty public",
+      "sql_sha256": "792051e60c1437f9aa8c08214aa1dbc6712794b8b39b154f44b3853f813a62ae",
+      "output": "0"
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "platform bootstrap",
+      "sql_sha256": "47e189955476a1493e4c7abc68c82d436ca78fcf0b2c8b847a79423597fbc037",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20260724000001_initial_schema.sql",
+      "sql_sha256": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20260724000002_rls_policies.sql",
+      "sql_sha256": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20260724000003_scoring_views.sql",
+      "sql_sha256": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20260725000004_pickem_views.sql",
+      "sql_sha256": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20260725000005_vapid_rpc.sql",
+      "sql_sha256": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261006000001_canonical_event_domain.sql",
+      "sql_sha256": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261006000002_ingestion_evidence_and_delivery.sql",
+      "sql_sha256": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261008000001_effective_result_compatibility.sql",
+      "sql_sha256": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000000_slice_2b_observation_evidence.sql",
+      "sql_sha256": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000001_slice_2b_structural_projection.sql",
+      "sql_sha256": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql",
+      "sql_sha256": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000003_slice_2b_acceptance_remediation.sql",
+      "sql_sha256": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000004_slice_2b_r2_acceptance.sql",
+      "sql_sha256": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261009000005_slice_2b_r3_provenance_grants.sql",
+      "sql_sha256": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261010000000_slice_2c_run_ledger.sql",
+      "sql_sha256": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql",
+      "sql_sha256": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t210823z_b1fca5_fresh",
+      "label": "supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql",
+      "sql_sha256": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+      "output": ""
+    }
+  ],
+  "assertions": [
+    {
+      "name": "explicit upper migration exists",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "bracket_transition_20261027t210823z_b1fca5_fresh: public starts empty",
+      "passed": true,
+      "actual": "0",
+      "expected": "0"
+    }
+  ],
+  "databases": [
+    "bracket_transition_20261027t210823z_b1fca5_fresh"
+  ],
+  "manifest": {
+    "supabase/migrations/20260724000001_initial_schema.sql": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+    "supabase/migrations/20260724000002_rls_policies.sql": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+    "supabase/migrations/20260724000003_scoring_views.sql": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+    "supabase/migrations/20260725000004_pickem_views.sql": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+    "supabase/migrations/20260725000005_vapid_rpc.sql": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+    "supabase/migrations/20261006000001_canonical_event_domain.sql": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+    "supabase/migrations/20261006000002_ingestion_evidence_and_delivery.sql": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+    "supabase/migrations/20261008000001_effective_result_compatibility.sql": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+    "supabase/migrations/20261009000000_slice_2b_observation_evidence.sql": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+    "supabase/migrations/20261009000001_slice_2b_structural_projection.sql": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+    "supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+    "supabase/migrations/20261009000003_slice_2b_acceptance_remediation.sql": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+    "supabase/migrations/20261009000004_slice_2b_r2_acceptance.sql": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+    "supabase/migrations/20261009000005_slice_2b_r3_provenance_grants.sql": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+    "supabase/migrations/20261010000000_slice_2c_run_ledger.sql": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+    "supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+    "supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+    "supabase/migrations/20261010000003_slice_2c_2_claim_checkpoint_contract.sql": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+    "supabase/migrations/20261010000004_slice_2c_rate_budget.sql": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+    "supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+    "supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+    "supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+    "supabase/migrations/20261010000008_immutable_evidence_grants.sql": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+    "supabase/migrations/20261027000001_typed_outcomes.sql": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+    "supabase/migrations/20261027000002_prediction_windows.sql": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+    "supabase/migrations/20261027000003_window_integrity_repair.sql": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+    "supabase/migrations/20261027000004_security_boundary_repair.sql": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0"
+  },
+  "excluded_migrations": [
+    "20261027000005_window_incarnation_history.sql"
+  ],
+  "concurrent_exclusion": "20261027000005 window history excluded by default, even if not yet present; rerun --through 20261027000005",
+  "inputs": {
+    "supabase/tests/transitions/canonical.sql": "db0d6aca04f29d15a0efc936aa3042ebd0184d45c4121d34ad5ae563ff3279d7",
+    "supabase/tests/transitions/incarnation-after.sql": "959d272dee38811c858d6b23120a476cd4eba9637d576fca3ab9856433f3e61f",
+    "supabase/tests/transitions/incarnation-before.sql": "235473d8a102137904574496c41cde40f091233eb4b6d3a21f9924890f97c1b0",
+    "supabase/tests/transitions/incarnation-held.sql": "793f00d0c49f7d88252a719cc029a9ecac647c24ccfae4232f1f8883c23230aa",
+    "supabase/tests/transitions/legacy.sql": "94b4b57fab6d35080267c8b9e6189732a15e49a7ace0eddcf0f5eb01bfba0860",
+    "supabase/tests/transitions/reader.sql": "0f051cb859952ac52edd585283f55b2823f76e19675dcbde1ec59aa8d8582f9a",
+    "supabase/tests/transitions/typed.sql": "2a567acf9dec96f7ac5390ebec16937e1c2bb2323b0340a4034389230b2ece7c"
+  },
+  "harness_sha256": "5f66665b36c17ec6ba4cc7143168bc029cc6508c1163aff62f91959949246b22",
+  "head": "3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8",
+  "platform": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit\npg_net:extensions\npg_stat_statements:extensions\npgcrypto:extensions\npgtap:extensions\nplpgsql:pg_catalog\nsupabase_vault:vault\nuuid-ossp:extensions\nanon\nauthenticated\nservice_role",
+  "status": "failed",
+  "failure": "{\"argv\": [\"docker\", \"exec\", \"-i\", \"supabase_db_bracket-fyi\", \"psql\", \"-X\", \"-U\", \"postgres\", \"-d\", \"bracket_transition_20261027t210823z_b1fca5_fresh\", \"-v\", \"ON_ERROR_STOP=1\", \"-Atq\"], \"returncode\": 2, \"stdout\": \"\", \"stderr\": \"WARNING:  terminating connection because of crash of another server process\\nDETAIL:  The postmaster has commanded this server process to roll back the current transaction and exit, because another server process exited abnormally and possibly corrupted shared memory.\\nHINT:  In a moment you should be able to reconnect to the database and repeat your command.\\nserver closed the connection unexpectedly\\n\\tThis probably means the server terminated abnormally\\n\\tbefore or while processing the request.\\nconnection to server was lost\\n\"}",
+  "retention": "All named databases retained. No reset, DROP DATABASE, migration-history edits, hosted access, or provider transport."
+}

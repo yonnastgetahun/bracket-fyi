@@ -35,7 +35,7 @@ export default async function AdminPage(
       ? getTemplateMatches(league.template_id)
       : Promise.resolve([]),
     league.template_id
-      ? getTeamRegistry(league.template_id)
+      ? getTeamRegistry(league.template_id, league.id)
       : Promise.resolve([]),
   ]);
 

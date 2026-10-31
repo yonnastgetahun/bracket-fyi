@@ -58,24 +58,21 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Template not found" }, { status: 404 });
   }
 
-  const registry = template.team_registry as Array<{ id: string; name: string; [key: string]: unknown }>;
+  const registry = (Array.isArray(template.team_registry) ? template.team_registry : []) as Array<{ id: string }>;
   const idx = registry.findIndex((t) => t.id === teamId);
   if (idx === -1) {
     return NextResponse.json({ error: "Team not found in registry" }, { status: 404 });
   }
 
-  const updated = registry.map((t) =>
-    t.id === teamId ? { ...t, name: trimmed } : t
-  );
-
+  // Display-only change: never mutate the shared template or competitor identity.
   const { error: updateErr } = await supabase
-    .from("templates")
-    .update({ team_registry: updated })
-    .eq("id", league.template_id);
+    .from("league_competitor_names")
+    .upsert({ league_id: leagueId, template_id: league.template_id, team_id: teamId, name: trimmed },
+      { onConflict: "league_id,template_id,team_id" });
 
   if (updateErr) {
-    return NextResponse.json({ error: updateErr.message }, { status: 500 });
+    return NextResponse.json({ error: "Could not rename competitor. Please try again." }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, name: trimmed });
 }
