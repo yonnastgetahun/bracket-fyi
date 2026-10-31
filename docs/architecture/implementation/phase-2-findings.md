@@ -59,3 +59,11 @@ Historical tail-truncation note retained in prior source snapshots; current adju
 4. Inspect refreshed exact publication allowlist and verify PR head equals tested commit. All26 preservation paths/case studies and raw/temp/bytecode/secret state remain excluded. Sanitized browser bundle is retained; final source hashes need refresh after concurrent work.
 
 Full delivery remains **ITERATE**. A transparently scoped preparatory/draft PR is authorized by the execution contract, not full-roadmap acceptance; numeric9/12 and FD04 transport/admission proof limitations must stay explicit. Final checks/tested-head identity remain mandatory for any claim that the PR is verified. No new approval ceremony; no merge/deploy. External live-provider/device/deployed-beta gates stay distinct. Historical HOLD/failure reports remain as recorded and are superseded only by current bounded verdicts above.
+
+## Published preparatory draft — 2026-10-30 closeout
+
+[Draft PR #4](https://github.com/yonnastgetahun/bracket-fyi/pull/4) is open against main. Initial publication head was 5de02b2d39be0cc327e96765b7b84dcd7304248a; this closeout is documentation-only. Exact final remote/head equality is recorded in the private publication receipt and PR body, avoiding a self-referential commit hash.
+
+400 explicitly allowlisted paths were committed; all26 protected working-tree hashes remain intact. SQL/transition/FD04 evidence binds84 distinct source paths to committed bytes. The branch also includes its earlier foundation (583 changed files against main); no case studies or protected uncommitted owner work were added. Staged diff-check returned exit2 for Markdown hard-break whitespace and blank EOF in nine files; earlier unstaged checks did not include those newly tracked files. These formatting findings remain disclosed, not silently waived as a passing check.
+
+Publication is complete only for this preparatory draft. Numeric9/12 shared-memory/OOM gate, full final-head runtime/DB-lint acceptance and external live/device/deployed-beta gates remain open. No merge/deploy/spend/live sends or runtime/VM/container changes. Git push used the configured CA; GitHub API used verified default SSL with that CA and retained proxy after gh's platform trust failure. No TLS verification disabled. Full Phase2 verdict remains **ITERATE**.

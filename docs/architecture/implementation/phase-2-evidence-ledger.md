@@ -1,8 +1,8 @@
 # Phase 2 execution ledger
-Approved scope: [execution plan](phase-2-orchestrated-execution-plan.md), [spec v1.0](../bracket-fyi-spec-v1.0.md). Started 2026-10-27; integration owner: dedicated Phase 2 session. Verdict: ITERATE, not delivered.
+Approved scope: [execution plan](phase-2-orchestrated-execution-plan.md), [spec v1.0](../bracket-fyi-spec-v1.0.md). Started 2026-10-27; integration owner: dedicated Phase 2 session. Verdict: ITERATE full scope; preparatory draft PR #4 published.
 
 ## Current acceptance — reconciled retained evidence, 2026-10-30
-**ITERATE / not delivered.** Current tree remains based on committed P1 checkpoint `3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8`; working-tree evidence is not tested-commit publication.
+**Historical pre-publication snapshot; see published-draft closeout below. ITERATE full scope.** Candidate was based on committed P1 checkpoint `3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8`; working-tree evidence is not tested-commit publication.
 
 - Actual nine full manual/synthetic journeys are credited: seven-family 122 scored + 12 structural, plus UCL 211/13 and WWC 64/7. [Final integration review](phase-2-final-integration-review.md), [family evidence](family-runtime-evidence.json).
 - Provider SQL supersedes the earlier 13/2 bundle: **15 passed, 0 failed, 0 skipped**, including all five SQL scenarios and their downstream replay/quarantine/auth/zero-send checks. [Runtime](final-numeric-runtime.md), [durable evidence](final-numeric-runtime-evidence.json). Eleven before/after hashes matched the earlier reconciliation snapshot; retained bundle equals original artifact. Later FD04 source changes require final affected-evidence rebinding.
@@ -207,3 +207,11 @@ done when:
 - [ ] Reviewed mapping/shared result/notification fixtures use scoped operator authority, denied direct writes remain denied.
 - [ ] Full SQL suite through00008 and migration matrix pass without weakened production grants.
 evidence: disposable DB bracket_transition_20261027t215203z_105306_fresh; initial full suite has11 failing files, including removed grant assertions and uncredentialed calls.
+
+## Published preparatory draft — 2026-10-30 closeout
+
+[Draft PR #4](https://github.com/yonnastgetahun/bracket-fyi/pull/4) is open against main. Initial publication head was 5de02b2d39be0cc327e96765b7b84dcd7304248a; this closeout is documentation-only. Exact final remote/head equality is recorded in the private publication receipt and PR body, avoiding a self-referential commit hash.
+
+400 explicitly allowlisted paths were committed; all26 protected working-tree hashes remain intact. SQL/transition/FD04 evidence binds84 distinct source paths to committed bytes. The branch also includes its earlier foundation (583 changed files against main); no case studies or protected uncommitted owner work were added. Staged diff-check returned exit2 for Markdown hard-break whitespace and blank EOF in nine files; earlier unstaged checks did not include those newly tracked files. These formatting findings remain disclosed, not silently waived as a passing check.
+
+Publication is complete only for this preparatory draft. Numeric9/12 shared-memory/OOM gate, full final-head runtime/DB-lint acceptance and external live/device/deployed-beta gates remain open. No merge/deploy/spend/live sends or runtime/VM/container changes. Git push used the configured CA; GitHub API used verified default SSL with that CA and retained proxy after gh's platform trust failure. No TLS verification disabled. Full Phase2 verdict remains **ITERATE**.
