@@ -77,4 +77,3 @@ This accepts the local scoring fix, not durable lifecycle completion or scoring 
 ## Required next evidence
 
 Repair F1–F4 with forward-safe migration handling, then rerun direct-role negative tests, sealed-manifest/membership/version tests, two-session cutoff/freeze and token-revocation barriers, and two-league isolation. Keep migration history registration, fresh/upgrade rehearsal, UI wiring and lifecycle worker acceptance separately tracked.
-

@@ -126,4 +126,3 @@ reset role;
 select * from finish();
 rollback;
 select count(*) as fixture_residue from templates where id='b3100000-0000-4000-8000-000000000001';
-

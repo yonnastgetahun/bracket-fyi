@@ -53,10 +53,10 @@ Focused lint: 0 errors/0 warnings (removed two unused named arguments from exist
 - Typed nomination schema/reader/race/forward-repair proof remains outside this ownership; no schema edits made.
 - Existing dirty/untracked work belongs to other owners and was not reverted. This worker wrote only the four listed source/test files and this report. No commits or activation.
 
-changed: PS-01–05 transport boundary guards plus original regression tests.  
-matters: malformed evidence and ambiguous/forbidden requests now reject locally without inventing settlement.  
-checks: 29 focused tests; project no-emit typecheck; focused lint; owned-file whitespace scan.  
-risk: remaining integration/live gaps above; independent skeptical post-repair verification pending.  
+changed: PS-01–05 transport boundary guards plus original regression tests.
+matters: malformed evidence and ambiguous/forbidden requests now reject locally without inventing settlement.
+checks: 29 focused tests; project no-emit typecheck; focused lint; owned-file whitespace scan.
+risk: remaining integration/live gaps above; independent skeptical post-repair verification pending.
 verdict: **HOLD for independent acceptance**; implementation complete within assigned boundary, not self-accepted.
 
 ## Final source/test identities

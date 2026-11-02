@@ -4,7 +4,7 @@ Date: 2026-10-27. **Verdict: ITERATE on PS-01–05.** No allegation was disprove
 
 ## Work item (recorded before completion)
 
-project: BRACKET-FYI  
+project: BRACKET-FYI
 done when:
 - [x] Test each allegation against actual guards and original synthetic in-memory HTTP responses.
 - [x] Record exact evidence, reachability limits and disposition by ID.
@@ -238,8 +238,8 @@ await check("FD04-no-prefix",[base,{...base,id:76}]);
 
 ## Closeout
 
-changed: this report only; existing source/test edits preserved.  
-matters: confirms four transport-boundary defects and narrows the runtime-input allegation without inventing production exploitation.  
-checks: original in-memory counterexamples/negative controls exit 0; focused existing suite 76/76 passes; optional repaired-boundary samples supported.  
-risk: no persistence, DB, app/browser, provider or activation proof; BDL/OSC integration absent in searched lib/app callers.  
+changed: this report only; existing source/test edits preserved.
+matters: confirms four transport-boundary defects and narrows the runtime-input allegation without inventing production exploitation.
+checks: original in-memory counterexamples/negative controls exit 0; focused existing suite 76/76 passes; optional repaired-boundary samples supported.
+risk: no persistence, DB, app/browser, provider or activation proof; BDL/OSC integration absent in searched lib/app callers.
 verdict: **ITERATE PS-01–05; no whole-packet approval.**

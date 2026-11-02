@@ -154,8 +154,8 @@ Exit 0, final asserted output:
 
 Every counted probe includes rejection type/code/call-count assertions or explicit success-output assertions. This is not merely output inspection or a count-based acceptance.
 
-changed: this review report only.  
-matters: independent malformed inputs fail closed while legitimate unknown, sparse and manual controls survive.  
-checks: 107 actual-source synthetic probes; 29 focused tests; hash stability; scoped callers.  
-risk: all integration/live/settlement gaps above remain.  
+changed: this review report only.
+matters: independent malformed inputs fail closed while legitimate unknown, sparse and manual controls survive.
+checks: 107 actual-source synthetic probes; 29 focused tests; hash stability; scoped callers.
+risk: all integration/live/settlement gaps above remain.
 verdict: **ACCEPT PS-01–05 narrowly; HOLD complete-provider and whole-roadmap acceptance.**

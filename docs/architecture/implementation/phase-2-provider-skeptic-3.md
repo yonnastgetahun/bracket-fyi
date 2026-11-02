@@ -147,8 +147,8 @@ Observed final line: {"probes":39,"sourceHashesUnchanged":true}; process exit 0.
 
 ## Closeout
 
-changed: this report only.  
-matters: independent controls did not defeat any PS finding; necessary repairs are concrete without exaggerating production exposure.  
-checks: 39 actual-source, injected-synthetic-fetch probes; no network; source hashes unchanged; scoped caller search.  
-risk: live provider semantics, downstream retention/settlement and runtime configuration reachability remain unverified; no DB/schema conclusions added.  
+changed: this report only.
+matters: independent controls did not defeat any PS finding; necessary repairs are concrete without exaggerating production exposure.
+checks: 39 actual-source, injected-synthetic-fetch probes; no network; source hashes unchanged; scoped caller search.
+risk: live provider semantics, downstream retention/settlement and runtime configuration reachability remain unverified; no DB/schema conclusions added.
 verdict: **ITERATE**. Pre-repair third skeptical review complete. Post-repair independent verification still required; this report does not accept future fixes or activate providers.

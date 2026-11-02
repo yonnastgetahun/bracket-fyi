@@ -83,4 +83,3 @@ SELECT * FROM finish();
 ROLLBACK;
 SELECT count(*) AS synthetic_templates_after_rollback FROM templates WHERE id='a9170000-0000-4000-8000-000000000001';
 ```
-

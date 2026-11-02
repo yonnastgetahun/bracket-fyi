@@ -4,7 +4,7 @@ Date: 2026-10-27. Verdict: **ITERATE / do not accept provider packet yet**.
 
 ## Review work item (recorded before report completion)
 
-project: BRACKET-FYI  
+project: BRACKET-FYI
 done when:
 - [x] Independently challenge BDL/OSC parser boundaries with original synthetic inputs.
 - [x] Inspect typed nomination constraints, reader gate and repair; distinguish runtime proof gaps.
@@ -81,7 +81,7 @@ Executed command (wrapper resets cwd, so all locations explicit):
 
 Result: **3 files / 86 tests passed** (3 BDL, 4 OSC, 79 contracts). Adversarial harness demonstrated PS-01 through PS-05 despite that green suite. All values original synthetic; no credentials obtained or provider response captured. A local docker inventory command did not return promptly; no DB mutations or hosted fallback were attempted. SQL statements/tests were reviewed, not independently executed in this pass.
 
-Changed: this review report only within repository.  
-Matters: safe-field/query and malformed-input claims currently exceed tested behavior.  
-Risk: live provider semantics, DB races/repair and effective-reader integration remain unverified.  
+Changed: this review report only within repository.
+Matters: safe-field/query and malformed-input claims currently exceed tested behavior.
+Risk: live provider semantics, DB races/repair and effective-reader integration remain unverified.
 Verdict: **ITERATE**. Remediation must be followed by **separate skeptical reviewers**; this report does not pre-approve postreview fixes.
