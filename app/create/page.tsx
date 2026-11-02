@@ -1,4 +1,6 @@
+import { getTeamRegistry } from "@/lib/league-data";
 import CreateFlow from "@/components/CreateFlow";
+import Link from "next/link";
 import { getPublicTemplates } from "@/lib/league-data";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { TeamEntry, ScoringConfig } from "@/lib/types";
@@ -41,7 +43,7 @@ async function fetchLeaguePrefill(leagueId: string): Promise<LeaguePrefill | nul
 
   let competitors: Array<{ id: string; name: string }> = [];
   if (isCustomTemplate && templateType === "bracket" && template?.team_registry) {
-    competitors = (template.team_registry as TeamEntry[])
+    competitors = (await getTeamRegistry(data.template_id, data.id))
       .filter((t) => !t.id.startsWith("bye-"))
       .map((t) => ({ id: t.id, name: t.name }));
   }
@@ -57,11 +59,12 @@ async function fetchLeaguePrefill(leagueId: string): Promise<LeaguePrefill | nul
   };
 }
 
-export default async function CreatePage({
-  searchParams,
-}: {
-  searchParams: { from?: string };
-}) {
+export default async function CreatePage(
+  props: {
+    searchParams: Promise<{ from?: string }>;
+  }
+) {
+  const searchParams = await props.searchParams;
   const templates = await getPublicTemplates();
   let prefill: LeaguePrefill | null = null;
   if (searchParams.from) {
@@ -71,9 +74,9 @@ export default async function CreatePage({
   return (
     <main className="min-h-screen bg-canvas">
       <div className="max-w-md mx-auto px-6 py-12">
-        <a href="/" className="block mb-8 text-sm text-secondary hover:text-primary">
+        <Link href="/" className="block mb-8 text-sm text-secondary hover:text-primary">
           bracket.fyi
-        </a>
+        </Link>
         <CreateFlow templates={templates} prefill={prefill} />
       </div>
     </main>

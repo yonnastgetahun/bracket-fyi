@@ -1,0 +1,42 @@
+{
+  "observations": [
+    {
+      "entityKind": "stage",
+      "externalId": "ceremony-stage",
+      "providerRevision": "ceremony-stage-1",
+      "observedAt": "2026-10-08T19:00:00Z",
+      "completeness": "full",
+      "sanitizedPayload": { "fixture": "synthetic-ceremony", "stage": "categories" },
+      "data": {
+        "eventEditionExternalId": "ceremony-edition",
+        "stageKey": "categories",
+        "name": "Synthetic Categories",
+        "stageKind": "ceremony",
+        "ordinal": 1,
+        "metadata": { "synthetic": true }
+      }
+    },
+    {
+      "entityKind": "result",
+      "externalId": "ceremony-category",
+      "providerRevision": "ceremony-category-1",
+      "providerUpdatedAt": "2026-10-08T21:00:00Z",
+      "observedAt": "2026-10-08T21:01:00Z",
+      "completeness": "full",
+      "sanitizedPayload": { "fixture": "synthetic-ceremony", "result": "awarded" },
+      "data": {
+        "eventEditionExternalId": "ceremony-edition",
+        "contestExternalId": "ceremony-category",
+        "resultStatus": "awarded",
+        "outcomeType": "winner",
+        "winnerEventEntryExternalId": "ceremony-entry",
+        "resultData": { "fixture": "synthetic-ceremony", "category": "synthetic-award" },
+        "providerEffectiveAt": "2026-10-08T21:00:00Z"
+      }
+    }
+  ],
+  "fetchedCount": 2,
+  "receivedAt": "2026-10-08T21:02:00Z",
+  "nextCursor": { "syntheticPage": 2 },
+  "etag": "synthetic-ceremony-etag"
+}

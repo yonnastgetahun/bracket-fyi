@@ -2,34 +2,37 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import {
   getLeagueWithTemplate,
+  scopedCookieToken,
+  getParticipantByMagicToken,
+  validateLeagueCredential,
   getLeaderboard,
   getChampionStatus,
   getPickResults,
   getTeamRegistry,
   getTemplateMatches,
 } from "@/lib/league-data";
+import BracketPage from "./p/[magic_token]/page";
 import LeaderboardLive from "@/components/LeaderboardLive";
 import PickEntry from "@/components/PickEntry";
 import PickEmEntry from "@/components/PickEmEntry";
-import LockedState from "@/components/LockedState";
 import JoinPrompt from "@/components/JoinPrompt";
 import type { PickemTopology } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
-export default async function LeaguePage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function LeaguePage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const leagueId = params.league_id;
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
 
   const participantCookie = cookieStore.get("bfyi_participant")?.value;
   const leagueCookie = cookieStore.get("bfyi_league")?.value;
 
-  const hasParticipant = participantCookie?.startsWith(`${leagueId}:`);
-  const hasLeagueToken = leagueCookie?.startsWith(`${leagueId}:`);
+  const participantToken = scopedCookieToken(leagueId, participantCookie);
 
   const league = await getLeagueWithTemplate(leagueId);
   if (!league) notFound();
@@ -39,51 +42,26 @@ export default async function LeaguePage({
   const isLocked =
     !!league.locked_at && new Date(league.locked_at) <= new Date();
 
-  // ── already submitted picks → show leaderboard ───────────────────────────
-  if (hasParticipant) {
-    const [rows, champions, picks, teamRegistry] = await Promise.all([
-      getLeaderboard(leagueId),
-      getChampionStatus(leagueId),
-      getPickResults(leagueId),
-      league.template_id
-        ? getTeamRegistry(league.template_id)
-        : Promise.resolve([]),
-    ]);
-    const teamRegistryMap: Record<string, string> = {};
-    for (const t of teamRegistry) {
-      teamRegistryMap[t.id] = t.name;
+  // Own recovery revalidates the exact participant credential before selecting picks.
+  if (!isLocked && participantToken) {
+    const participant = await getParticipantByMagicToken(leagueId, participantToken);
+    if (participant) {
+      return BracketPage({
+        params: Promise.resolve({ league_id: leagueId, magic_token: participantToken }),
+      });
     }
-    return (
-      <LeaderboardLive
-        leagueId={leagueId}
-        initialRows={rows}
-        initialChampions={champions}
-        initialPicks={picks}
-        league={league}
-        teamRegistry={teamRegistryMap}
-      />
-    );
   }
+  const hasLeagueToken = await validateLeagueCredential(leagueId, leagueCookie, "join");
 
   // ── has join token, hasn't submitted yet ─────────────────────────────────
-  if (hasLeagueToken) {
-    if (isLocked) {
-      return (
-        <LockedState
-          leagueName={league.name}
-          lockedAt={league.locked_at!}
-          leagueId={leagueId}
-        />
-      );
-    }
-
+  if (hasLeagueToken && !isLocked) {
     // fetch data for pick entry
     const [matches, teamRegistry] = await Promise.all([
       league.template_id
         ? getTemplateMatches(league.template_id)
         : Promise.resolve([]),
       league.template_id
-        ? getTeamRegistry(league.template_id)
+        ? getTeamRegistry(league.template_id, league.id)
         : Promise.resolve([]),
     ]);
 
@@ -114,7 +92,7 @@ export default async function LeaguePage({
       getChampionStatus(leagueId),
       getPickResults(leagueId),
       league.template_id
-        ? getTeamRegistry(league.template_id)
+        ? getTeamRegistry(league.template_id, league.id)
         : Promise.resolve([]),
     ]);
     const teamRegistryMap: Record<string, string> = {};

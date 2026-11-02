@@ -1,0 +1,661 @@
+{
+  "status": "hold",
+  "numeric": {
+    "status": "failed",
+    "mode": "sql",
+    "completedPersisted": [
+      "play-in/before",
+      "play-in/first",
+      "play-in/complete",
+      "play-in/corrected",
+      "play-in/invalidated",
+      "play-in/recomplete",
+      "eliminated-forfeited/eliminated-forfeited",
+      "ucl-coupled/leg-one",
+      "ucl-unknown/leg-one"
+    ],
+    "completedRendered": [],
+    "errorType": "Error",
+    "reason": "Local fixture SQL rejected (XX000); private DB retained"
+  },
+  "numericSourcesStable": true,
+  "dbSourcesStable": true,
+  "db": {
+    "database": "bracket_final_1793406820453880000",
+    "container": "supabase_db_bracket-fyi",
+    "through": "20261027000015",
+    "steps": [],
+    "migrations": {
+      "20260724000001_initial_schema.sql": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+      "20260724000002_rls_policies.sql": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+      "20260724000003_scoring_views.sql": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+      "20260725000004_pickem_views.sql": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+      "20260725000005_vapid_rpc.sql": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+      "20261006000001_canonical_event_domain.sql": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+      "20261006000002_ingestion_evidence_and_delivery.sql": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+      "20261008000001_effective_result_compatibility.sql": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+      "20261009000000_slice_2b_observation_evidence.sql": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+      "20261009000001_slice_2b_structural_projection.sql": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+      "20261009000002_slice_2b_atomic_result_projection.sql": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+      "20261009000003_slice_2b_acceptance_remediation.sql": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+      "20261009000004_slice_2b_r2_acceptance.sql": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+      "20261009000005_slice_2b_r3_provenance_grants.sql": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+      "20261010000000_slice_2c_run_ledger.sql": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+      "20261010000001_slice_2c_2_acceptance_remediation.sql": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+      "20261010000002_slice_2c_2_clock_remediation.sql": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+      "20261010000003_slice_2c_2_claim_checkpoint_contract.sql": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+      "20261010000004_slice_2c_rate_budget.sql": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+      "20261010000005_slice_2c_5b_acceptance_remediation.sql": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+      "20261010000006_slice_2c_5b_r2_header_semantics.sql": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+      "20261010000007_slice_2c_5_scheduling_health.sql": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+      "20261010000008_immutable_evidence_grants.sql": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+      "20261027000001_typed_outcomes.sql": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+      "20261027000002_prediction_windows.sql": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+      "20261027000003_window_integrity_repair.sql": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+      "20261027000004_security_boundary_repair.sql": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0",
+      "20261027000005_window_incarnation_history.sql": "a3be839db1aaed9f7a7efb9b641b8f023a627eb4a98ece4a178dd3de26e05429",
+      "20261027000006_event_lifecycle.sql": "55bbb1f26e926041c71ed869ad290d91b5757a5cc11865ba9c1daea67f2362d2",
+      "20261027000007_event_notifications.sql": "36f453a18b35756f2cb52e0e03ad9dce4107dcae7e1d9827ec02b529638c9f2b",
+      "20261027000008_event_operator_controls.sql": "441dfc54f7f704ac2cfd86f98068fedbc472c6b452590e226d67900da3debe55",
+      "20261027000009_window_lifecycle_repairs.sql": "0fb324e02359ca8f002ab0558f1bfa416fc7b076e02b8a9a835e6d24c7f2e721",
+      "20261027000010_reviewed_pairings.sql": "6826386256c8c90eed4351fc57ab027be573e3d0a2c97efdc10f06fc09416a10",
+      "20261027000011_notification_operator_authority_repair.sql": "efc5c242e3c6f05430dc4b620165d0b9eabb156331ca15f5c6571000403a404c",
+      "20261027000012_http_business_conflicts.sql": "5819c05f98db7de2f5394f35994769a2792a57aafa2ea161116f12b9056c5ac8",
+      "20261027000013_league_competitor_names.sql": "abd03dd9af4379a3ce6f186e91b77d3553d81b7731ab3d345d19b460ea012fbd",
+      "20261027000014_reviewed_series.sql": "1e19ee72a821d9b0322b59e3e29d3b572301641016715fc30fc0f2bad403cade",
+      "20261027000015_structural_qualifiers.sql": "8edabbaf8b7e8aa65d9043847a277dfeeaabbf8e34a0cdde41fe670913aa340a"
+    },
+    "tests": {
+      "01_provider_registry_test.sql": {
+        "sha256": "40bc90d7398669eae60ca1bf79ac74a7b51e58ad400c0b4dcd5371b4877c196b",
+        "count": 1,
+        "passed": true
+      },
+      "02_event_edition_identity_test.sql": {
+        "sha256": "6dfeccdf29e6dda1893239819dd4ccabc9d8445741cf8ebcce8907376ecc1121",
+        "count": 4,
+        "passed": true
+      },
+      "03_competitor_identity_test.sql": {
+        "sha256": "7431907092a6503339928be2d49142ad2ad514e535a4a3cdf501acafce019185",
+        "count": 4,
+        "passed": true
+      },
+      "04_contest_structure_test.sql": {
+        "sha256": "3b6bb2beaa3eb6343661671e4141f92ac64d3dda70534b35781b94d1ee5ad051",
+        "count": 4,
+        "passed": true
+      },
+      "05_bracket_graph_test.sql": {
+        "sha256": "97192f21335eeda4e59bd5c809d72405f76bd6fd85b508e78469430a43617437",
+        "count": 5,
+        "passed": true
+      },
+      "06_template_compatibility_test.sql": {
+        "sha256": "132b44be308d6ee7296a4df16701e604655d234b6d44ff02e810717c8f2dee80",
+        "count": 6,
+        "passed": true
+      },
+      "07_canonical_schema_security_test.sql": {
+        "sha256": "bf168842ebba9f62c6a7bc53a925992c85577efcb630a94aedceb44f29a8acce",
+        "count": 3,
+        "passed": true
+      },
+      "08_provider_binding_and_run_test.sql": {
+        "sha256": "a242e276b4a333ad621f228e22a14087c53e3b131dcd4518fff549a56e46bb7b",
+        "count": 6,
+        "passed": true
+      },
+      "09_provider_observation_and_quarantine_test.sql": {
+        "sha256": "a6d3f883de685baabf2f69e3aa4652813f67a9f031249e1d708628331e97d2f6",
+        "count": 14,
+        "passed": true
+      },
+      "10_canonical_result_history_test.sql": {
+        "sha256": "6b334f756bb5ae054b3664be0c8d7fe23cf249ac0a81a2c0ecac8f8004f8bc17",
+        "count": 11,
+        "passed": true
+      },
+      "11_audit_hold_and_outbox_test.sql": {
+        "sha256": "de96bee0d4a2e105e018871a37af5858651cd80f0b32dff5979343fffd08e646",
+        "count": 22,
+        "passed": true
+      },
+      "12_ingestion_schema_security_test.sql": {
+        "sha256": "7b94f4602bee089fc24e6caa2b82ddc6773f644e33c652234c31d3f5fbc037db",
+        "count": 35,
+        "passed": true
+      },
+      "13_effective_result_compatibility_test.sql": {
+        "sha256": "3167c9aba903fede48486b1f885f74079ea9ec3747ac37b91baa354e350c269e",
+        "count": 8,
+        "passed": true
+      },
+      "14_legacy_result_backfill_test.sql": {
+        "sha256": "5e236ffe8d4a904399dd76f885c5a6fe7504540cbba730f46dde9deb61e354be",
+        "count": 5,
+        "passed": true
+      },
+      "15_result_compatibility_security_test.sql": {
+        "sha256": "7dd9e28908e56ebd5bf60876dd094537d55462aa6827bb8e66b65c55f34d27ee",
+        "count": 5,
+        "passed": true
+      },
+      "16_slice_2b_identity_persistence_test.sql": {
+        "sha256": "fabaa58eccfca192b63e5e3f4bf7a9776ff2d1e1334bc7cec89ecf08394d887c",
+        "count": 26,
+        "passed": true
+      },
+      "17_slice_2b_structural_projection_test.sql": {
+        "sha256": "3aae75f50aba357a5bb9ab77be65fa665013b90120745ff821619324a3af1fff",
+        "count": 23,
+        "passed": true
+      },
+      "18_slice_2b_atomic_result_projection_test.sql": {
+        "sha256": "7817a1237a977cc1015423a112dd2d117dbf18a5cc903b6a2bd4212d80483123",
+        "count": 39,
+        "passed": true
+      },
+      "19_slice_2b_replay_acceptance_test.sql": {
+        "sha256": "3155df9e655c78cada1953065ceb981377d6da2165c4506c5500103e4f9bebf1",
+        "count": 21,
+        "passed": true
+      },
+      "20_slice_2b_acceptance_remediation_test.sql": {
+        "sha256": "55a34c72757c65ef49c2fd23baf6f5ccac24a1fe520dd977435b4d59ea3bb9f1",
+        "count": 52,
+        "passed": true
+      },
+      "21_slice_2b_r2_acceptance_test.sql": {
+        "sha256": "fd4c59dca8a6293924ee61307d7c238938aa02b71e6a123eabb035ae9bf8e2b0",
+        "count": 66,
+        "passed": true
+      },
+      "22_slice_2b_r3_provenance_grants_test.sql": {
+        "sha256": "7dfec834f8a270690ce2ba854c5fb1b00bfc7bbf05e9aa9459d0362da8f42262",
+        "count": 27,
+        "passed": true
+      },
+      "23_slice_2c_run_ledger_test.sql": {
+        "sha256": "a52cd8c2b156aa56c860582dbe4ea35abd905ad78c852257c63afc75282c386c",
+        "count": 99,
+        "passed": true
+      },
+      "24_slice_2c_rate_budget_and_health_test.sql": {
+        "sha256": "91d26f9c49f29af8ac62c7591b7cbe6b2ef40ba48f1127a310982a212d01c6a0",
+        "count": 157,
+        "passed": true
+      },
+      "25_slice_2c_scheduling_health_test.sql": {
+        "sha256": "204bbba545ed90a57b54c49c8820795075512bc39f4cbe963ab327e436c2031f",
+        "count": 24,
+        "passed": true
+      },
+      "26_slice_2c_orchestrator_replay_test.sql": {
+        "sha256": "7cb038480f2782487a8718de583077b489ba4db24ab77cc9515d97b74c10621c",
+        "count": 12,
+        "passed": true
+      },
+      "27_typed_outcomes_test.sql": {
+        "sha256": "014c0ba9f1b2e7fbee1b34512456547a4f01051811bb3db1003beb77e16afb82",
+        "count": 56,
+        "passed": true
+      },
+      "28_prediction_windows_test.sql": {
+        "sha256": "6f9998127b262fbdbd27e1929812406933ddfd06ea5145c64ea493b202c16cd8",
+        "count": 25,
+        "passed": true
+      },
+      "30_security_boundary_test.sql": {
+        "sha256": "2d559eab9079bf88d6f86573d2b17a0a9450fcbfd7648eb1a317f034d756a5b0",
+        "count": 54,
+        "passed": true
+      },
+      "DB29_window_integrity_test.sql": {
+        "sha256": "f66f0e0a0c8b1304a83803b51d42258e266bd376fbaf7629c425082a18533469",
+        "count": 47,
+        "passed": true
+      },
+      "DB31_window_incarnation_history_test.sql": {
+        "sha256": "e908c2959b5be9c3347752a9871b63a75f6c193659cdca2ff99458c10562985c",
+        "count": 68,
+        "passed": true
+      },
+      "DB32_event_lifecycle_test.sql": {
+        "sha256": "86ddf7110e846cc347e0b5ea059a8371050eef6fbe09d59673c3c89ccad5a548",
+        "count": 46,
+        "passed": true
+      },
+      "DB33_event_notifications_test.sql": {
+        "sha256": "17e7e6fd2bee28fac06b55b4a06266fdf69a28a01ffa6f13b8cb391e99863746",
+        "count": 54,
+        "passed": true
+      },
+      "DB34_event_operator_controls_test.sql": {
+        "sha256": "7d64d1afb0b4b5496b6b6d1bb2e64f012cccd05d429e8e6713f82201ebde9ba8",
+        "count": 45,
+        "passed": true
+      },
+      "DB35_window_lifecycle_repair_test.sql": {
+        "sha256": "dfa05e1fb0b054b0f8073fb972ab2e1370623f78b4a8198a4d5ba16b1cec4b70",
+        "count": 26,
+        "passed": true
+      },
+      "DB36_reviewed_pairings_test.sql": {
+        "sha256": "522d5761e8942c1d0c5a1448c0596ca4d0742edbecb6ed187612dc9f5bd3a8eb",
+        "count": 23,
+        "passed": true
+      },
+      "DB37_notification_operator_authority_test.sql": {
+        "sha256": "b98c661547c281bd3bc35ff6f894fb02fd98afeade1cd16317e74b678f3617e3",
+        "count": 17,
+        "passed": true
+      },
+      "DB38_http_business_conflicts_test.sql": {
+        "sha256": "054d804f373b92ee48302074a30c3d9ef0ffbb486e90978a24028914b9a988b0",
+        "count": 10,
+        "passed": false
+      },
+      "DB39_league_competitor_names_test.sql": {
+        "sha256": "0fbda958bc7b6fc501dd078b2e87aed603e14459f95dc6b0462196ab2aff5d89",
+        "count": 11,
+        "passed": true
+      }
+    },
+    "status": "failed",
+    "failure": "TAP failed: DB38_http_business_conflicts_test.sql",
+    "conflictAndSafetyAudit": "commit_event_series\nt|f|f|0"
+  },
+  "transition": {
+    "path": "supabase/tests/transitions/evidence-20261031T002058Z_1a4065.json",
+    "sha256": "86dd82c9886267c26b05816a78007c8170f63fce010ffb46cdce63936e18e2b9",
+    "assertions": 2429,
+    "status": "passed",
+    "databases": [
+      "bracket_transition_20261031t002058z_1a4065_fresh",
+      "bracket_transition_20261031t002058z_1a4065_legacy",
+      "bracket_transition_20261031t002058z_1a4065_current"
+    ]
+  },
+  "dbLint": {
+    "exit": 0,
+    "warnings": 18,
+    "schema": "public",
+    "database": "bracket_final_1793406820453880000",
+    "findings": [
+      {
+        "function": "public.slice_2c_assert_lease",
+        "issues": [
+          {
+            "level": "warning extra",
+            "message": "unused parameter \"p_now\"",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.start_ingestion_run",
+        "issues": [
+          {
+            "level": "warning extra",
+            "message": "unused parameter \"p_now\"",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.renew_ingestion_run",
+        "issues": [
+          {
+            "level": "warning extra",
+            "message": "unused parameter \"p_now\"",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.event_lifecycle_effective",
+        "issues": [
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "4",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"result\" initialization on line 3",
+            "sqlState": "42804"
+          }
+        ]
+      },
+      {
+        "function": "public.review_event_pairings",
+        "issues": [
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "6",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"bindings\" initialization on line 4",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "6",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"markets\" initialization on line 4",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "6",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"assigned\" initialization on line 4",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "6",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"used\" initialization on line 4",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning extra",
+            "message": "auto variable \"i\" shadows a previously defined variable",
+            "statement": {
+              "lineNumber": "47",
+              "text": "FOR with integer loop variable"
+            },
+            "hint": "SET plpgsql.extra_warnings TO 'shadowed_variables'",
+            "sqlState": "00000"
+          },
+          {
+            "level": "warning",
+            "message": "unused variable \"i\"",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.event_series_outcome",
+        "issues": [
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "4",
+              "text": "RETURN"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "at RETURN",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "routine is marked as IMMUTABLE, but expression is STABLE",
+            "statement": {
+              "lineNumber": "7",
+              "text": "RETURN"
+            },
+            "hint": "When you fix this issue, please, recheck other functions that uses this function.",
+            "detail": "there is a risk of unwanted behave",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.capture_event_series",
+        "issues": [
+          {
+            "level": "warning extra",
+            "message": "never read variable \"p\"",
+            "sqlState": "00000"
+          }
+        ]
+      },
+      {
+        "function": "public.review_event_structural_qualifiers",
+        "issues": [
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "10",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"qualifiers\" initialization on line 6",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "10",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"pairings\" initialization on line 6",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "10",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"markets\" initialization on line 6",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "target type is different type than source type",
+            "statement": {
+              "lineNumber": "10",
+              "text": "statement block"
+            },
+            "hint": "The input expression type does not have an assignment cast to the target type.",
+            "detail": "cast \"text\" value to \"jsonb\" type",
+            "context": "during statement block local variable \"bindings\" initialization on line 6",
+            "sqlState": "42804"
+          },
+          {
+            "level": "warning",
+            "message": "unused variable \"seed\"",
+            "sqlState": "00000"
+          }
+        ]
+      }
+    ]
+  },
+  "finalSafety": {
+    "bracket_final_1793406820453880000": "t|f|f|0",
+    "bracket_http_439610679a15": "t|f|f|0"
+  },
+  "artifactHashes": {
+    "tmp/trusted-numeric/run-mzUnEY/result.json": "7a54a4dd57fb07facc7fc781bf4aadab4b3f243a952c4284b4d67ca4b3cebf82",
+    "tmp/trusted-numeric/1793405859841072000-source.json": "dce3216b9d2202a10a5bb1b3c250b96da3ec87e4b4ba0b77e48bf395e1d058a3",
+    "supabase/tests/transitions/evidence-20261031T002058Z_1a4065.json": "86dd82c9886267c26b05816a78007c8170f63fce010ffb46cdce63936e18e2b9",
+    "tmp/runtime-recovery/db-evidence.json": "0dc114b7850c1e53605d1cda84a92bd82a8736e5aecb230f1367551cd40b63be",
+    "tmp/runtime-recovery/db-lint.log": "ba59b3cdb65472968bef30e98e9b6e38962f6c841695962686d4a4c8df353db1",
+    "tmp/runtime-recovery/restart-inventory.json": "ed4c486bb495bd1c3d51de03f3be64571d3bcd5beac5906c13d1283a032d207f",
+    "tmp/runtime-recovery-lint.log": "6b2ea03d20b28cd1fa4b6db87167fb39b0ee1d0ab5af2efbbca9d7b6a2262918",
+    "tmp/runtime-recovery-fixture-tests.log": "156550fc73ac03c13f740fac54c15140bc850871bbfa759fc2cd0fcc4ff0c71e",
+    "tests/events/trusted-numeric-persistence.ts": "836d6407cbde466147adf5aa86632d2ca88f30d59898118446b62f214abd65c9",
+    "tests/events/trusted-numeric-fixture.ts": "a2c005c14b4c233e1b9db8b62d2088222d85c9d369a3c0be69d0fe44f2ef7f6d",
+    "scripts/browser/fixture-sql.ts": "9eb1f2c9bb0335486737edcafaba8cc89e7cf386296aa2bb36079001d721694b",
+    "tmp/runtime-recovery-db.py": "c80ea30c6d5bb17eb167b10fec3cf62a3db9aebdb37f792e3e8360a6eab2eefd",
+    "tmp/runtime-recovery-finish-db.py": "14c19b2d2d447491b13931f6d11909cbf1eb551b305dbe9cfecafc33ea19bced"
+  },
+  "restartInventory": {
+    "stoppedByThisTask": [],
+    "containers": [
+      {
+        "id": "7454b3e08ecbd92af91b2372ebb75fb38748ddffd4d7ba1fc3a4d83d8b39bc7f",
+        "name": "/bracket-p11-db-9bd170c85c0f",
+        "image": "public.ecr.aws/supabase/postgres:17.6.1.147",
+        "labels": {
+          "bracket.p11-owned": "true"
+        },
+        "state": {
+          "Status": "running",
+          "Running": true,
+          "OOMKilled": true,
+          "ExitCode": 0
+        },
+        "mounts": [],
+        "memory": 536870912,
+        "memorySwap": 536870912,
+        "nanoCpus": 1000000000,
+        "restartCommand": [
+          "docker",
+          "start",
+          "bracket-p11-db-9bd170c85c0f"
+        ]
+      },
+      {
+        "id": "022c8e68059ac89d661903c5f9d8a776e6beb85ff5d2653fb56ecc3636d92105",
+        "name": "/bracket-http-rest-439610679a15",
+        "image": "public.ecr.aws/supabase/postgrest:v14.5",
+        "labels": {
+          "bracket.local-http": "true",
+          "org.opencontainers.image.ref.name": "ubuntu",
+          "org.opencontainers.image.version": "24.04"
+        },
+        "state": {
+          "Status": "running",
+          "Running": true,
+          "OOMKilled": false,
+          "ExitCode": 0
+        },
+        "mounts": [],
+        "memory": 536870912,
+        "memorySwap": 536870912,
+        "nanoCpus": 1000000000,
+        "restartCommand": [
+          "docker",
+          "start",
+          "bracket-http-rest-439610679a15"
+        ]
+      },
+      {
+        "id": "59f5fa53e011409da0ee5a7ba5d12f8bf5597b742599539bd9d8a17b6554f75f",
+        "name": "/supabase_db_bracket-fyi",
+        "image": "public.ecr.aws/supabase/postgres:17.6.1.147",
+        "labels": {
+          "com.docker.compose.project": "bracket-fyi",
+          "com.supabase.cli.project": "bracket-fyi",
+          "com.supabase.cli.workdir": "/Users/yonnasgetahun/bracket-fyi"
+        },
+        "state": {
+          "Status": "running",
+          "Running": true,
+          "OOMKilled": false,
+          "ExitCode": 0
+        },
+        "mounts": [
+          {
+            "Type": "volume",
+            "Name": "supabase_db_bracket-fyi",
+            "Source": "/var/lib/docker/volumes/supabase_db_bracket-fyi/_data",
+            "Destination": "/var/lib/postgresql/data",
+            "Driver": "local",
+            "Mode": "z",
+            "RW": true,
+            "Propagation": ""
+          }
+        ],
+        "memory": 0,
+        "memorySwap": 0,
+        "nanoCpus": 0,
+        "restartCommand": [
+          "docker",
+          "start",
+          "supabase_db_bracket-fyi"
+        ]
+      },
+      {
+        "id": "42dd32ef8f5d1b9ec5836091dbc9d6d28b2c6e1395ab945b7f9f6628419dc889",
+        "name": "/bracket-http-rest-3ff79a5ca427",
+        "image": "public.ecr.aws/supabase/postgrest:v14.5",
+        "labels": {
+          "bracket.local-http": "true",
+          "org.opencontainers.image.ref.name": "ubuntu",
+          "org.opencontainers.image.version": "24.04"
+        },
+        "state": {
+          "Status": "exited",
+          "Running": false,
+          "OOMKilled": true,
+          "ExitCode": 137
+        },
+        "mounts": [],
+        "memory": 0,
+        "memorySwap": 0,
+        "nanoCpus": 0,
+        "restartCommand": [
+          "docker",
+          "start",
+          "bracket-http-rest-3ff79a5ca427"
+        ]
+      },
+      {
+        "id": "0df4f6c285e507150b943618e19960d116eab148bd6d059e2358811545b0f4a1",
+        "name": "/bracket-http-rest-3ff79a5ca427-bounded",
+        "image": "public.ecr.aws/supabase/postgrest:v14.5",
+        "labels": {
+          "bracket.local-http": "true",
+          "org.opencontainers.image.ref.name": "ubuntu",
+          "org.opencontainers.image.version": "24.04"
+        },
+        "state": {
+          "Status": "exited",
+          "Running": false,
+          "OOMKilled": false,
+          "ExitCode": 255
+        },
+        "mounts": [],
+        "memory": 536870912,
+        "memorySwap": 536870912,
+        "nanoCpus": 1000000000,
+        "restartCommand": [
+          "docker",
+          "start",
+          "bracket-http-rest-3ff79a5ca427-bounded"
+        ]
+      }
+    ]
+  },
+  "independentReviewRuns": [
+    "856e34cb-b3d5-4a68-93e6-4e92a385d23a",
+    "97ed88e5-11b5-4d75-ab7d-18275b802653"
+  ]
+}

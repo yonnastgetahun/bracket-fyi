@@ -1,15 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminClient } from "@/lib/supabase/admin";
+import { authorizeOrganizer } from "@/lib/auth/organizer";
+import { readJsonObject } from "@/lib/http/json";
 
 export async function POST(request: NextRequest) {
-  const body = await request.json();
-  const { leagueId } = body as { leagueId: string };
+  const parsed = await readJsonObject<{ leagueId?: unknown }>(request);
+  if (!parsed.ok) return parsed.response;
 
-  if (!leagueId) {
+  const { leagueId } = parsed.body;
+
+  if (typeof leagueId !== "string" || !leagueId) {
     return NextResponse.json({ error: "Missing leagueId" }, { status: 400 });
   }
 
-  const supabase = getAdminClient();
+  const authorization = await authorizeOrganizer(request, leagueId);
+  if (!authorization.ok) return authorization.response;
+  if (authorization.league.status !== "locked") {
+    return NextResponse.json(
+      { error: "Only a locked league can be unlocked" },
+      { status: 409 }
+    );
+  }
+
+  const { supabase } = authorization;
 
   const { error } = await supabase
     .from("leagues")

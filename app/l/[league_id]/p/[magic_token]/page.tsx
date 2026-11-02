@@ -1,9 +1,9 @@
 export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
-import { getAdminClient } from "@/lib/supabase/admin";
 import {
   getLeagueWithTemplate,
+  getParticipantByMagicToken,
   getPickResults,
   getTeamRegistry,
   getTemplateMatches,
@@ -12,19 +12,15 @@ import BracketLive from "@/components/BracketLive";
 import PickEmBracket from "@/components/PickEmBracket";
 import type { PickemTopology } from "@/lib/types";
 
-export default async function BracketPage({
-  params,
-}: {
-  params: { league_id: string; magic_token: string };
-}) {
+export default async function BracketPage(
+  props: {
+    params: Promise<{ league_id: string; magic_token: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id, magic_token } = params;
 
-  const { data: participant } = await getAdminClient()
-    .from("participants")
-    .select("id, display_name, emoji, league_id")
-    .eq("magic_token", magic_token)
-    .eq("league_id", league_id)
-    .single();
+  const participant = await getParticipantByMagicToken(league_id, magic_token);
 
   if (!participant) notFound();
 
@@ -34,7 +30,7 @@ export default async function BracketPage({
   const [picks, teamRegistry, matches] = await Promise.all([
     getPickResults(league_id, participant.id),
     league.template_id
-      ? getTeamRegistry(league.template_id)
+      ? getTeamRegistry(league.template_id, league.id)
       : Promise.resolve([]),
     league.template_id
       ? getTemplateMatches(league.template_id)

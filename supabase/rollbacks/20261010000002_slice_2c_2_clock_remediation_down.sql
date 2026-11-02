@@ -1,0 +1,9 @@
+-- Slice 2C.2-R2 rollback note: intentionally non-destructive forward-repair note.
+--
+-- Do not remove the fresh-clock public RPC bodies or their private helper
+-- dependencies. A hosted rollback requires a reviewed forward migration that
+-- preserves run/page evidence and installs compatible public wrappers before
+-- retiring any unused implementation.
+--
+-- Local rehearsal is transactional and should execute this file with \i inside
+-- BEGIN/ROLLBACK, invoking a public claim RPC before and after it.

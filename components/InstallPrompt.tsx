@@ -17,9 +17,10 @@ export default function InstallPrompt({ leagueId }: InstallPromptProps) {
     const dismissKey = `bfyi_ios_install_dismissed:${leagueId}`
     const dismissed = localStorage.getItem(dismissKey) === "true"
 
-    if (isIOS && !isStandalone && !dismissed) {
-      setShow(true)
-    }
+    if (!isIOS || isStandalone || dismissed) return
+
+    const timer = window.setTimeout(() => setShow(true), 0)
+    return () => window.clearTimeout(timer)
   }, [leagueId])
 
   function dismiss() {

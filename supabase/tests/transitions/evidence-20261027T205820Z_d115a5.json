@@ -1,0 +1,2393 @@
+{
+  "run": "20261027T205820Z_d115a5",
+  "container": "supabase_db_bracket-fyi",
+  "through": "20261027000004",
+  "scope": "infrastructure only; not full P12/product acceptance",
+  "steps": [
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "empty public",
+      "sql_sha256": "792051e60c1437f9aa8c08214aa1dbc6712794b8b39b154f44b3853f813a62ae",
+      "output": "0"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "platform bootstrap",
+      "sql_sha256": "47e189955476a1493e4c7abc68c82d436ca78fcf0b2c8b847a79423597fbc037",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20260724000001_initial_schema.sql",
+      "sql_sha256": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20260724000002_rls_policies.sql",
+      "sql_sha256": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20260724000003_scoring_views.sql",
+      "sql_sha256": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20260725000004_pickem_views.sql",
+      "sql_sha256": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20260725000005_vapid_rpc.sql",
+      "sql_sha256": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261006000001_canonical_event_domain.sql",
+      "sql_sha256": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261006000002_ingestion_evidence_and_delivery.sql",
+      "sql_sha256": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261008000001_effective_result_compatibility.sql",
+      "sql_sha256": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000000_slice_2b_observation_evidence.sql",
+      "sql_sha256": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000001_slice_2b_structural_projection.sql",
+      "sql_sha256": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql",
+      "sql_sha256": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000003_slice_2b_acceptance_remediation.sql",
+      "sql_sha256": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000004_slice_2b_r2_acceptance.sql",
+      "sql_sha256": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261009000005_slice_2b_r3_provenance_grants.sql",
+      "sql_sha256": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000000_slice_2c_run_ledger.sql",
+      "sql_sha256": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql",
+      "sql_sha256": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql",
+      "sql_sha256": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000003_slice_2c_2_claim_checkpoint_contract.sql",
+      "sql_sha256": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000004_slice_2c_rate_budget.sql",
+      "sql_sha256": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql",
+      "sql_sha256": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql",
+      "sql_sha256": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql",
+      "sql_sha256": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261010000008_immutable_evidence_grants.sql",
+      "sql_sha256": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261027000001_typed_outcomes.sql",
+      "sql_sha256": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261027000002_prediction_windows.sql",
+      "sql_sha256": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261027000003_window_integrity_repair.sql",
+      "sql_sha256": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/migrations/20261027000004_security_boundary_repair.sql",
+      "sql_sha256": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/tests/transitions/legacy.sql",
+      "sql_sha256": "94b4b57fab6d35080267c8b9e6189732a15e49a7ace0eddcf0f5eb01bfba0860",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "counts",
+      "sql_sha256": "2ebcdbc837bd9bcad88f2798b262e706df118d81d8e8d62bdb4abaa908f80112",
+      "output": "6/12"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "score oracle",
+      "sql_sha256": "88e3651bd5eb025672701d1ffcc1b4dd5dfef0c116c42203d58c6b4566f9d2fb",
+      "output": "t"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "tenant oracle",
+      "sql_sha256": "c1910406d19be39499a4bc7683683d681b68b0f74a9fa93e5417c569472a2f39",
+      "output": "t"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/tests/transitions/reader.sql",
+      "sql_sha256": "0f051cb859952ac52edd585283f55b2823f76e19675dcbde1ec59aa8d8582f9a",
+      "output": "{\"picks\": [{\"id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}, {\"id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}], \"leagues\": [{\"id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"55605eb3-6a8f-04a8-46a8-3cfed5529a89\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3\"}, {\"id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"3b97333f-55ba-8942-7ebe-8235e205d407\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"c0756104-329a-d313-f943-27cbdd687280\"}, {\"id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"7556def8-f0d8-7e27-eb9e-2cc614cd43dc\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"a59db630-8f95-6442-d322-5465a9a90822\"}, {\"id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"1bb76abb-f525-bbcb-6de3-1fcae72b081a\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"f306d968-7cfb-ffdf-2513-bedb479e5254\"}, {\"id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"704381c6-82c7-84f0-8a03-86b11a100e3e\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"ef193a3f-424d-1448-d1e4-44d88f1bd3ad\"}, {\"id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"1c78eaa3-51be-4da4-1635-e74c397cc32a\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"1eddbf07-b80f-17f4-a349-986f37be57fe\"}], \"results\": [{\"locked\": false, \"pick_id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}], \"leaderboard\": [{\"rank\": 1, \"points\": 1, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}], \"participants\": [{\"id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"888a44ac-0395-7c4a-106a-581472004cb7\", \"display_name\": \"B\"}, {\"id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723\", \"display_name\": \"B\"}, {\"id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"b5a2d69c-8716-70fb-a325-cb9f847eae2b\", \"display_name\": \"B\"}, {\"id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"1a7c389e-4055-5be8-98cf-4511e72669e2\", \"display_name\": \"A\"}, {\"id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"d8dbe7dc-a2c5-f007-49ea-efa91dd6d455\", \"display_name\": \"B\"}, {\"id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"43617c32-fa96-ab6b-5178-95af40c3e7a2\", \"display_name\": \"A\"}, {\"id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"e088af46-f510-858b-d7f6-fb5f76267c93\", \"display_name\": \"B\"}, {\"id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"ffcb128d-c072-0289-0a0e-bd7ddf154336\", \"display_name\": \"A\"}, {\"id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526\", \"display_name\": \"A\"}, {\"id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"68e9d950-7cac-9de8-0b26-32d39a7e354a\", \"display_name\": \"A\"}, {\"id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"2d2835a3-eeda-06b4-2e26-db75d3b510de\", \"display_name\": \"B\"}, {\"id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"ea1ee237-c635-f793-0583-04c2e3990466\", \"display_name\": \"A\"}]}"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/tests/transitions/legacy.sql",
+      "sql_sha256": "94b4b57fab6d35080267c8b9e6189732a15e49a7ace0eddcf0f5eb01bfba0860",
+      "output": ""
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/tests/transitions/reader.sql",
+      "sql_sha256": "0f051cb859952ac52edd585283f55b2823f76e19675dcbde1ec59aa8d8582f9a",
+      "output": "{\"picks\": [{\"id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}, {\"id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}], \"leagues\": [{\"id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"55605eb3-6a8f-04a8-46a8-3cfed5529a89\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3\"}, {\"id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"3b97333f-55ba-8942-7ebe-8235e205d407\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"c0756104-329a-d313-f943-27cbdd687280\"}, {\"id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"7556def8-f0d8-7e27-eb9e-2cc614cd43dc\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"a59db630-8f95-6442-d322-5465a9a90822\"}, {\"id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"1bb76abb-f525-bbcb-6de3-1fcae72b081a\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"f306d968-7cfb-ffdf-2513-bedb479e5254\"}, {\"id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"704381c6-82c7-84f0-8a03-86b11a100e3e\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"ef193a3f-424d-1448-d1e4-44d88f1bd3ad\"}, {\"id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"1c78eaa3-51be-4da4-1635-e74c397cc32a\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"1eddbf07-b80f-17f4-a349-986f37be57fe\"}], \"results\": [{\"locked\": false, \"pick_id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}], \"leaderboard\": [{\"rank\": 1, \"points\": 1, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}], \"participants\": [{\"id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"888a44ac-0395-7c4a-106a-581472004cb7\", \"display_name\": \"B\"}, {\"id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723\", \"display_name\": \"B\"}, {\"id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"b5a2d69c-8716-70fb-a325-cb9f847eae2b\", \"display_name\": \"B\"}, {\"id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"1a7c389e-4055-5be8-98cf-4511e72669e2\", \"display_name\": \"A\"}, {\"id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"d8dbe7dc-a2c5-f007-49ea-efa91dd6d455\", \"display_name\": \"B\"}, {\"id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"43617c32-fa96-ab6b-5178-95af40c3e7a2\", \"display_name\": \"A\"}, {\"id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"e088af46-f510-858b-d7f6-fb5f76267c93\", \"display_name\": \"B\"}, {\"id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"ffcb128d-c072-0289-0a0e-bd7ddf154336\", \"display_name\": \"A\"}, {\"id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526\", \"display_name\": \"A\"}, {\"id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"68e9d950-7cac-9de8-0b26-32d39a7e354a\", \"display_name\": \"A\"}, {\"id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"2d2835a3-eeda-06b4-2e26-db75d3b510de\", \"display_name\": \"B\"}, {\"id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"ea1ee237-c635-f793-0583-04c2e3990466\", \"display_name\": \"A\"}]}"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "supabase/tests/transitions/reader.sql",
+      "sql_sha256": "0f051cb859952ac52edd585283f55b2823f76e19675dcbde1ec59aa8d8582f9a",
+      "output": "{\"picks\": [{\"id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"locked\": false, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}, {\"id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"locked\": false, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"A\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"A\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"locked\": true, \"slot_id\": \"f6ca446a-5d6e-2934-5630-1537536fbd9a\", \"team_id\": \"B\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"locked\": true, \"slot_id\": \"465277a0-aa0a-92b9-2c75-774321ea1d73\", \"team_id\": \"B\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"submitted_at\": \"2026-01-01T00:00:00+00:00\", \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}], \"leagues\": [{\"id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"55605eb3-6a8f-04a8-46a8-3cfed5529a89\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3\"}, {\"id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"3b97333f-55ba-8942-7ebe-8235e205d407\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"c0756104-329a-d313-f943-27cbdd687280\"}, {\"id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"7556def8-f0d8-7e27-eb9e-2cc614cd43dc\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"a59db630-8f95-6442-d322-5465a9a90822\"}, {\"id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"status\": \"complete\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"1bb76abb-f525-bbcb-6de3-1fcae72b081a\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"f306d968-7cfb-ffdf-2513-bedb479e5254\"}, {\"id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"status\": \"locked\", \"locked_at\": \"2026-01-03T00:00:00+00:00\", \"join_token\": \"704381c6-82c7-84f0-8a03-86b11a100e3e\", \"template_id\": \"2c96d513-5d26-6359-cb9d-106f01467a7f\", \"scoring_config\": {\"scheme\": \"pickem_flat\", \"other_points\": 1}, \"organizer_token\": \"ef193a3f-424d-1448-d1e4-44d88f1bd3ad\"}, {\"id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"status\": \"active\", \"locked_at\": null, \"join_token\": \"1c78eaa3-51be-4da4-1635-e74c397cc32a\", \"template_id\": \"5aa017d9-0763-8f62-f1c0-a4a0573cf84f\", \"scoring_config\": {\"round_points\": {\"1\": 1}, \"champion_bonus\": 0}, \"organizer_token\": \"1eddbf07-b80f-17f4-a349-986f37be57fe\"}], \"results\": [{\"locked\": false, \"pick_id\": \"0423f3ba-6465-3eb6-082a-6c1bd8daa293\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"34cc7b56-2d1a-d534-2138-dd4a2e1020bc\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"41264e9a-b737-c3e7-e27c-d915105cbd08\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"5d774c17-60d3-fa02-a144-cf72041d03dd\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"7920f4f8-a8de-73f3-db3c-8d81d07169cb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"84053aa0-ae1c-678e-49fe-031a4b0cbe7f\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"851db584-3d3c-feeb-638d-4ae33932f382\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"picked_team_id\": \"B\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"998d438b-2ad8-a2b4-6317-2a1afc698f52\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": false, \"pick_id\": \"a514236b-7b75-ed84-764b-235fa8aebd6d\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"picked_team_id\": \"A\", \"winner_team_id\": \"A\"}, {\"locked\": true, \"pick_id\": \"c7586fef-0606-4823-56cd-b5b071a34118\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": false, \"points_earned\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"picked_team_id\": \"A\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"ecf5b24a-81ba-8165-268c-6c8cedf64c87\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}, {\"locked\": true, \"pick_id\": \"f0c729a5-7361-25a5-c2e0-0a0e983e07c4\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"is_correct\": true, \"points_earned\": 1, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"picked_team_id\": \"B\", \"winner_team_id\": \"B\"}], \"leaderboard\": [{\"rank\": 1, \"points\": 1, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"019230ac-7a32-bf65-8387-723978d06b65\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\"}, {\"rank\": 1, \"points\": 1, \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"wrong_picks\": 0, \"total_points\": 1, \"correct_picks\": 1, \"pending_picks\": 0, \"participant_id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\"}, {\"rank\": 2, \"points\": 0, \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"wrong_picks\": 1, \"total_points\": 0, \"correct_picks\": 0, \"pending_picks\": 0, \"participant_id\": \"f92a8707-7586-6715-3636-f684d0784e39\"}], \"participants\": [{\"id\": \"019230ac-7a32-bf65-8387-723978d06b65\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"888a44ac-0395-7c4a-106a-581472004cb7\", \"display_name\": \"B\"}, {\"id\": \"0a992ba5-4935-995b-e3c4-6c472f9bb73c\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723\", \"display_name\": \"B\"}, {\"id\": \"37265d21-b0ca-7c8c-2279-d7a13194696a\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"b5a2d69c-8716-70fb-a325-cb9f847eae2b\", \"display_name\": \"B\"}, {\"id\": \"58d3f20f-8c2a-c476-fdce-f8a8b614d7ba\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"1a7c389e-4055-5be8-98cf-4511e72669e2\", \"display_name\": \"A\"}, {\"id\": \"5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f\", \"league_id\": \"ad3efed0-ad32-393a-7467-e9e90813704e\", \"magic_token\": \"d8dbe7dc-a2c5-f007-49ea-efa91dd6d455\", \"display_name\": \"B\"}, {\"id\": \"847a4ca9-01d6-a2aa-7da6-366ba127b9f1\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"43617c32-fa96-ab6b-5178-95af40c3e7a2\", \"display_name\": \"A\"}, {\"id\": \"8bcb5977-22e4-0574-b0f8-7be667a10569\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"e088af46-f510-858b-d7f6-fb5f76267c93\", \"display_name\": \"B\"}, {\"id\": \"aeadae3a-ae44-0e74-66a8-2f96d2f70aaa\", \"league_id\": \"90590265-00f9-5f80-86f5-c11e4fd8a50a\", \"magic_token\": \"ffcb128d-c072-0289-0a0e-bd7ddf154336\", \"display_name\": \"A\"}, {\"id\": \"bf312fb8-827d-0dfd-ce64-46a617dcb0bb\", \"league_id\": \"9ebc40ef-835e-b9f0-5e49-ccfe8633f44a\", \"magic_token\": \"63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526\", \"display_name\": \"A\"}, {\"id\": \"c6568c1f-c044-a8de-5f4c-782a237c4229\", \"league_id\": \"a241947b-fb7b-a9cc-7d3e-198683e792ae\", \"magic_token\": \"68e9d950-7cac-9de8-0b26-32d39a7e354a\", \"display_name\": \"A\"}, {\"id\": \"f4f197ae-4483-8711-fae6-c4b7624b4c52\", \"league_id\": \"4b316542-1393-93ef-c84d-96f1ec2bc530\", \"magic_token\": \"2d2835a3-eeda-06b4-2e26-db75d3b510de\", \"display_name\": \"B\"}, {\"id\": \"f92a8707-7586-6715-3636-f684d0784e39\", \"league_id\": \"7486ad25-a16e-67ea-e24d-9f80a307bb95\", \"magic_token\": \"ea1ee237-c635-f793-0583-04c2e3990466\", \"display_name\": \"A\"}]}"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "counts",
+      "sql_sha256": "2ebcdbc837bd9bcad88f2798b262e706df118d81d8e8d62bdb4abaa908f80112",
+      "output": "6/12"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "score oracle",
+      "sql_sha256": "88e3651bd5eb025672701d1ffcc1b4dd5dfef0c116c42203d58c6b4566f9d2fb",
+      "output": "t"
+    },
+    {
+      "db": "bracket_transition_20261027t205820z_d115a5_fresh",
+      "label": "tenant oracle",
+      "sql_sha256": "c1910406d19be39499a4bc7683683d681b68b0f74a9fa93e5417c569472a2f39",
+      "output": "t"
+    }
+  ],
+  "assertions": [
+    {
+      "name": "explicit upper migration exists",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: public starts empty",
+      "passed": true,
+      "actual": "0",
+      "expected": "0"
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: six leagues/twelve picks",
+      "passed": true,
+      "actual": "6/12",
+      "expected": "6/12"
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: independent 1/0 scores and ranks",
+      "passed": true,
+      "actual": "t",
+      "expected": "t"
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: per-tenant pick linkage",
+      "passed": true,
+      "actual": "t",
+      "expected": "t"
+    },
+    {
+      "name": "fresh: setup replay identical",
+      "passed": true,
+      "actual": {
+        "picks": [
+          {
+            "id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          },
+          {
+            "id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          }
+        ],
+        "leagues": [
+          {
+            "id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "55605eb3-6a8f-04a8-46a8-3cfed5529a89",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3"
+          },
+          {
+            "id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "3b97333f-55ba-8942-7ebe-8235e205d407",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "c0756104-329a-d313-f943-27cbdd687280"
+          },
+          {
+            "id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "7556def8-f0d8-7e27-eb9e-2cc614cd43dc",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "a59db630-8f95-6442-d322-5465a9a90822"
+          },
+          {
+            "id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "1bb76abb-f525-bbcb-6de3-1fcae72b081a",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "f306d968-7cfb-ffdf-2513-bedb479e5254"
+          },
+          {
+            "id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "704381c6-82c7-84f0-8a03-86b11a100e3e",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "ef193a3f-424d-1448-d1e4-44d88f1bd3ad"
+          },
+          {
+            "id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "1c78eaa3-51be-4da4-1635-e74c397cc32a",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "1eddbf07-b80f-17f4-a349-986f37be57fe"
+          }
+        ],
+        "results": [
+          {
+            "locked": false,
+            "pick_id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          }
+        ],
+        "leaderboard": [
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          }
+        ],
+        "participants": [
+          {
+            "id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "888a44ac-0395-7c4a-106a-581472004cb7",
+            "display_name": "B"
+          },
+          {
+            "id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723",
+            "display_name": "B"
+          },
+          {
+            "id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "b5a2d69c-8716-70fb-a325-cb9f847eae2b",
+            "display_name": "B"
+          },
+          {
+            "id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "1a7c389e-4055-5be8-98cf-4511e72669e2",
+            "display_name": "A"
+          },
+          {
+            "id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "d8dbe7dc-a2c5-f007-49ea-efa91dd6d455",
+            "display_name": "B"
+          },
+          {
+            "id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "43617c32-fa96-ab6b-5178-95af40c3e7a2",
+            "display_name": "A"
+          },
+          {
+            "id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "e088af46-f510-858b-d7f6-fb5f76267c93",
+            "display_name": "B"
+          },
+          {
+            "id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "ffcb128d-c072-0289-0a0e-bd7ddf154336",
+            "display_name": "A"
+          },
+          {
+            "id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526",
+            "display_name": "A"
+          },
+          {
+            "id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "68e9d950-7cac-9de8-0b26-32d39a7e354a",
+            "display_name": "A"
+          },
+          {
+            "id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "2d2835a3-eeda-06b4-2e26-db75d3b510de",
+            "display_name": "B"
+          },
+          {
+            "id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "ea1ee237-c635-f793-0583-04c2e3990466",
+            "display_name": "A"
+          }
+        ]
+      },
+      "expected": {
+        "picks": [
+          {
+            "id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          },
+          {
+            "id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          }
+        ],
+        "leagues": [
+          {
+            "id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "55605eb3-6a8f-04a8-46a8-3cfed5529a89",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3"
+          },
+          {
+            "id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "3b97333f-55ba-8942-7ebe-8235e205d407",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "c0756104-329a-d313-f943-27cbdd687280"
+          },
+          {
+            "id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "7556def8-f0d8-7e27-eb9e-2cc614cd43dc",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "a59db630-8f95-6442-d322-5465a9a90822"
+          },
+          {
+            "id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "1bb76abb-f525-bbcb-6de3-1fcae72b081a",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "f306d968-7cfb-ffdf-2513-bedb479e5254"
+          },
+          {
+            "id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "704381c6-82c7-84f0-8a03-86b11a100e3e",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "ef193a3f-424d-1448-d1e4-44d88f1bd3ad"
+          },
+          {
+            "id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "1c78eaa3-51be-4da4-1635-e74c397cc32a",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "1eddbf07-b80f-17f4-a349-986f37be57fe"
+          }
+        ],
+        "results": [
+          {
+            "locked": false,
+            "pick_id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          }
+        ],
+        "leaderboard": [
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          }
+        ],
+        "participants": [
+          {
+            "id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "888a44ac-0395-7c4a-106a-581472004cb7",
+            "display_name": "B"
+          },
+          {
+            "id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723",
+            "display_name": "B"
+          },
+          {
+            "id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "b5a2d69c-8716-70fb-a325-cb9f847eae2b",
+            "display_name": "B"
+          },
+          {
+            "id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "1a7c389e-4055-5be8-98cf-4511e72669e2",
+            "display_name": "A"
+          },
+          {
+            "id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "d8dbe7dc-a2c5-f007-49ea-efa91dd6d455",
+            "display_name": "B"
+          },
+          {
+            "id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "43617c32-fa96-ab6b-5178-95af40c3e7a2",
+            "display_name": "A"
+          },
+          {
+            "id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "e088af46-f510-858b-d7f6-fb5f76267c93",
+            "display_name": "B"
+          },
+          {
+            "id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "ffcb128d-c072-0289-0a0e-bd7ddf154336",
+            "display_name": "A"
+          },
+          {
+            "id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526",
+            "display_name": "A"
+          },
+          {
+            "id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "68e9d950-7cac-9de8-0b26-32d39a7e354a",
+            "display_name": "A"
+          },
+          {
+            "id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "2d2835a3-eeda-06b4-2e26-db75d3b510de",
+            "display_name": "B"
+          },
+          {
+            "id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "ea1ee237-c635-f793-0583-04c2e3990466",
+            "display_name": "A"
+          }
+        ]
+      }
+    },
+    {
+      "name": "fresh: old service reader survives upgrade",
+      "passed": true,
+      "actual": {
+        "picks": [
+          {
+            "id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          },
+          {
+            "id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          }
+        ],
+        "leagues": [
+          {
+            "id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "55605eb3-6a8f-04a8-46a8-3cfed5529a89",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3"
+          },
+          {
+            "id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "3b97333f-55ba-8942-7ebe-8235e205d407",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "c0756104-329a-d313-f943-27cbdd687280"
+          },
+          {
+            "id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "7556def8-f0d8-7e27-eb9e-2cc614cd43dc",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "a59db630-8f95-6442-d322-5465a9a90822"
+          },
+          {
+            "id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "1bb76abb-f525-bbcb-6de3-1fcae72b081a",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "f306d968-7cfb-ffdf-2513-bedb479e5254"
+          },
+          {
+            "id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "704381c6-82c7-84f0-8a03-86b11a100e3e",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "ef193a3f-424d-1448-d1e4-44d88f1bd3ad"
+          },
+          {
+            "id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "1c78eaa3-51be-4da4-1635-e74c397cc32a",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "1eddbf07-b80f-17f4-a349-986f37be57fe"
+          }
+        ],
+        "results": [
+          {
+            "locked": false,
+            "pick_id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          }
+        ],
+        "leaderboard": [
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          }
+        ],
+        "participants": [
+          {
+            "id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "888a44ac-0395-7c4a-106a-581472004cb7",
+            "display_name": "B"
+          },
+          {
+            "id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723",
+            "display_name": "B"
+          },
+          {
+            "id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "b5a2d69c-8716-70fb-a325-cb9f847eae2b",
+            "display_name": "B"
+          },
+          {
+            "id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "1a7c389e-4055-5be8-98cf-4511e72669e2",
+            "display_name": "A"
+          },
+          {
+            "id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "d8dbe7dc-a2c5-f007-49ea-efa91dd6d455",
+            "display_name": "B"
+          },
+          {
+            "id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "43617c32-fa96-ab6b-5178-95af40c3e7a2",
+            "display_name": "A"
+          },
+          {
+            "id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "e088af46-f510-858b-d7f6-fb5f76267c93",
+            "display_name": "B"
+          },
+          {
+            "id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "ffcb128d-c072-0289-0a0e-bd7ddf154336",
+            "display_name": "A"
+          },
+          {
+            "id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526",
+            "display_name": "A"
+          },
+          {
+            "id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "68e9d950-7cac-9de8-0b26-32d39a7e354a",
+            "display_name": "A"
+          },
+          {
+            "id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "2d2835a3-eeda-06b4-2e26-db75d3b510de",
+            "display_name": "B"
+          },
+          {
+            "id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "ea1ee237-c635-f793-0583-04c2e3990466",
+            "display_name": "A"
+          }
+        ]
+      },
+      "expected": {
+        "picks": [
+          {
+            "id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "locked": false,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          },
+          {
+            "id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "locked": false,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "A",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "A",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "locked": true,
+            "slot_id": "f6ca446a-5d6e-2934-5630-1537536fbd9a",
+            "team_id": "B",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "locked": true,
+            "slot_id": "465277a0-aa0a-92b9-2c75-774321ea1d73",
+            "team_id": "B",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "submitted_at": "2026-01-01T00:00:00+00:00",
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          }
+        ],
+        "leagues": [
+          {
+            "id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "55605eb3-6a8f-04a8-46a8-3cfed5529a89",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "82957bc1-44a6-f5bd-ca4b-3cde1ec1d2d3"
+          },
+          {
+            "id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "3b97333f-55ba-8942-7ebe-8235e205d407",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "c0756104-329a-d313-f943-27cbdd687280"
+          },
+          {
+            "id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "7556def8-f0d8-7e27-eb9e-2cc614cd43dc",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "a59db630-8f95-6442-d322-5465a9a90822"
+          },
+          {
+            "id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "status": "complete",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "1bb76abb-f525-bbcb-6de3-1fcae72b081a",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "f306d968-7cfb-ffdf-2513-bedb479e5254"
+          },
+          {
+            "id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "status": "locked",
+            "locked_at": "2026-01-03T00:00:00+00:00",
+            "join_token": "704381c6-82c7-84f0-8a03-86b11a100e3e",
+            "template_id": "2c96d513-5d26-6359-cb9d-106f01467a7f",
+            "scoring_config": {
+              "scheme": "pickem_flat",
+              "other_points": 1
+            },
+            "organizer_token": "ef193a3f-424d-1448-d1e4-44d88f1bd3ad"
+          },
+          {
+            "id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "status": "active",
+            "locked_at": null,
+            "join_token": "1c78eaa3-51be-4da4-1635-e74c397cc32a",
+            "template_id": "5aa017d9-0763-8f62-f1c0-a4a0573cf84f",
+            "scoring_config": {
+              "round_points": {
+                "1": 1
+              },
+              "champion_bonus": 0
+            },
+            "organizer_token": "1eddbf07-b80f-17f4-a349-986f37be57fe"
+          }
+        ],
+        "results": [
+          {
+            "locked": false,
+            "pick_id": "0423f3ba-6465-3eb6-082a-6c1bd8daa293",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "34cc7b56-2d1a-d534-2138-dd4a2e1020bc",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "41264e9a-b737-c3e7-e27c-d915105cbd08",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "5d774c17-60d3-fa02-a144-cf72041d03dd",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "7920f4f8-a8de-73f3-db3c-8d81d07169cb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "84053aa0-ae1c-678e-49fe-031a4b0cbe7f",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "851db584-3d3c-feeb-638d-4ae33932f382",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "picked_team_id": "B",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "998d438b-2ad8-a2b4-6317-2a1afc698f52",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": false,
+            "pick_id": "a514236b-7b75-ed84-764b-235fa8aebd6d",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "picked_team_id": "A",
+            "winner_team_id": "A"
+          },
+          {
+            "locked": true,
+            "pick_id": "c7586fef-0606-4823-56cd-b5b071a34118",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": false,
+            "points_earned": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "picked_team_id": "A",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "ecf5b24a-81ba-8165-268c-6c8cedf64c87",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          },
+          {
+            "locked": true,
+            "pick_id": "f0c729a5-7361-25a5-c2e0-0a0e983e07c4",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "is_correct": true,
+            "points_earned": 1,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "picked_team_id": "B",
+            "winner_team_id": "B"
+          }
+        ],
+        "leaderboard": [
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "019230ac-7a32-bf65-8387-723978d06b65"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "37265d21-b0ca-7c8c-2279-d7a13194696a"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "8bcb5977-22e4-0574-b0f8-7be667a10569"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa"
+          },
+          {
+            "rank": 1,
+            "points": 1,
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "wrong_picks": 0,
+            "total_points": 1,
+            "correct_picks": 1,
+            "pending_picks": 0,
+            "participant_id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "c6568c1f-c044-a8de-5f4c-782a237c4229"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f4f197ae-4483-8711-fae6-c4b7624b4c52"
+          },
+          {
+            "rank": 2,
+            "points": 0,
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "wrong_picks": 1,
+            "total_points": 0,
+            "correct_picks": 0,
+            "pending_picks": 0,
+            "participant_id": "f92a8707-7586-6715-3636-f684d0784e39"
+          }
+        ],
+        "participants": [
+          {
+            "id": "019230ac-7a32-bf65-8387-723978d06b65",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "888a44ac-0395-7c4a-106a-581472004cb7",
+            "display_name": "B"
+          },
+          {
+            "id": "0a992ba5-4935-995b-e3c4-6c472f9bb73c",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "9dccb7c9-fc7a-0605-1a5b-0c3bdcff6723",
+            "display_name": "B"
+          },
+          {
+            "id": "37265d21-b0ca-7c8c-2279-d7a13194696a",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "b5a2d69c-8716-70fb-a325-cb9f847eae2b",
+            "display_name": "B"
+          },
+          {
+            "id": "58d3f20f-8c2a-c476-fdce-f8a8b614d7ba",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "1a7c389e-4055-5be8-98cf-4511e72669e2",
+            "display_name": "A"
+          },
+          {
+            "id": "5c00a717-d1f9-b7e9-ef8f-2724fbeefb7f",
+            "league_id": "ad3efed0-ad32-393a-7467-e9e90813704e",
+            "magic_token": "d8dbe7dc-a2c5-f007-49ea-efa91dd6d455",
+            "display_name": "B"
+          },
+          {
+            "id": "847a4ca9-01d6-a2aa-7da6-366ba127b9f1",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "43617c32-fa96-ab6b-5178-95af40c3e7a2",
+            "display_name": "A"
+          },
+          {
+            "id": "8bcb5977-22e4-0574-b0f8-7be667a10569",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "e088af46-f510-858b-d7f6-fb5f76267c93",
+            "display_name": "B"
+          },
+          {
+            "id": "aeadae3a-ae44-0e74-66a8-2f96d2f70aaa",
+            "league_id": "90590265-00f9-5f80-86f5-c11e4fd8a50a",
+            "magic_token": "ffcb128d-c072-0289-0a0e-bd7ddf154336",
+            "display_name": "A"
+          },
+          {
+            "id": "bf312fb8-827d-0dfd-ce64-46a617dcb0bb",
+            "league_id": "9ebc40ef-835e-b9f0-5e49-ccfe8633f44a",
+            "magic_token": "63ca80cb-bd3c-7b30-a3a2-cc67b1fa4526",
+            "display_name": "A"
+          },
+          {
+            "id": "c6568c1f-c044-a8de-5f4c-782a237c4229",
+            "league_id": "a241947b-fb7b-a9cc-7d3e-198683e792ae",
+            "magic_token": "68e9d950-7cac-9de8-0b26-32d39a7e354a",
+            "display_name": "A"
+          },
+          {
+            "id": "f4f197ae-4483-8711-fae6-c4b7624b4c52",
+            "league_id": "4b316542-1393-93ef-c84d-96f1ec2bc530",
+            "magic_token": "2d2835a3-eeda-06b4-2e26-db75d3b510de",
+            "display_name": "B"
+          },
+          {
+            "id": "f92a8707-7586-6715-3636-f684d0784e39",
+            "league_id": "7486ad25-a16e-67ea-e24d-9f80a307bb95",
+            "magic_token": "ea1ee237-c635-f793-0583-04c2e3990466",
+            "display_name": "A"
+          }
+        ]
+      }
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: six leagues/twelve picks",
+      "passed": true,
+      "actual": "6/12",
+      "expected": "6/12"
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: independent 1/0 scores and ranks",
+      "passed": true,
+      "actual": "t",
+      "expected": "t"
+    },
+    {
+      "name": "bracket_transition_20261027t205820z_d115a5_fresh: per-tenant pick linkage",
+      "passed": true,
+      "actual": "t",
+      "expected": "t"
+    }
+  ],
+  "databases": [
+    "bracket_transition_20261027t205820z_d115a5_fresh"
+  ],
+  "manifest": {
+    "supabase/migrations/20260724000001_initial_schema.sql": "406a9d1376abe1507b4b4ef8c7b3f66658b5ca83817660c46cd53d0fc8e152a9",
+    "supabase/migrations/20260724000002_rls_policies.sql": "3d895166cafff2db470673534cd3da9bec7834ba0522ae52318da0969893119e",
+    "supabase/migrations/20260724000003_scoring_views.sql": "5a3ad67822e139a4fd77b8ee558a568bb54754531fc3a560ae864df86963236e",
+    "supabase/migrations/20260725000004_pickem_views.sql": "ee088a7087dffd2214f8ca8b1a79dbe89a5f89a89cc05701eef59f7dbb262b32",
+    "supabase/migrations/20260725000005_vapid_rpc.sql": "afa09e1fa1946f52b107f42719b9c912764ca2c38b81648a46f0fca2730c10ee",
+    "supabase/migrations/20261006000001_canonical_event_domain.sql": "7fc336e6d864b7f305d3390dfae93b8acafd7add2b00ff17ed0e29f0912669be",
+    "supabase/migrations/20261006000002_ingestion_evidence_and_delivery.sql": "6955bb070fc60f3041356857efd0998a8c85430dbcdb1d0fbbbe5bb183ad1416",
+    "supabase/migrations/20261008000001_effective_result_compatibility.sql": "c8e02430237578a634f3c6b6976804d85d8e96338179de9a3e9c654fb500d2de",
+    "supabase/migrations/20261009000000_slice_2b_observation_evidence.sql": "d21c4d3932aaeee1aae6616378da80968a7f644dc8de3d3336998f353a446d00",
+    "supabase/migrations/20261009000001_slice_2b_structural_projection.sql": "3df0a224127f906d981532dd6cb8ca5574178431f0dfc575009b2135dae9f864",
+    "supabase/migrations/20261009000002_slice_2b_atomic_result_projection.sql": "010149f754d90a5e76ba34d44c9920c0f5fd698b224d57e565244032858db11c",
+    "supabase/migrations/20261009000003_slice_2b_acceptance_remediation.sql": "91957b68e7bde040f05ce3c2f74e36c1fe67f5d4fdf4ef4c3972d9e0f95e6aec",
+    "supabase/migrations/20261009000004_slice_2b_r2_acceptance.sql": "b3f4a4e599370e49d5120a95f1eb89825a14f231215de4d3ef30455447f77e62",
+    "supabase/migrations/20261009000005_slice_2b_r3_provenance_grants.sql": "68dcfdf97f64a5df433e4e8492fb55307e500097e12dc64dd9ba4d344374aa3c",
+    "supabase/migrations/20261010000000_slice_2c_run_ledger.sql": "9970707b928406f6d7cbd18bf052b673c7e19fb7ac561614f485647a31a1685a",
+    "supabase/migrations/20261010000001_slice_2c_2_acceptance_remediation.sql": "9c56eb432078c7344e174edaab6f96847e62023eeaae4fdefddaa4b64de72ef4",
+    "supabase/migrations/20261010000002_slice_2c_2_clock_remediation.sql": "ca705b109bd4bead728afe3961bc503c8e9dee89579051332505ffa039b88b8b",
+    "supabase/migrations/20261010000003_slice_2c_2_claim_checkpoint_contract.sql": "eeaf9d72710e0ff6ddbca4ab5f8cbd831bdf2ddd7681fcba28dcebd1db57e493",
+    "supabase/migrations/20261010000004_slice_2c_rate_budget.sql": "76382b359d779ed655227d4ba6b8055c5b2c59871ddfca7e85cd8496bc920c5f",
+    "supabase/migrations/20261010000005_slice_2c_5b_acceptance_remediation.sql": "06b89b4d5d35ca659aaffa749b7f3f78d077ab64dd3c81f0a1904af42dd7925e",
+    "supabase/migrations/20261010000006_slice_2c_5b_r2_header_semantics.sql": "c9b8f76215f25a0734e16255d34c49fa2936e5d73e80ea7499a3a145df54b0ec",
+    "supabase/migrations/20261010000007_slice_2c_5_scheduling_health.sql": "752df4b1210c9e47dc6ffe4bfebaa525f00032ccd7618289f7993d3131ad5d87",
+    "supabase/migrations/20261010000008_immutable_evidence_grants.sql": "0971d9c26c4c290054eadda29e42d1dcbca91eb5d26ebc2f5f7d250157376f00",
+    "supabase/migrations/20261027000001_typed_outcomes.sql": "47c2f77d495bfdd5eb8aea3bdc361a8954a371afac22b390ea2e45f55a8a0dad",
+    "supabase/migrations/20261027000002_prediction_windows.sql": "9f19ac4ecf24db0cf3d4030f62d974d8cdf776b309640bbc7a794daf2a277ec3",
+    "supabase/migrations/20261027000003_window_integrity_repair.sql": "93591a6c6aaf2fdb2c6a3f4380fd984935c0d442149f3ac90f3b4d6d34352346",
+    "supabase/migrations/20261027000004_security_boundary_repair.sql": "20c28f3bc2f3fc0b9ac2b99410c36e6a7c59c8c21035337ae84801dd2c4953b0"
+  },
+  "excluded_migrations": [
+    "20261027000005_window_incarnation_history.sql"
+  ],
+  "concurrent_exclusion": "20261027000005 window history excluded by default, even if not yet present; rerun --through 20261027000005",
+  "inputs": {
+    "supabase/tests/transitions/canonical.sql": "890dc2262aacecd3059215b57186011adf9aa1b2b93c692c2e6443e6b0cca10d",
+    "supabase/tests/transitions/legacy.sql": "94b4b57fab6d35080267c8b9e6189732a15e49a7ace0eddcf0f5eb01bfba0860",
+    "supabase/tests/transitions/reader.sql": "0f051cb859952ac52edd585283f55b2823f76e19675dcbde1ec59aa8d8582f9a"
+  },
+  "harness_sha256": "bfb6acac4667a48e76adcca19b7e0258f0f5a4917649ef3cf473f5c92801da30",
+  "head": "3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8",
+  "platform": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit\npg_net:extensions\npg_stat_statements:extensions\npgcrypto:extensions\npgtap:extensions\nplpgsql:pg_catalog\nsupabase_vault:vault\nuuid-ossp:extensions\nanon\nauthenticated\nservice_role",
+  "status": "failed",
+  "failure": "{\"argv\": [\"docker\", \"exec\", \"-i\", \"supabase_db_bracket-fyi\", \"psql\", \"-X\", \"-U\", \"postgres\", \"-d\", \"bracket_transition_20261027t205820z_d115a5_fresh\", \"-v\", \"ON_ERROR_STOP=1\", \"-Atq\"], \"returncode\": 3, \"stdout\": \"\", \"stderr\": \"ERROR:  new row for relation \\\"competitors\\\" violates check constraint \\\"competitors_key_format\\\"\\nDETAIL:  Failing row contains (eed55108-d6ca-ef8f-620a-63c98145775b, null, transition-A, team, Synthetic A, null, null, {}, 2026-10-27 20:58:23.665836+00, 2026-10-27 20:58:23.665836+00).\\n\"}",
+  "retention": "All named databases retained. No reset, DROP DATABASE, migration-history edits, hosted access, or provider transport."
+}

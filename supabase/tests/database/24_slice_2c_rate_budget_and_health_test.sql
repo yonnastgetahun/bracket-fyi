@@ -1,0 +1,387 @@
+begin;
+
+select plan(157);
+
+select has_table('public', 'provider_rate_budgets', 'provider-wide budget table exists');
+select has_table('public', 'provider_rate_budget_reservations', 'immutable reservation table exists');
+select has_column('public', 'provider_rate_budgets', 'provider_id', 'budget provider_id exists');
+select has_column('public', 'provider_rate_budgets', 'scope_key', 'budget scope exists');
+select has_column('public', 'provider_rate_budgets', 'configured_limit_count', 'budget ceiling exists');
+select has_column('public', 'provider_rate_budgets', 'configured_window_seconds', 'budget window exists');
+select has_column('public', 'provider_rate_budgets', 'available_count', 'budget availability exists');
+select has_column('public', 'provider_rate_budgets', 'trusted_reset_at', 'trusted reset exists');
+select has_column('public', 'provider_rate_budgets', 'observed_limit_count', 'observed limit exists');
+select has_column('public', 'provider_rate_budgets', 'observed_remaining_count', 'observed remaining exists');
+select has_column('public', 'provider_rate_budgets', 'observed_reset_at', 'observed reset exists');
+select has_column('public', 'provider_rate_budgets', 'observed_at', 'observed effective time exists');
+select has_column('public', 'provider_rate_budgets', 'observed_accepted_at', 'observed acceptance time exists');
+select has_column('public', 'provider_rate_budgets', 'updated_at', 'budget updated_at exists');
+select has_column('public', 'provider_rate_budget_reservations', 'id', 'reservation id exists');
+select has_column('public', 'provider_rate_budget_reservations', 'provider_id', 'reservation provider exists');
+select has_column('public', 'provider_rate_budget_reservations', 'scope_key', 'reservation scope exists');
+select has_column('public', 'provider_rate_budget_reservations', 'attempt_key', 'reservation attempt key exists');
+select has_column('public', 'provider_rate_budget_reservations', 'cost', 'reservation cost exists');
+select has_column('public', 'provider_rate_budget_reservations', 'reserved_at', 'reservation time exists');
+select has_column('public', 'provider_rate_budget_reservations', 'remaining_after', 'reservation remaining exists');
+select has_index('public', 'provider_rate_budgets', 'provider_rate_budgets_pkey', 'budget primary key exists');
+select ok(
+  exists (
+    select 1
+    from pg_constraint
+    where conrelid = 'public.provider_rate_budget_reservations'::regclass
+      and contype = 'u'
+      and pg_get_constraintdef(oid) like '%(provider_id, scope_key, attempt_key)%'
+  ),
+  'reservation uniqueness constraint covers provider, scope, and attempt key'
+);
+select ok((select count(*) >= 8 from pg_constraint where conrelid = 'public.provider_rate_budgets'::regclass), 'budget constraints cover scope, ceiling, availability, and observations');
+select ok((select count(*) >= 4 from pg_constraint where conrelid = 'public.provider_rate_budget_reservations'::regclass), 'reservation constraints cover identity and nonnegative values');
+select ok((select relrowsecurity from pg_class where oid = 'public.provider_rate_budgets'::regclass), 'budget RLS is enabled');
+select ok((select relrowsecurity from pg_class where oid = 'public.provider_rate_budget_reservations'::regclass), 'reservation RLS is enabled');
+select ok(has_table_privilege('service_role', 'public.provider_rate_budgets', 'select'), 'service_role can select budgets');
+select ok(has_table_privilege('service_role', 'public.provider_rate_budget_reservations', 'select'), 'service_role can select reservations');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budgets', 'insert'), 'service_role cannot insert budgets directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budgets', 'update'), 'service_role cannot update budgets directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budgets', 'delete'), 'service_role cannot delete budgets directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budgets', 'truncate'), 'service_role cannot truncate budgets directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budget_reservations', 'insert'), 'service_role cannot insert reservations directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budget_reservations', 'update'), 'service_role cannot update reservations directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budget_reservations', 'delete'), 'service_role cannot delete reservations directly');
+select ok(not has_table_privilege('service_role', 'public.provider_rate_budget_reservations', 'truncate'), 'service_role cannot truncate reservations directly');
+select ok(has_function_privilege('service_role', 'public.reserve_provider_budget(uuid,text,text,integer)', 'execute'), 'service_role can reserve through the public wrapper');
+select ok(has_function_privilege('service_role', 'public.record_ingestion_response(uuid,text,integer,integer,integer,timestamptz,timestamptz,timestamptz)', 'execute'), 'service_role can record responses through the public wrapper');
+select ok(not has_function_privilege('service_role', 'public.record_provider_rate_headers_for_run(uuid,text,integer,integer,timestamptz,timestamptz)', 'execute'), 'service_role cannot execute the private header helper');
+
+insert into data_providers (id, adapter_key, display_name)
+values ('c5000000-0000-4000-8000-000000000001', 'slice-2c-budget', 'Slice 2C Budget Provider');
+insert into data_providers (id, adapter_key, display_name)
+values ('c5000000-0000-4000-8000-000000000007', 'slice-2c-no-budget', 'Slice 2C No Budget Provider');
+insert into organizations (id, organization_key, name, kind)
+values ('c5000000-0000-4000-8000-000000000002', 'slice-2c-budget-org', 'Slice 2C Budget Org', 'league');
+insert into competitions (id, organization_id, competition_key, name, domain)
+values ('c5000000-0000-4000-8000-000000000003', 'c5000000-0000-4000-8000-000000000002', 'slice-2c-budget-cup', 'Slice 2C Budget Cup', 'sport');
+insert into event_editions (id, competition_id, edition_key, name, season_label)
+values ('c5000000-0000-4000-8000-000000000004', 'c5000000-0000-4000-8000-000000000003', '2026', 'Slice 2C Budget Edition', '2026');
+insert into provider_bindings (id, provider_id, event_edition_id, binding_key, role, mode, health_status, next_poll_at, provider_cursor)
+values ('c5000000-0000-4000-8000-000000000005', 'c5000000-0000-4000-8000-000000000001', 'c5000000-0000-4000-8000-000000000004', 'budget-primary', 'primary', 'write', 'healthy', now(), '{}'::jsonb);
+insert into provider_bindings (id, provider_id, event_edition_id, binding_key, role, mode, health_status, next_poll_at, provider_cursor)
+values ('c5000000-0000-4000-8000-000000000006', 'c5000000-0000-4000-8000-000000000001', 'c5000000-0000-4000-8000-000000000004', 'budget-secondary', 'fallback', 'write', 'healthy', now(), '{}'::jsonb);
+insert into provider_bindings (id, provider_id, event_edition_id, binding_key, role, mode, health_status, next_poll_at, provider_cursor)
+values ('c5000000-0000-4000-8000-000000000008', 'c5000000-0000-4000-8000-000000000007', 'c5000000-0000-4000-8000-000000000004', 'budget-missing', 'fallback', 'write', 'healthy', now(), '{}'::jsonb);
+insert into provider_rate_budgets (provider_id, scope_key, configured_limit_count, configured_window_seconds, available_count, trusted_reset_at)
+values ('c5000000-0000-4000-8000-000000000001', 'provider', 3, 60, 3, clock_timestamp() + interval '60 seconds');
+
+create temporary table budget_claim as
+select * from claim_manual_ingestion_run('c5000000-0000-4000-8000-000000000005', 'budget-run', 'budget-worker', now(), 900);
+select lives_ok($$select * from start_ingestion_run((select run_id from budget_claim), (select lease_token from budget_claim), now())$$, 'budget run starts through the existing lifecycle wrapper');
+create temporary table budget_attempt as
+select
+  'v1:request:' || (select run_id::text from budget_claim) || ':0:' ||
+  public.slice_2c_page_key('c5000000-0000-4000-8000-000000000005', 0, '{}'::jsonb, null) as attempt_key;
+
+create temporary table first_reservation as
+select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from budget_attempt), 1);
+select is((select outcome from first_reservation), 'reserved', 'available budget creates one reservation');
+select is((select remaining_count from first_reservation), 2, 'reservation decrements exactly once');
+select is((select count(*) from provider_rate_budget_reservations), 1::bigint, 'one immutable reservation row exists');
+select is((select available_count from provider_rate_budgets), 2, 'provider-wide budget availability is decremented');
+
+create temporary table replay_reservation as
+select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from budget_attempt), 1);
+select is((select outcome from replay_reservation), 'replayed', 'exact reservation replay is idempotent');
+select is((select reservation_id from replay_reservation), (select reservation_id from first_reservation), 'replay returns the original reservation');
+select is((select count(*) from provider_rate_budget_reservations), 1::bigint, 'replay does not add a reservation');
+select is((select available_count from provider_rate_budgets), 2, 'replay does not decrement or replenish');
+select throws_ok($$select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from budget_attempt), 2)$$, 'P0005', null, 'same attempt key with changed cost is a conflict');
+
+create temporary table second_claim as
+select * from claim_manual_ingestion_run('c5000000-0000-4000-8000-000000000006', 'budget-run-2', 'budget-worker-2', now(), 900);
+select lives_ok($$select * from start_ingestion_run((select run_id from second_claim), (select lease_token from second_claim), now())$$, 'second binding can use the provider-wide budget');
+create temporary table second_attempt as
+select 'v1:request:' || (select run_id::text from second_claim) || ':0:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000006', 0, '{}'::jsonb, null) as attempt_key;
+create temporary table second_reservation as
+select * from reserve_provider_budget((select run_id from second_claim), (select lease_token from second_claim), (select attempt_key from second_attempt), 1);
+select is((select outcome from second_reservation), 'reserved', 'a second binding shares the provider budget');
+select is((select remaining_count from second_reservation), 1, 'shared provider budget has one unit remaining');
+select is((select count(*) from provider_rate_budget_reservations), 2::bigint, 'shared budget records both binding attempts');
+
+create temporary table missing_claim as
+select * from claim_manual_ingestion_run('c5000000-0000-4000-8000-000000000008', 'budget-missing-run', 'budget-worker-missing', now(), 900);
+select lives_ok($$select * from start_ingestion_run((select run_id from missing_claim), (select lease_token from missing_claim), now())$$, 'missing-budget run starts through the existing lifecycle wrapper');
+create temporary table missing_attempt as
+select 'v1:request:' || (select run_id::text from missing_claim) || ':0:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000008', 0, '{}'::jsonb, null) as attempt_key;
+update ingestion_runs set lease_expires_at = clock_timestamp() - interval '1 second' where id = (select run_id from missing_claim);
+select throws_ok($$select * from reserve_provider_budget((select run_id from missing_claim), (select lease_token from missing_claim), (select attempt_key from missing_attempt), 1)$$, 'P0001', null, 'expired lease is rejected before missing-budget lookup');
+update ingestion_runs set lease_expires_at = clock_timestamp() + interval '15 minutes' where id = (select run_id from missing_claim);
+create temporary table missing_reservation as
+select * from reserve_provider_budget((select run_id from missing_claim), (select lease_token from missing_claim), (select attempt_key from missing_attempt), 1);
+select is((select outcome from missing_reservation), 'configuration_missing', 'missing provider budget fails closed');
+select is((select reservation_id from missing_reservation), null::uuid, 'missing configuration has no reservation');
+select is((select remaining_count from missing_reservation), null::integer, 'missing configuration has no remaining count');
+select is((select retry_at from missing_reservation), null::timestamptz, 'missing configuration has no retry time');
+
+update ingestion_runs set retry_index = 1 where id = (select run_id from second_claim);
+create temporary table second_retry_attempt as
+select 'v1:request:' || (select run_id::text from second_claim) || ':1:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000006', 0, '{}'::jsonb, null) as attempt_key;
+update provider_rate_budgets set available_count = 0 where provider_id = 'c5000000-0000-4000-8000-000000000001';
+create temporary table exhausted_reservation as
+select * from reserve_provider_budget((select run_id from second_claim), (select lease_token from second_claim), (select attempt_key from second_retry_attempt), 1);
+select is((select outcome from exhausted_reservation), 'exhausted', 'insufficient availability is exhausted');
+select is((select retry_at from exhausted_reservation), (select trusted_reset_at from provider_rate_budgets), 'exhaustion returns authoritative trusted reset');
+select is((select count(*) from provider_rate_budget_reservations), 2::bigint, 'exhaustion does not create a reservation');
+
+update ingestion_runs set retry_index = 2 where id = (select run_id from second_claim);
+create temporary table boundary_attempt as
+select 'v1:request:' || (select run_id::text from second_claim) || ':2:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000006', 0, '{}'::jsonb, null) as attempt_key;
+update provider_rate_budgets set available_count = 0, trusted_reset_at = clock_timestamp() where provider_id = 'c5000000-0000-4000-8000-000000000001';
+create temporary table boundary_reservation as
+select * from reserve_provider_budget((select run_id from second_claim), (select lease_token from second_claim), (select attempt_key from boundary_attempt), 1);
+select is((select outcome from boundary_reservation), 'reserved', 'exact reset boundary replenishes before reservation');
+select is((select remaining_count from boundary_reservation), 2, 'boundary reset restores the configured ceiling once');
+
+update ingestion_runs set retry_index = 3 where id = (select run_id from second_claim);
+update provider_rate_budgets set available_count = 0, trusted_reset_at = clock_timestamp() - interval '181 seconds' where provider_id = 'c5000000-0000-4000-8000-000000000001';
+create temporary table multi_window_reservation as
+select * from reserve_provider_budget(
+  (select run_id from second_claim), (select lease_token from second_claim),
+  'v1:request:' || (select run_id::text from second_claim) || ':3:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000006', 0, '{}'::jsonb, null), 1
+);
+select is((select outcome from multi_window_reservation), 'reserved', 'multiple elapsed windows replenish safely');
+select is((select remaining_count from multi_window_reservation), 2, 'multi-window reset never over-credits');
+select ok((select trusted_reset_at > clock_timestamp() from provider_rate_budgets), 'multi-window reset advances strictly beyond database time');
+
+create temporary table budget_before_response as
+select trusted_reset_at from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 429, 100, 1, clock_timestamp() + interval '1 hour', clock_timestamp(), now())$$, 'response wrapper records metadata and headers atomically');
+select is((select http_status from ingestion_runs where id = (select run_id from budget_claim)), 429, 'HTTP status is persisted');
+select is((select observed_limit_count from provider_rate_budgets), 100, 'observed limit is retained without changing configured ceiling');
+select is((select available_count from provider_rate_budgets), 1, 'headers can reduce but not raise availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from budget_before_response), 'trusted reset remains database-authoritative');
+update ingestion_runs set retry_index = 1 where id = (select run_id from budget_claim);
+create temporary table post_header_attempt as
+select 'v1:request:' || (select run_id::text from budget_claim) || ':1:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000005', 0, '{}'::jsonb, null) as attempt_key;
+create temporary table post_header_reservation as
+select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from post_header_attempt), 1);
+select is((select outcome from post_header_reservation), 'reserved', 'current-window provider remaining permits one call');
+select is((select remaining_count from post_header_reservation), 0, 'reservation consumes the header-constrained remaining unit without over-credit');
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 100, 0, clock_timestamp() + interval '2 hours', null, clock_timestamp() + interval '1 day')$$, 'future provider observation is accepted with server-time clamping');
+select is((select available_count from provider_rate_budgets), 0, 'future headers cannot increase availability');
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 100, 3, clock_timestamp() - interval '1 hour', null, clock_timestamp() - interval '1 day')$$, 'older header is safely ignored');
+select is((select observed_remaining_count from provider_rate_budgets), 0, 'older header cannot overwrite newer observation');
+select throws_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 1, 2, null, null, now())$$, '22023', null, 'invalid header bounds fail atomically');
+select is((select http_status from ingestion_runs where id = (select run_id from budget_claim)), 200, 'failed header update leaves prior response metadata unchanged');
+
+update provider_rate_budgets
+set available_count = 2,
+    trusted_reset_at = clock_timestamp() + interval '60 seconds',
+    observed_limit_count = 3,
+    observed_remaining_count = 2,
+    observed_reset_at = clock_timestamp() + interval '60 seconds',
+    observed_at = clock_timestamp() - interval '1 hour',
+    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create temporary table no_header_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 204, null, null, null, null, clock_timestamp() + interval '1 day')$$, 'observed_at alone is not a rate-header observation');
+select is((select available_count from provider_rate_budgets), (select available_count from no_header_before), 'no-header response preserves availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from no_header_before), 'no-header response preserves trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from no_header_before), 'no-header response preserves observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from no_header_before), 'no-header response preserves observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from no_header_before), 'no-header response preserves observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from no_header_before), 'no-header response preserves observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from no_header_before), 'no-header response preserves acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from no_header_before), 'no-header response preserves budget updated_at');
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 1, (select trusted_reset_at from no_header_before), null, (select observed_at + interval '1 second' from no_header_before))$$, 'delayed lower-remaining header is accepted after a no-header response');
+select is((select available_count from provider_rate_budgets), 1, 'delayed lower-remaining header reduces availability');
+
+update provider_rate_budgets
+set available_count = 0,
+    trusted_reset_at = clock_timestamp() + interval '60 seconds',
+    observed_at = clock_timestamp() - interval '1 hour',
+    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    observed_remaining_count = 0,
+    observed_reset_at = clock_timestamp() + interval '60 seconds',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create temporary table stale_header_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, (select trusted_reset_at - interval '1 second' from stale_header_before), null, clock_timestamp())$$, 'fresh stale-reset header is ignored');
+select is((select available_count from provider_rate_budgets), (select available_count from stale_header_before), 'stale-reset header cannot change availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from stale_header_before), 'stale-reset header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from stale_header_before), 'stale-reset header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from stale_header_before), 'stale-reset header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from stale_header_before), 'stale-reset header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from stale_header_before), 'stale-reset header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from stale_header_before), 'stale-reset header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from stale_header_before), 'stale-reset header cannot change budget updated_at');
+
+update provider_rate_budgets
+set available_count = 0,
+    trusted_reset_at = clock_timestamp() - interval '60 seconds',
+    observed_at = clock_timestamp() - interval '1 hour',
+    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    observed_remaining_count = 0,
+    observed_reset_at = clock_timestamp() - interval '60 seconds',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create temporary table expired_stale_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, clock_timestamp() - interval '30 seconds', null, clock_timestamp())$$, 'stale-reset header is ignored when the local window is already expired');
+select is((select available_count from provider_rate_budgets), (select available_count from expired_stale_before), 'expired-window stale header cannot replenish availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from expired_stale_before), 'expired-window stale header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from expired_stale_before), 'expired-window stale header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from expired_stale_before), 'expired-window stale header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from expired_stale_before), 'expired-window stale header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from expired_stale_before), 'expired-window stale header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from expired_stale_before), 'expired-window stale header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from expired_stale_before), 'expired-window stale header cannot change budget updated_at');
+
+update provider_rate_budgets
+set available_count = 0,
+    trusted_reset_at = clock_timestamp() - interval '61 seconds',
+    observed_at = clock_timestamp() - interval '1 hour',
+    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    observed_remaining_count = 0,
+    observed_reset_at = clock_timestamp() - interval '61 seconds',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create temporary table out_of_order_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, clock_timestamp() + interval '60 seconds', null, clock_timestamp() - interval '2 hours')$$, 'out-of-order header is ignored before local reset mutation');
+select is((select available_count from provider_rate_budgets), (select available_count from out_of_order_before), 'out-of-order header cannot change availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from out_of_order_before), 'out-of-order header cannot advance trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from out_of_order_before), 'out-of-order header cannot change observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from out_of_order_before), 'out-of-order header cannot change observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from out_of_order_before), 'out-of-order header cannot change observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from out_of_order_before), 'out-of-order header cannot change observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from out_of_order_before), 'out-of-order header cannot change acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from out_of_order_before), 'out-of-order header cannot change budget updated_at');
+
+update provider_rate_budgets
+set available_count = 0,
+    trusted_reset_at = clock_timestamp() - interval '61 seconds',
+    observed_at = clock_timestamp() - interval '1 hour',
+    observed_accepted_at = clock_timestamp() - interval '1 hour',
+    observed_remaining_count = 0,
+    observed_reset_at = clock_timestamp() - interval '61 seconds',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 10, 2, clock_timestamp() + interval '60 seconds', null, clock_timestamp())$$, 'current-window remaining header is accepted after an expired local window');
+update ingestion_runs set retry_index = 2 where id = (select run_id from budget_claim);
+create temporary table current_window_attempt as
+select 'v1:request:' || (select run_id::text from budget_claim) || ':2:' || public.slice_2c_page_key('c5000000-0000-4000-8000-000000000005', 0, '{}'::jsonb, null) as attempt_key;
+create temporary table current_window_reservation as
+select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from current_window_attempt), 1);
+select is((select outcome from current_window_reservation), 'reserved', 'current-window constrained reservation succeeds');
+select is((select remaining_count from current_window_reservation), 1, 'current-window remaining 2 followed by cost 1 leaves 1');
+
+update provider_rate_budgets
+set available_count = 3,
+    trusted_reset_at = clock_timestamp() + interval '60 seconds',
+    observed_at = '2000-01-01 00:00:00+00',
+    observed_accepted_at = '2000-01-01 00:00:00+00',
+    observed_remaining_count = 3,
+    observed_reset_at = clock_timestamp() + interval '60 seconds',
+    updated_at = clock_timestamp()
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 2, (select trusted_reset_at from provider_rate_budgets), null, '2026-10-11 07:00:00+00')$$, 'first equal-time header is accepted');
+select lives_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 200, 3, 1, (select trusted_reset_at from provider_rate_budgets), null, '2026-10-11 07:00:00+00')$$, 'later equal-time header is accepted');
+select is((select observed_remaining_count from provider_rate_budgets), 1, 'later database acceptance wins equal effective timestamps');
+
+create temporary table helper_failure_run_before as
+select http_status, rate_limit_limit, rate_limit_remaining, rate_limit_reset_at, retry_after_at, metadata
+from ingestion_runs where id = (select run_id from budget_claim);
+create temporary table helper_failure_budget_before as
+select available_count, trusted_reset_at, observed_limit_count,
+       observed_remaining_count, observed_reset_at, observed_at,
+       observed_accepted_at, updated_at
+from provider_rate_budgets
+where provider_id = 'c5000000-0000-4000-8000-000000000001' and scope_key = 'provider';
+create or replace function public.slice_2c_test_fail_budget_header()
+returns trigger language plpgsql as $$
+begin
+  raise exception 'forced_header_helper_failure' using errcode = 'P0001';
+end;
+$$;
+create trigger slice_2c_test_fail_budget_header_trigger
+before update on provider_rate_budgets
+for each row execute function public.slice_2c_test_fail_budget_header();
+select throws_ok($$select * from record_ingestion_response((select run_id from budget_claim), (select lease_token from budget_claim), 201, 3, 1, clock_timestamp() + interval '60 seconds', null, clock_timestamp())$$, 'P0001', null, 'helper-stage failure rolls back response and budget atomically');
+select is((select http_status from ingestion_runs where id = (select run_id from budget_claim)), (select http_status from helper_failure_run_before), 'helper failure rolls back HTTP metadata');
+select is((select rate_limit_limit from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_limit from helper_failure_run_before), 'helper failure rolls back run rate-limit limit');
+select is((select rate_limit_remaining from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_remaining from helper_failure_run_before), 'helper failure rolls back run rate-limit metadata');
+select is((select rate_limit_reset_at from ingestion_runs where id = (select run_id from budget_claim)), (select rate_limit_reset_at from helper_failure_run_before), 'helper failure rolls back run rate-limit reset');
+select is((select retry_after_at from ingestion_runs where id = (select run_id from budget_claim)), (select retry_after_at from helper_failure_run_before), 'helper failure rolls back retry-after metadata');
+select is((select metadata from ingestion_runs where id = (select run_id from budget_claim)), (select metadata from helper_failure_run_before), 'helper failure rolls back run metadata');
+select is((select available_count from provider_rate_budgets), (select available_count from helper_failure_budget_before), 'helper failure rolls back availability');
+select is((select trusted_reset_at from provider_rate_budgets), (select trusted_reset_at from helper_failure_budget_before), 'helper failure rolls back trusted reset');
+select is((select observed_limit_count from provider_rate_budgets), (select observed_limit_count from helper_failure_budget_before), 'helper failure rolls back observed limit');
+select is((select observed_remaining_count from provider_rate_budgets), (select observed_remaining_count from helper_failure_budget_before), 'helper failure rolls back observed remaining');
+select is((select observed_reset_at from provider_rate_budgets), (select observed_reset_at from helper_failure_budget_before), 'helper failure rolls back observed reset');
+select is((select observed_at from provider_rate_budgets), (select observed_at from helper_failure_budget_before), 'helper failure rolls back observed time');
+select is((select observed_accepted_at from provider_rate_budgets), (select observed_accepted_at from helper_failure_budget_before), 'helper failure rolls back acceptance time');
+select is((select updated_at from provider_rate_budgets), (select updated_at from helper_failure_budget_before), 'helper failure rolls back budget timestamp');
+drop trigger slice_2c_test_fail_budget_header_trigger on provider_rate_budgets;
+drop function public.slice_2c_test_fail_budget_header();
+
+grant select on budget_claim, budget_attempt, second_claim, second_attempt, post_header_attempt, current_window_attempt to service_role;
+set role service_role;
+select is(current_user, 'service_role', 'privilege probe runs as service_role');
+select throws_ok($sql$insert into provider_rate_budgets (provider_id, scope_key, configured_limit_count, configured_window_seconds, available_count, trusted_reset_at) values ('c5000000-0000-4000-8000-000000000001', 'provider', 1, 60, 1, now())$sql$, '42501', null, 'service_role cannot insert budgets directly');
+select throws_ok($sql$update provider_rate_budgets set available_count = 0 where false$sql$, '42501', null, 'service_role cannot update budgets directly');
+select throws_ok($sql$delete from provider_rate_budgets where false$sql$, '42501', null, 'service_role cannot delete budgets directly');
+select throws_ok($sql$truncate table provider_rate_budgets$sql$, '42501', null, 'service_role cannot truncate budgets');
+select throws_ok($sql$insert into provider_rate_budget_reservations (provider_id, scope_key, attempt_key, cost, reserved_at, remaining_after) values ('c5000000-0000-4000-8000-000000000001', 'provider', 'direct', 1, now(), 0)$sql$, '42501', null, 'service_role cannot insert reservations directly');
+select throws_ok($sql$update provider_rate_budget_reservations set cost = 2 where false$sql$, '42501', null, 'service_role cannot update reservations directly');
+select throws_ok($sql$delete from provider_rate_budget_reservations where false$sql$, '42501', null, 'service_role cannot delete reservations directly');
+select throws_ok($sql$truncate table provider_rate_budget_reservations$sql$, '42501', null, 'service_role cannot truncate reservations');
+select ok(
+  not has_table_privilege('anon', 'public.provider_rate_budgets', 'insert')
+  and not has_table_privilege('anon', 'public.provider_rate_budgets', 'update')
+  and not has_table_privilege('anon', 'public.provider_rate_budgets', 'delete')
+  and not has_table_privilege('anon', 'public.provider_rate_budgets', 'truncate')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budgets', 'insert')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budgets', 'update')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budgets', 'delete')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budgets', 'truncate'),
+  'browser roles cannot mutate provider budgets directly'
+);
+select ok(
+  not has_table_privilege('anon', 'public.provider_rate_budget_reservations', 'insert')
+  and not has_table_privilege('anon', 'public.provider_rate_budget_reservations', 'update')
+  and not has_table_privilege('anon', 'public.provider_rate_budget_reservations', 'delete')
+  and not has_table_privilege('anon', 'public.provider_rate_budget_reservations', 'truncate')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budget_reservations', 'insert')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budget_reservations', 'update')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budget_reservations', 'delete')
+  and not has_table_privilege('authenticated', 'public.provider_rate_budget_reservations', 'truncate'),
+  'browser roles cannot mutate reservations directly'
+);
+select ok(not has_function_privilege('anon', 'public.reserve_provider_budget(uuid,text,text,integer)', 'execute'), 'anon cannot execute the reservation wrapper');
+select ok(not has_function_privilege('authenticated', 'public.reserve_provider_budget(uuid,text,text,integer)', 'execute'), 'authenticated cannot execute the reservation wrapper');
+select ok(not has_function_privilege('anon', 'public.record_ingestion_response(uuid,text,integer,integer,integer,timestamptz,timestamptz,timestamptz)', 'execute'), 'anon cannot execute the response wrapper');
+select ok(not has_function_privilege('authenticated', 'public.record_ingestion_response(uuid,text,integer,integer,integer,timestamptz,timestamptz,timestamptz)', 'execute'), 'authenticated cannot execute the response wrapper');
+select lives_ok($$select * from reserve_provider_budget((select run_id from budget_claim), (select lease_token from budget_claim), (select attempt_key from current_window_attempt), 1)$$, 'service_role can execute reservation wrapper');
+select throws_ok($$select * from record_provider_rate_headers_for_run((select run_id from second_claim), (select lease_token from second_claim), 10, 1, now(), now())$$, '42501', null, 'service_role cannot execute private header helper');
+reset role;
+
+select * from finish();
+rollback;

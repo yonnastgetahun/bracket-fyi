@@ -8,22 +8,27 @@ import {
   getPickResults,
   getParticipants,
 } from "@/lib/league-data";
+import JoinPrompt from "@/components/JoinPrompt";
 import CompareLive from "@/components/CompareLive";
 
-export default async function ComparePage({
-  params,
-}: {
-  params: { league_id: string };
-}) {
+export default async function ComparePage(
+  props: {
+    params: Promise<{ league_id: string }>;
+  }
+) {
+  const params = await props.params;
   const { league_id } = params;
 
   const league = await getLeagueWithTemplate(league_id);
   if (!league) notFound();
+  if (!(league.locked_at && new Date(league.locked_at) <= new Date())) {
+    return <JoinPrompt leagueName={league.name} />;
+  }
 
   const [participants, allPicks, teamRegistry, matches] = await Promise.all([
     getParticipants(league_id),
     getPickResults(league_id),
-    league.template_id ? getTeamRegistry(league.template_id) : Promise.resolve([]),
+    league.template_id ? getTeamRegistry(league.template_id, league.id) : Promise.resolve([]),
     league.template_id ? getTemplateMatches(league.template_id) : Promise.resolve([]),
   ]);
 

@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { cn } from "@/lib/ui";
 import type { TemplateMatch, PickemCategory } from "@/lib/types";
@@ -121,7 +120,6 @@ function MatchCard({
 
 export default function MatchesLive({
   leagueId,
-  templateId,
   initialMatches,
   teamMap,
   seedMap,
@@ -132,14 +130,12 @@ export default function MatchesLive({
   const [results, setResults] = useState(initialResults);
 
   const refetch = useCallback(async () => {
-    const supabase = getBrowserClient();
-    const { data } = await supabase
-      .from("effective_results")
-      .select("template_match_id, winner_team_id")
-      .eq("template_id", templateId)
-      .eq("league_id", leagueId);
-    if (data) setResults(data as EffectiveResult[]);
-  }, [leagueId, templateId]);
+    const response = await fetch(`/l/${leagueId}/data?view=results`, { cache: "no-store" }).catch(() => null);
+    if (response?.ok) {
+      const { results } = await response.json();
+      setResults(results);
+    }
+  }, [leagueId]);
 
   useLiveRefresh(refetch);
 

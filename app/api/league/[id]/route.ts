@@ -1,3 +1,4 @@
+import { getTeamRegistry } from "@/lib/league-data";
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminClient } from "@/lib/supabase/admin";
 import type { TeamEntry } from "@/lib/types";
@@ -12,10 +13,8 @@ const PUBLIC_TEMPLATE_NAMES = [
   "Oscars 2025 (97th Academy Awards)",
 ];
 
-export async function GET(
-  _req: NextRequest,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const db = getAdminClient();
 
   const { data, error } = await db
@@ -39,7 +38,7 @@ export async function GET(
   // Return competitors only for custom bracket templates (not pickem, not seeded)
   let competitors: Array<{ id: string; name: string }> = [];
   if (isCustomTemplate && templateType === "bracket" && template?.team_registry) {
-    competitors = (template.team_registry as TeamEntry[])
+    competitors = (await getTeamRegistry(data.template_id, data.id))
       .filter((t) => !t.id.startsWith("bye-"))
       .map((t) => ({ id: t.id, name: t.name }));
   }

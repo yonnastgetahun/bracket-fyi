@@ -1,0 +1,10 @@
+-- Slice 2C.2-R rollback note: intentionally non-destructive forward-repair note.
+--
+-- This companion must not drop helpers, constraints, indexes, or evidence while
+-- retained public RPCs depend on the helpers and while immutable run/page/
+-- observation evidence exists. A hosted rollback requires a reviewed forward
+-- migration that first installs compatible public RPC bodies, preserves all
+-- evidence, and then retires only demonstrably unused objects.
+--
+-- Local rehearsal is transactional and should execute this file with \i inside
+-- BEGIN/ROLLBACK, invoking a public claim RPC before and after it.

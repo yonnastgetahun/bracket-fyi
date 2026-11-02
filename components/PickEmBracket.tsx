@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
-import { getBrowserClient } from "@/lib/supabase/client";
 import { useLiveRefresh } from "./useLiveRefresh";
 import { cn } from "@/lib/ui";
 import type { PickResultRow, League, PickemCategory, TemplateMatch } from "@/lib/types";
@@ -129,13 +128,14 @@ export default function PickEmBracket({
   }, [categories, templateMatches]);
 
   const refetch = useCallback(async () => {
-    const supabase = getBrowserClient();
-    const { data } = await supabase
-      .from("v_pick_results")
-      .select("*")
-      .eq("participant_id", participant.id)
-      .eq("league_id", participant.league_id);
-    if (data) setPicks(data as PickResultRow[]);
+    const response = await fetch(
+      `/l/${participant.league_id}/data?participantId=${participant.id}`,
+      { cache: "no-store" }
+    ).catch(() => null);
+    if (response?.ok) {
+      const { picks } = await response.json();
+      setPicks(picks as PickResultRow[]);
+    }
   }, [participant.id, participant.league_id]);
 
   useLiveRefresh(refetch);

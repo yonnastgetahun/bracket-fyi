@@ -1,0 +1,3 @@
+-- Intentionally non-destructive. Re-granting UPDATE/DELETE/TRUNCATE on immutable
+-- evidence would recreate the security defect this migration repairs. A future
+-- reviewed migration may replace this privilege model without deleting evidence.

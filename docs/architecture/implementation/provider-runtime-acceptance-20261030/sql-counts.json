@@ -1,0 +1,367 @@
+{
+  "fd": {
+    "database": "bracket_provider_vertical_6915530f02c7",
+    "command": "docker exec -i supabase_db_bracket-fyi psql -X -U postgres -d bracket_provider_vertical_6915530f02c7 -Atq -v ON_ERROR_STOP=1 < inspection.sql",
+    "snapshot": {
+      "runs": [
+        {
+          "status": "canceled",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "partial",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "failed",
+          "metadata": {
+            "reason": "unmapped_match",
+            "matchId": "9999",
+            "rowIndex": 0,
+            "awayTeamId": "202",
+            "homeTeamId": "101",
+            "fetchedCount": 1,
+            "reviewRequired": true
+          },
+          "errorClass": "provider:invalid_response"
+        },
+        {
+          "status": "failed",
+          "metadata": {},
+          "errorClass": "provider:authentication"
+        }
+      ],
+      "budget": {
+        "limit": 100,
+        "remaining": 94
+      },
+      "control": {
+        "stopped": true,
+        "realSends": false,
+        "notifications": false
+      },
+      "results": [
+        {
+          "winner": null,
+          "outcome": "draw",
+          "version": 1,
+          "attributed": true
+        }
+      ],
+      "leaderboard": [
+        {
+          "state": "complete",
+          "leagueId": "a3300000-0000-4000-8000-000000000011",
+          "leaderboard": [
+            {
+              "id": "a3300000-0000-4000-8000-000000000101",
+              "rank": 1,
+              "wrong": 0,
+              "earned": 1,
+              "maximum": 1,
+              "pending": 0
+            },
+            {
+              "id": "a3300000-0000-4000-8000-000000000102",
+              "rank": 2,
+              "wrong": 1,
+              "earned": 0,
+              "maximum": 0,
+              "pending": 0
+            }
+          ]
+        },
+        {
+          "state": "locked",
+          "leagueId": "a3300000-0000-4000-8000-000000000012",
+          "leaderboard": []
+        },
+        {
+          "state": "locked",
+          "leagueId": "a3300000-0000-4000-8000-000000000013",
+          "leaderboard": []
+        }
+      ],
+      "ingestion_runs": 6,
+      "contest_results": 1,
+      "ingestion_quarantine": 1,
+      "provider_entity_refs": 5,
+      "notification_attempts": 0,
+      "provider_observations": 4,
+      "event_provider_attempts": 5,
+      "provider_rate_budget_reservations": 6
+    }
+  },
+  "bdl-cursor-failure": {
+    "database": "bracket_bdl_vertical_c598fdbc9833",
+    "command": "docker exec -i supabase_db_bracket-fyi psql -X -U postgres -d bracket_bdl_vertical_c598fdbc9833 -Atq -v ON_ERROR_STOP=1 < inspection.sql",
+    "snapshot": {
+      "runs": [
+        {
+          "status": "canceled",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "failed",
+          "metadata": {
+            "reason": "invalid_cursor",
+            "reviewRequired": true
+          },
+          "errorClass": "provider:invalid_response"
+        }
+      ],
+      "budget": {
+        "limit": 5,
+        "remaining": 3
+      },
+      "control": {
+        "stopped": true,
+        "realSends": false,
+        "notifications": false
+      },
+      "results": null,
+      "leaderboard": [
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000011",
+          "leaderboard": []
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000012",
+          "leaderboard": []
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000013",
+          "leaderboard": []
+        }
+      ],
+      "ingestion_runs": 2,
+      "contest_results": 0,
+      "ingestion_quarantine": 0,
+      "provider_entity_refs": 5,
+      "notification_attempts": 0,
+      "provider_observations": 0,
+      "event_provider_attempts": 1,
+      "provider_rate_budget_reservations": 2
+    }
+  },
+  "bdl-budget-failure": {
+    "database": "bracket_bdl_vertical_696255ecf0d4",
+    "command": "docker exec -i supabase_db_bracket-fyi psql -X -U postgres -d bracket_bdl_vertical_696255ecf0d4 -Atq -v ON_ERROR_STOP=1 < inspection.sql",
+    "snapshot": {
+      "runs": [
+        {
+          "status": "canceled",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "partial",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "failed",
+          "metadata": {
+            "reason": "unmapped_game",
+            "rowIndex": 0,
+            "fetchedCount": 1,
+            "reviewRequired": true
+          },
+          "errorClass": "provider:invalid_response"
+        },
+        {
+          "status": "rate_limited",
+          "metadata": {},
+          "errorClass": null
+        }
+      ],
+      "budget": {
+        "limit": 5,
+        "remaining": 0
+      },
+      "control": {
+        "stopped": true,
+        "realSends": false,
+        "notifications": false
+      },
+      "results": [
+        {
+          "winner": "b4400000-0000-4000-8000-000000000007",
+          "outcome": "winner",
+          "version": 1,
+          "attributed": true
+        }
+      ],
+      "leaderboard": [
+        {
+          "state": "complete",
+          "leagueId": "b4400000-0000-4000-8000-000000000011",
+          "leaderboard": [
+            {
+              "id": "b4400000-0000-4000-8000-000000000101",
+              "rank": 1,
+              "wrong": 0,
+              "earned": 1,
+              "maximum": 1,
+              "pending": 0
+            },
+            {
+              "id": "b4400000-0000-4000-8000-000000000102",
+              "rank": 2,
+              "wrong": 1,
+              "earned": 0,
+              "maximum": 0,
+              "pending": 0
+            }
+          ]
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000012",
+          "leaderboard": []
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000013",
+          "leaderboard": []
+        }
+      ],
+      "ingestion_runs": 6,
+      "contest_results": 1,
+      "ingestion_quarantine": 1,
+      "provider_entity_refs": 5,
+      "notification_attempts": 0,
+      "provider_observations": 4,
+      "event_provider_attempts": 4,
+      "provider_rate_budget_reservations": 5
+    }
+  },
+  "bdl-final": {
+    "database": "bracket_bdl_vertical_d8f188e9660e",
+    "command": "docker exec -i supabase_db_bracket-fyi psql -X -U postgres -d bracket_bdl_vertical_d8f188e9660e -Atq -v ON_ERROR_STOP=1 < inspection.sql",
+    "snapshot": {
+      "runs": [
+        {
+          "status": "canceled",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "succeeded",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "partial",
+          "metadata": {},
+          "errorClass": null
+        },
+        {
+          "status": "failed",
+          "metadata": {
+            "reason": "unmapped_game",
+            "rowIndex": 0,
+            "fetchedCount": 1,
+            "reviewRequired": true
+          },
+          "errorClass": "provider:invalid_response"
+        },
+        {
+          "status": "failed",
+          "metadata": {},
+          "errorClass": "provider:authentication"
+        }
+      ],
+      "budget": {
+        "limit": 6,
+        "remaining": 0
+      },
+      "control": {
+        "stopped": true,
+        "realSends": false,
+        "notifications": false
+      },
+      "results": [
+        {
+          "winner": "b4400000-0000-4000-8000-000000000007",
+          "outcome": "winner",
+          "version": 1,
+          "attributed": true
+        }
+      ],
+      "leaderboard": [
+        {
+          "state": "complete",
+          "leagueId": "b4400000-0000-4000-8000-000000000011",
+          "leaderboard": [
+            {
+              "id": "b4400000-0000-4000-8000-000000000101",
+              "rank": 1,
+              "wrong": 0,
+              "earned": 1,
+              "maximum": 1,
+              "pending": 0
+            },
+            {
+              "id": "b4400000-0000-4000-8000-000000000102",
+              "rank": 2,
+              "wrong": 1,
+              "earned": 0,
+              "maximum": 0,
+              "pending": 0
+            }
+          ]
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000012",
+          "leaderboard": []
+        },
+        {
+          "state": "locked",
+          "leagueId": "b4400000-0000-4000-8000-000000000013",
+          "leaderboard": []
+        }
+      ],
+      "ingestion_runs": 6,
+      "contest_results": 1,
+      "ingestion_quarantine": 1,
+      "provider_entity_refs": 5,
+      "notification_attempts": 0,
+      "provider_observations": 4,
+      "event_provider_attempts": 5,
+      "provider_rate_budget_reservations": 6
+    }
+  }
+}

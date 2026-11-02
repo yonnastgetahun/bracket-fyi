@@ -1,5 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
+import {
+  organizerApiCookieName,
+  organizerApiCookieOptions,
+} from "@/lib/auth/organizer-cookie";
 
 // Cookie names — one per token type, path-scoped to /l/[league_id]
 const COOKIE_PARTICIPANT = "bfyi_participant";
@@ -10,9 +14,9 @@ const COOKIE_ORGANIZER = "bfyi_organizer";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// Edge-safe Supabase client using service role.
-// Created per-request (no persistent session in Edge Runtime).
-function getEdgeClient() {
+// Server-side Supabase client using the service role.
+// Created per request with no persistent session.
+function getProxyClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
@@ -58,7 +62,7 @@ async function handleMagicToken(
   }
 
   // First visit: validate against DB
-  const { data, error } = await getEdgeClient()
+  const { data, error } = await getProxyClient()
     .from("participants")
     .select("id")
     .eq("magic_token", magicToken)
@@ -99,7 +103,7 @@ async function handleJoinToken(
     }
 
     // Validate against DB
-    const { data, error } = await getEdgeClient()
+    const { data, error } = await getProxyClient()
       .from("leagues")
       .select("id")
       .eq("join_token", joinToken)
@@ -153,7 +157,7 @@ async function handleOrganizerToken(
     }
 
     // Validate against DB
-    const { data, error } = await getEdgeClient()
+    const { data, error } = await getProxyClient()
       .from("leagues")
       .select("id")
       .eq("organizer_token", organizerToken)
@@ -173,6 +177,11 @@ async function handleOrganizerToken(
       `${leagueId}:${organizerToken}`,
       cookieOpts(leagueId)
     );
+    response.cookies.set(
+      organizerApiCookieName(leagueId),
+      organizerToken,
+      organizerApiCookieOptions()
+    );
     return response;
   }
 
@@ -180,9 +189,15 @@ async function handleOrganizerToken(
   const cookieValue = request.cookies.get(COOKIE_ORGANIZER)?.value;
   if (cookieValue?.startsWith(`${leagueId}:`)) {
     const token = cookieValue.split(":").slice(1).join(":");
-    return NextResponse.next({
+    const response = NextResponse.next({
       request: { headers: withHeader(request, "x-organizer-token", token) },
     });
+    response.cookies.set(
+      organizerApiCookieName(leagueId),
+      token,
+      organizerApiCookieOptions()
+    );
+    return response;
   }
 
   // No organizer credentials — 403
@@ -190,9 +205,9 @@ async function handleOrganizerToken(
 }
 
 // ============================================================
-// Main middleware
+// Main proxy
 // ============================================================
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
   // Extract league_id from /l/[league_id]/...

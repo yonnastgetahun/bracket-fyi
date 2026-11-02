@@ -1,0 +1,3 @@
+-- Intentionally empty.
+-- Catalog fixtures remain opt-in under supabase/seeds/ so a local reset does not
+-- create product data implicitly.

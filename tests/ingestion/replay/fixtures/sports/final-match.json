@@ -1,0 +1,61 @@
+{
+  "observations": [
+    {
+      "entityKind": "event_entry",
+      "externalId": "sports-entry-a",
+      "providerRevision": "sports-entry-a-1",
+      "providerUpdatedAt": "2026-10-08T16:00:00Z",
+      "observedAt": "2026-10-08T16:01:00Z",
+      "completeness": "full",
+      "sanitizedPayload": { "fixture": "synthetic-sports", "entry": "a" },
+      "data": {
+        "eventEditionExternalId": "sports-edition",
+        "competitorExternalId": "sports-team-a",
+        "role": "team",
+        "status": "confirmed",
+        "metadata": { "synthetic": true },
+        "seed": 1
+      }
+    },
+    {
+      "entityKind": "event_entry",
+      "externalId": "sports-entry-b",
+      "providerRevision": "sports-entry-b-1",
+      "providerUpdatedAt": "2026-10-08T16:00:00Z",
+      "observedAt": "2026-10-08T16:02:00Z",
+      "completeness": "full",
+      "sanitizedPayload": { "fixture": "synthetic-sports", "entry": "b" },
+      "data": {
+        "eventEditionExternalId": "sports-edition",
+        "competitorExternalId": "sports-team-b",
+        "role": "team",
+        "status": "confirmed",
+        "metadata": { "synthetic": true },
+        "seed": 2
+      }
+    },
+    {
+      "entityKind": "result",
+      "externalId": "sports-final",
+      "providerRevision": "sports-final-1",
+      "providerUpdatedAt": "2026-10-08T18:00:00Z",
+      "observedAt": "2026-10-08T18:01:00Z",
+      "completeness": "full",
+      "sanitizedPayload": { "fixture": "synthetic-sports", "result": "final" },
+      "data": {
+        "eventEditionExternalId": "sports-edition",
+        "contestExternalId": "sports-final",
+        "resultStatus": "final",
+        "outcomeType": "winner",
+        "winnerEventEntryExternalId": "sports-entry-a",
+        "resultData": { "fixture": "synthetic-sports" },
+        "score": { "home": 2, "away": 1 },
+        "providerEffectiveAt": "2026-10-08T18:00:00Z"
+      }
+    }
+  ],
+  "fetchedCount": 3,
+  "receivedAt": "2026-10-08T18:02:00Z",
+  "nextCursor": { "syntheticPage": 2 },
+  "etag": "synthetic-sports-etag"
+}

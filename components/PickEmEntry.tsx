@@ -131,7 +131,7 @@ export default function PickEmEntry({
         <div className="max-w-sm w-full space-y-6">
           <div className="text-center space-y-2">
             <div className="text-4xl">✓</div>
-            <h1 className="font-display text-2xl text-primary">You're in!</h1>
+            <h1 className="font-display text-2xl text-primary">You&apos;re in!</h1>
             <p className="text-secondary text-sm">
               {emoji ? `${emoji} ` : ""}
               {displayName}
@@ -343,8 +343,8 @@ export default function PickEmEntry({
         })}
       </div>
 
-      {/* Fixed bottom CTA */}
-      <div className="fixed bottom-0 left-0 right-0 bg-canvas/95 backdrop-blur border-t border-border px-4 pt-3 pb-6">
+      {/* Reserve the league layout’s 56px tab bar below this fixed CTA. */}
+      <div className="fixed bottom-14 left-0 right-0 bg-canvas/95 backdrop-blur border-t border-border px-4 pt-3 pb-6">
         <div className="max-w-sm mx-auto">
           <Button
             className="w-full py-3"

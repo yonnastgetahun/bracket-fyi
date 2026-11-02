@@ -1,0 +1,648 @@
+{
+  "database": "bracket_db38_1793407089368602000",
+  "container": "supabase_db_bracket-fyi",
+  "binding": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+  "edition": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+  "stamp": "0e8f7010-5994-4a6c-9c99-64c136111df3",
+  "safety": "true:false:false",
+  "notificationAttempts": "0",
+  "providerAttempts": "0",
+  "checkpoints": [
+    "real adapter \u2192 orchestrator \u2192 SQL evidence/quarantine/failed ledger",
+    "immutable UPDATE and DELETE trigger rejects owner writes; row byte-equivalent",
+    "same-run exact replay immutable/deduplicated; fresh run owns separate witness",
+    "actual SQL 42501 at each persistence RPC; explicit failed ledger; evidence-before-quarantine retry repaired",
+    "valid prefix never projected; zero canonical IDs/contests/results/checkpoints; raw and secret absent"
+  ],
+  "sqlFailures": [
+    {
+      "rpc": "record_provider_observation",
+      "sqlstate": "42501"
+    },
+    {
+      "rpc": "open_ingestion_quarantine",
+      "sqlstate": "42501"
+    }
+  ],
+  "rpcNames": [
+    "claim_manual_ingestion_run",
+    "start_ingestion_run",
+    "reserve_provider_budget",
+    "record_provider_observation",
+    "open_ingestion_quarantine",
+    "finish_ingestion_run",
+    "record_provider_observation",
+    "open_ingestion_quarantine",
+    "claim_manual_ingestion_run",
+    "start_ingestion_run",
+    "reserve_provider_budget",
+    "record_provider_observation",
+    "open_ingestion_quarantine",
+    "finish_ingestion_run",
+    "claim_manual_ingestion_run",
+    "start_ingestion_run",
+    "reserve_provider_budget",
+    "record_provider_observation",
+    "finish_ingestion_run",
+    "claim_manual_ingestion_run",
+    "start_ingestion_run",
+    "reserve_provider_budget",
+    "record_provider_observation",
+    "open_ingestion_quarantine",
+    "finish_ingestion_run",
+    "record_provider_observation",
+    "open_ingestion_quarantine"
+  ],
+  "hashes": {
+    "lib/ingestion/providers/football-data.ts": "2d6332b2caca70886bf9b69ec1b296fe1bf9b51670333f28d9ca4489816b022a",
+    "lib/ingestion/quarantine/adapter-rejection.ts": "df846687866ba046fc3434e630a11d2baecea0ae4de52f3e598923030003a0e7",
+    "lib/ingestion/quarantine/repository.ts": "ec9856563831cf702583f4c30ba3334936dfa807317f1acdf8f35fd94ece3a77",
+    "lib/ingestion/evidence/repository.ts": "0363ed3e54e4d24aa4d1289987bf28a8dfbc582d34bf736f667cea25b2664ded",
+    "lib/ingestion/orchestrator/orchestrator.ts": "09261f99998418bc3104908f3ea56922dee6a3ae9780c8cf34b071ee79717ec9",
+    "lib/ingestion/orchestrator/run-ledger-repository.ts": "4ecfe470da3795abd79a4fc20c28282f91358e68038423d25b2bc0da96e23aa9",
+    "tests/events/provider-fd04-quarantine-db.test.ts": "ba0531586332c3e9cfa50124a10956454c74baed67869889d1beeafcdb2ec0aa"
+  },
+  "limitation": "Synthetic in-memory fetch and admission controls; actual SQL RPCs via service-role psql, not PostgREST or production attempt admission.",
+  "rows": {
+    "provider_observations": [
+      {
+        "id": "1f6e69d4-2c00-4e3b-b415-78f543e4b0eb",
+        "metadata": {
+          "adapterKey": "football-data",
+          "completeness": "partial",
+          "semanticHash": "4828f508cb7a2b275fa294d7bea696a5918398d5abbab4eb56255060fd0f0c4f",
+          "contractVersion": "adapter-rejection-v1",
+          "normalizedEntity": {
+            "scope": "entire_batch",
+            "reason": "unmapped_match",
+            "matchId": "9002",
+            "witness": "first_rejected_row",
+            "rowIndex": 1,
+            "awayTeamId": "202",
+            "homeTeamId": "101",
+            "disposition": "rejected",
+            "fetchedCount": 2,
+            "reviewRequired": true
+          },
+          "adapterConfigVersion": 1,
+          "normalizationPolicyVersion": "identity-normalization-v1"
+        },
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:12.036889+00:00",
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "received_at": "2026-10-31T00:57:11.851+00:00",
+        "payload_hash": "9d848e86ff0a180fa32caa31b6b881301f3cb4ea8b92d74ca2dee2113300b64c",
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "ingestion_run_id": "39fd5aba-b736-46a3-8efa-5a1f15d67452",
+        "provider_revision": null,
+        "sanitized_payload": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "external_object_id": "39fd5aba-b736-46a3-8efa-5a1f15d67452:page:0:row:1",
+        "provider_updated_at": null,
+        "external_object_kind": "adapter_rejection",
+        "sanitization_version": 1
+      },
+      {
+        "id": "cae0b9b5-e582-4038-9c47-bbd77c3c65cd",
+        "metadata": {
+          "adapterKey": "football-data",
+          "completeness": "partial",
+          "semanticHash": "4828f508cb7a2b275fa294d7bea696a5918398d5abbab4eb56255060fd0f0c4f",
+          "contractVersion": "adapter-rejection-v1",
+          "normalizedEntity": {
+            "scope": "entire_batch",
+            "reason": "unmapped_match",
+            "matchId": "9002",
+            "witness": "first_rejected_row",
+            "rowIndex": 1,
+            "awayTeamId": "202",
+            "homeTeamId": "101",
+            "disposition": "rejected",
+            "fetchedCount": 2,
+            "reviewRequired": true
+          },
+          "adapterConfigVersion": 1,
+          "normalizationPolicyVersion": "identity-normalization-v1"
+        },
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:13.771881+00:00",
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "received_at": "2026-10-31T00:57:13.724+00:00",
+        "payload_hash": "9d848e86ff0a180fa32caa31b6b881301f3cb4ea8b92d74ca2dee2113300b64c",
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "ingestion_run_id": "e84aa5be-1adf-4816-b66d-46a292fe698a",
+        "provider_revision": null,
+        "sanitized_payload": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "external_object_id": "e84aa5be-1adf-4816-b66d-46a292fe698a:page:0:row:1",
+        "provider_updated_at": null,
+        "external_object_kind": "adapter_rejection",
+        "sanitization_version": 1
+      },
+      {
+        "id": "e148402b-3ecd-41a2-b1c8-7329033d0db5",
+        "metadata": {
+          "adapterKey": "football-data",
+          "completeness": "partial",
+          "semanticHash": "4828f508cb7a2b275fa294d7bea696a5918398d5abbab4eb56255060fd0f0c4f",
+          "contractVersion": "adapter-rejection-v1",
+          "normalizedEntity": {
+            "scope": "entire_batch",
+            "reason": "unmapped_match",
+            "matchId": "9002",
+            "witness": "first_rejected_row",
+            "rowIndex": 1,
+            "awayTeamId": "202",
+            "homeTeamId": "101",
+            "disposition": "rejected",
+            "fetchedCount": 2,
+            "reviewRequired": true
+          },
+          "adapterConfigVersion": 1,
+          "normalizationPolicyVersion": "identity-normalization-v1"
+        },
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:09.969056+00:00",
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "received_at": "2026-10-31T00:57:09.923+00:00",
+        "payload_hash": "9d848e86ff0a180fa32caa31b6b881301f3cb4ea8b92d74ca2dee2113300b64c",
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "ingestion_run_id": "3f70769b-5140-4bf3-97ec-8a2d2b08ce17",
+        "provider_revision": null,
+        "sanitized_payload": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "external_object_id": "3f70769b-5140-4bf3-97ec-8a2d2b08ce17:page:0:row:1",
+        "provider_updated_at": null,
+        "external_object_kind": "adapter_rejection",
+        "sanitization_version": 1
+      }
+    ],
+    "ingestion_quarantine": [
+      {
+        "id": "708fe7a6-af98-42a6-af5d-1f7d2a7e641d",
+        "status": "open",
+        "details": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "severity": "blocking",
+        "opened_at": "2026-10-31T00:57:10.041346+00:00",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:10.041346+00:00",
+        "issue_code": "mapping_missing",
+        "updated_at": "2026-10-31T00:57:10.041346+00:00",
+        "resolved_at": null,
+        "resolved_by": null,
+        "candidate_ids": [],
+        "observation_id": "e148402b-3ecd-41a2-b1c8-7329033d0db5",
+        "resolution_note": null,
+        "ingestion_run_id": "3f70769b-5140-4bf3-97ec-8a2d2b08ce17",
+        "resolution_action": null,
+        "external_entity_id": null,
+        "external_entity_kind": null
+      },
+      {
+        "id": "77a4bd50-027a-436a-9ec6-8591a0d491b9",
+        "status": "open",
+        "details": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "severity": "blocking",
+        "opened_at": "2026-10-31T00:57:12.246758+00:00",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:12.246758+00:00",
+        "issue_code": "mapping_missing",
+        "updated_at": "2026-10-31T00:57:12.246758+00:00",
+        "resolved_at": null,
+        "resolved_by": null,
+        "candidate_ids": [],
+        "observation_id": "1f6e69d4-2c00-4e3b-b415-78f543e4b0eb",
+        "resolution_note": null,
+        "ingestion_run_id": "39fd5aba-b736-46a3-8efa-5a1f15d67452",
+        "resolution_action": null,
+        "external_entity_id": null,
+        "external_entity_kind": null
+      },
+      {
+        "id": "adb15617-2971-4e6c-ae0a-2067043ae7b7",
+        "status": "open",
+        "details": {
+          "scope": "entire_batch",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "witness": "first_rejected_row",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "disposition": "rejected",
+          "fetchedCount": 2,
+          "reviewRequired": true
+        },
+        "severity": "blocking",
+        "opened_at": "2026-10-31T00:57:14.406852+00:00",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "created_at": "2026-10-31T00:57:14.406852+00:00",
+        "issue_code": "mapping_missing",
+        "updated_at": "2026-10-31T00:57:14.406852+00:00",
+        "resolved_at": null,
+        "resolved_by": null,
+        "candidate_ids": [],
+        "observation_id": "cae0b9b5-e582-4038-9c47-bbd77c3c65cd",
+        "resolution_note": null,
+        "ingestion_run_id": "e84aa5be-1adf-4816-b66d-46a292fe698a",
+        "resolution_action": null,
+        "external_entity_id": null,
+        "external_entity_kind": null
+      }
+    ],
+    "ingestion_runs": [
+      {
+        "id": "39fd5aba-b736-46a3-8efa-5a1f15d67452",
+        "status": "failed",
+        "metadata": {
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "fetchedCount": 2,
+          "reviewEvidence": {
+            "scope": "entire_batch",
+            "status": "open",
+            "witness": "first_rejected_row",
+            "issueCode": "mapping_missing",
+            "quarantineId": "77a4bd50-027a-436a-9ec6-8591a0d491b9",
+            "observationId": "1f6e69d4-2c00-4e3b-b415-78f543e4b0eb"
+          },
+          "reviewRequired": true
+        },
+        "claim_key": "v1:manual:e66aca45-6862-4b5c-96be-3c95d43ee188:g2",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "claimed_by": "fd04-synthetic",
+        "created_at": "2026-10-31T00:57:11.203923+00:00",
+        "started_at": "2026-10-31T00:57:11.422445+00:00",
+        "error_class": "provider:invalid_response",
+        "finished_at": "2026-10-31T00:57:12.379769+00:00",
+        "http_status": null,
+        "lease_token": null,
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "retry_index": 0,
+        "cursor_after": null,
+        "failed_count": 0,
+        "trigger_kind": "manual",
+        "cursor_before": {},
+        "error_message": "Provider execution failed: invalid_response",
+        "fetched_count": 0,
+        "next_retry_at": null,
+        "skipped_count": 0,
+        "retry_after_at": null,
+        "projected_count": 0,
+        "retry_of_run_id": null,
+        "unchanged_count": 0,
+        "claim_generation": 2,
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "lease_expires_at": null,
+        "normalized_count": 0,
+        "rate_limit_limit": null,
+        "claim_request_key": "manual:v1:e66aca45-6862-4b5c-96be-3c95d43ee188:fd04-0e8f7010-5994-4a6c-9c99-64c136111df3-cross-run",
+        "quarantined_count": 0,
+        "rate_limit_reset_at": null,
+        "rate_limit_remaining": null
+      },
+      {
+        "id": "3f70769b-5140-4bf3-97ec-8a2d2b08ce17",
+        "status": "failed",
+        "metadata": {
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "fetchedCount": 2,
+          "reviewEvidence": {
+            "scope": "entire_batch",
+            "status": "open",
+            "witness": "first_rejected_row",
+            "issueCode": "mapping_missing",
+            "quarantineId": "708fe7a6-af98-42a6-af5d-1f7d2a7e641d",
+            "observationId": "e148402b-3ecd-41a2-b1c8-7329033d0db5"
+          },
+          "reviewRequired": true
+        },
+        "claim_key": "v1:manual:e66aca45-6862-4b5c-96be-3c95d43ee188:g1",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "claimed_by": "fd04-synthetic",
+        "created_at": "2026-10-31T00:57:09.735918+00:00",
+        "started_at": "2026-10-31T00:57:09.82772+00:00",
+        "error_class": "provider:invalid_response",
+        "finished_at": "2026-10-31T00:57:10.102082+00:00",
+        "http_status": null,
+        "lease_token": null,
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "retry_index": 0,
+        "cursor_after": null,
+        "failed_count": 0,
+        "trigger_kind": "manual",
+        "cursor_before": {},
+        "error_message": "Provider execution failed: invalid_response",
+        "fetched_count": 0,
+        "next_retry_at": null,
+        "skipped_count": 0,
+        "retry_after_at": null,
+        "projected_count": 0,
+        "retry_of_run_id": null,
+        "unchanged_count": 0,
+        "claim_generation": 1,
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "lease_expires_at": null,
+        "normalized_count": 0,
+        "rate_limit_limit": null,
+        "claim_request_key": "manual:v1:e66aca45-6862-4b5c-96be-3c95d43ee188:fd04-0e8f7010-5994-4a6c-9c99-64c136111df3-first",
+        "quarantined_count": 0,
+        "rate_limit_reset_at": null,
+        "rate_limit_remaining": null
+      },
+      {
+        "id": "69121e10-91d5-413d-9299-8dcbf824a424",
+        "status": "failed",
+        "metadata": {
+          "stage": "adapter_quarantine",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "fetchedCount": 2,
+          "reviewRequired": true,
+          "reviewPersistenceFailed": true
+        },
+        "claim_key": "v1:manual:e66aca45-6862-4b5c-96be-3c95d43ee188:g3",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "claimed_by": "fd04-synthetic",
+        "created_at": "2026-10-31T00:57:12.700624+00:00",
+        "started_at": "2026-10-31T00:57:12.788897+00:00",
+        "error_class": "system:adapter_quarantine_failed",
+        "finished_at": "2026-10-31T00:57:13.108599+00:00",
+        "http_status": null,
+        "lease_token": null,
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "retry_index": 0,
+        "cursor_after": null,
+        "failed_count": 0,
+        "trigger_kind": "manual",
+        "cursor_before": {},
+        "error_message": "Ingestion execution failed: adapter_quarantine_failed",
+        "fetched_count": 0,
+        "next_retry_at": null,
+        "skipped_count": 0,
+        "retry_after_at": null,
+        "projected_count": 0,
+        "retry_of_run_id": null,
+        "unchanged_count": 0,
+        "claim_generation": 3,
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "lease_expires_at": null,
+        "normalized_count": 0,
+        "rate_limit_limit": null,
+        "claim_request_key": "manual:v1:e66aca45-6862-4b5c-96be-3c95d43ee188:fd04-0e8f7010-5994-4a6c-9c99-64c136111df3-evidence-denied",
+        "quarantined_count": 0,
+        "rate_limit_reset_at": null,
+        "rate_limit_remaining": null
+      },
+      {
+        "id": "e84aa5be-1adf-4816-b66d-46a292fe698a",
+        "status": "failed",
+        "metadata": {
+          "stage": "adapter_quarantine",
+          "reason": "unmapped_match",
+          "matchId": "9002",
+          "rowIndex": 1,
+          "awayTeamId": "202",
+          "homeTeamId": "101",
+          "fetchedCount": 2,
+          "reviewRequired": true,
+          "reviewPersistenceFailed": true
+        },
+        "claim_key": "v1:manual:e66aca45-6862-4b5c-96be-3c95d43ee188:g4",
+        "binding_id": "e66aca45-6862-4b5c-96be-3c95d43ee188",
+        "claimed_by": "fd04-synthetic",
+        "created_at": "2026-10-31T00:57:13.558003+00:00",
+        "started_at": "2026-10-31T00:57:13.636308+00:00",
+        "error_class": "system:adapter_quarantine_failed",
+        "finished_at": "2026-10-31T00:57:13.966653+00:00",
+        "http_status": null,
+        "lease_token": null,
+        "provider_id": "a0a93edb-e4c4-45ee-ae4d-d3f21f0d55a3",
+        "retry_index": 0,
+        "cursor_after": null,
+        "failed_count": 0,
+        "trigger_kind": "manual",
+        "cursor_before": {},
+        "error_message": "Ingestion execution failed: adapter_quarantine_failed",
+        "fetched_count": 0,
+        "next_retry_at": null,
+        "skipped_count": 0,
+        "retry_after_at": null,
+        "projected_count": 0,
+        "retry_of_run_id": null,
+        "unchanged_count": 0,
+        "claim_generation": 4,
+        "event_edition_id": "107d7388-ea3e-4e31-8389-bd96c3bb5387",
+        "lease_expires_at": null,
+        "normalized_count": 0,
+        "rate_limit_limit": null,
+        "claim_request_key": "manual:v1:e66aca45-6862-4b5c-96be-3c95d43ee188:fd04-0e8f7010-5994-4a6c-9c99-64c136111df3-quarantine-denied",
+        "quarantined_count": 0,
+        "rate_limit_reset_at": null,
+        "rate_limit_remaining": null
+      }
+    ]
+  },
+  "sql_function_definitions_sha256": {
+    "record_provider_observation": "6906bd573a1193a6f145324143153747e3be5f42d6112910ed2d114e38cc9ef9",
+    "open_ingestion_quarantine": "6a7dbb6f876f21d9c8dee21238b5cdbc5edf92cd8279662c6eb23007b0e6cb93",
+    "start_ingestion_run": "300c9375828a0aa704d240e156a4fcfbb4a161f508ea37e17d9d54d10f8e25e1",
+    "finish_ingestion_run": "3a23c5fc67c33c560bddfe500e2ca61a7a37b2d304f07d85c74580ed1cedcd96",
+    "commit_event_series": "1f03af7b5419cb76b4fe59db56ac6ec0b63c6fafe0e110719244e9809a9ccd8f"
+  },
+  "server_version": "17.6",
+  "baseline": {
+    "docs/architecture/bracket-fyi-master-spec.md": {
+      "expected": "51088a545016d59b8c1519bbd23aeea07bf637d9760951b3b4ef2577d2bc2a3b",
+      "actual": "51088a545016d59b8c1519bbd23aeea07bf637d9760951b3b4ef2577d2bc2a3b"
+    },
+    "docs/architecture/bracket-fyi-spec-v1.0.md": {
+      "expected": "4f3bee14261669907c55d2f3e756d2371b60ae19fbd7723763086a33af9cd7f2",
+      "actual": "4f3bee14261669907c55d2f3e756d2371b60ae19fbd7723763086a33af9cd7f2"
+    },
+    "docs/architecture/implementation/competitor-stage-coverage-20261027.md": {
+      "expected": "16067657804d0a7331bdbece3f237bbbab16db21fe71aed305750ac382b78c5f",
+      "actual": "16067657804d0a7331bdbece3f237bbbab16db21fe71aed305750ac382b78c5f"
+    },
+    "docs/architecture/implementation/full-master-architecture-review.md": {
+      "expected": "b930b1a66256bbe43e89e2a0aad0fbd41fb0f9216057ecd8d81b9f003cbd4e54",
+      "actual": "b930b1a66256bbe43e89e2a0aad0fbd41fb0f9216057ecd8d81b9f003cbd4e54"
+    },
+    "docs/architecture/implementation/full-master-product-review.md": {
+      "expected": "54d6569192f4d08cfb28aea0aebb1b41b1403b497bc0fef2274c212251002730",
+      "actual": "54d6569192f4d08cfb28aea0aebb1b41b1403b497bc0fef2274c212251002730"
+    },
+    "docs/architecture/implementation/full-master-security-review.md": {
+      "expected": "00b3d7bef8eeef67e759247332e8bdb69b24dd92b4caa63db08004041529dd11",
+      "actual": "00b3d7bef8eeef67e759247332e8bdb69b24dd92b4caa63db08004041529dd11"
+    },
+    "docs/architecture/implementation/full-master-spec-review.md": {
+      "expected": "7a9cd58e65803ea3a2f5a77e4748dc231a3648279ac357bea620f7ec6513de47",
+      "actual": "7a9cd58e65803ea3a2f5a77e4748dc231a3648279ac357bea620f7ec6513de47"
+    },
+    "docs/architecture/implementation/full-master-verification-review.md": {
+      "expected": "6027fd280c5d87a237b48193ed540fd7a6a30a9034a55af26c738e4510faeef3",
+      "actual": "6027fd280c5d87a237b48193ed540fd7a6a30a9034a55af26c738e4510faeef3"
+    },
+    "docs/architecture/implementation/full-roadmap-execution-contract.md": {
+      "expected": "218ab6f74fd35c824fe6536a533e83735db2b4630ef95b585d41f927b072cb10",
+      "actual": "218ab6f74fd35c824fe6536a533e83735db2b4630ef95b585d41f927b072cb10"
+    },
+    "docs/architecture/implementation/full-roadmap-issue-reconciliation.md": {
+      "expected": "c80ed652a681c37c168bb05b67150660e9dbd6291684f661f2433a265fa593eb",
+      "actual": "c80ed652a681c37c168bb05b67150660e9dbd6291684f661f2433a265fa593eb"
+    },
+    "docs/architecture/implementation/full-roadmap-provider-contracts.md": {
+      "expected": "4a5783d9cb851bc1022c337ed71e624a554aeab44fa6990f4263c48c26c1afb3",
+      "actual": "4a5783d9cb851bc1022c337ed71e624a554aeab44fa6990f4263c48c26c1afb3"
+    },
+    "docs/architecture/implementation/full-roadmap-template-manifests.md": {
+      "expected": "de4dc2073125579e2649c94305e9ec1c05a96729b4f8af3c267b349125cf97d6",
+      "actual": "de4dc2073125579e2649c94305e9ec1c05a96729b4f8af3c267b349125cf97d6"
+    },
+    "docs/architecture/implementation/m3-spec-first-pilot.md": {
+      "expected": "4a59afa95e6419cfe127e5c4cbcd122c8b691e597b07daf41f8c97a1598ea79e",
+      "actual": "4a59afa95e6419cfe127e5c4cbcd122c8b691e597b07daf41f8c97a1598ea79e"
+    },
+    "docs/architecture/implementation/m3-spec-review.md": {
+      "expected": "00bd186f18890b3d2ce8590a7ef4e9b092b433b5afd413fde400f556bf2fbe81",
+      "actual": "00bd186f18890b3d2ce8590a7ef4e9b092b433b5afd413fde400f556bf2fbe81"
+    },
+    "docs/architecture/implementation/phase-2-orchestrated-execution-plan.md": {
+      "expected": "a0b2880c2ccc88620e947736fda4eb46a8cefa336268ca70a3d2537e18b6a5ae",
+      "actual": "a0b2880c2ccc88620e947736fda4eb46a8cefa336268ca70a3d2537e18b6a5ae"
+    },
+    "docs/architecture/implementation/ucl-observed-field-mapping.md": {
+      "expected": "9e5013233fbf1f3806738c667ac562d122e7cbd66277d24fbce3885308c928c8",
+      "actual": "9e5013233fbf1f3806738c667ac562d122e7cbd66277d24fbce3885308c928c8"
+    },
+    "docs/architecture/implementation/v1-architecture-review.md": {
+      "expected": "e9f3a0dea5a3caae13e5b5815bef1447428ce8d5901965268053ae40b6b5ed2a",
+      "actual": "e9f3a0dea5a3caae13e5b5815bef1447428ce8d5901965268053ae40b6b5ed2a"
+    },
+    "docs/architecture/implementation/v1-product-review.md": {
+      "expected": "c391db9cd578df8597ae81813ee2b90abea1807d9f4b8e16bdd3e81a57877ea0",
+      "actual": "c391db9cd578df8597ae81813ee2b90abea1807d9f4b8e16bdd3e81a57877ea0"
+    },
+    "docs/architecture/implementation/v1-security-review.md": {
+      "expected": "ca55c6f2a96bf02d74df932b3dbe37df40b81b35059c6ca1d2015ce06fda36f7",
+      "actual": "ca55c6f2a96bf02d74df932b3dbe37df40b81b35059c6ca1d2015ce06fda36f7"
+    },
+    "docs/architecture/implementation/v1-verification-review.md": {
+      "expected": "2dcea68de17911745c4dc15b415ea701e5e77f70c3312c67beeda614ec7a6d0a",
+      "actual": "2dcea68de17911745c4dc15b415ea701e5e77f70c3312c67beeda614ec7a6d0a"
+    },
+    "docs/case-studies/boyz-wc2026.md": {
+      "expected": "62a1c5aa1017df775051fdc34ca11025b072c4feeae5ac89215fd9e80c80b392",
+      "actual": "62a1c5aa1017df775051fdc34ca11025b072c4feeae5ac89215fd9e80c80b392"
+    },
+    "docs/architecture/tournament-ingestion-architecture-plan.md": {
+      "expected": "9f4fa71913a1d308d9ec62ebc0cdf14cb35b3867cd708adddf85dbbe2562bf6d",
+      "actual": "9f4fa71913a1d308d9ec62ebc0cdf14cb35b3867cd708adddf85dbbe2562bf6d"
+    },
+    "docs/architecture/tournament-ingestion-implementation-plan.md": {
+      "expected": "c3ef7665a04caa4700b946d3243df1d1a644e9014f13d894f06331125438910e",
+      "actual": "c3ef7665a04caa4700b946d3243df1d1a644e9014f13d894f06331125438910e"
+    },
+    "docs/architecture/tournament-ingestion-qa-plan.md": {
+      "expected": "320ea428548ff0ef6c3662687cc15fa67f5096210a9f8ee5e61f18cd0a80b3de",
+      "actual": "320ea428548ff0ef6c3662687cc15fa67f5096210a9f8ee5e61f18cd0a80b3de"
+    },
+    "docs/architecture/tournament-provider-and-event-roadmap.md": {
+      "expected": "60aab94c778d93793a6992354a7b8a48c37f7249713b68e1708348ee0b7589d4",
+      "actual": "60aab94c778d93793a6992354a7b8a48c37f7249713b68e1708348ee0b7589d4"
+    },
+    "docs/plans/2026-07-25-feat-p3b-push-notify-edge-function-pwa-nudge-plan.md": {
+      "expected": "42bffa55e52c531142221eff4a2e59d11f27d01600ef59cc9d117a6303e78a7e",
+      "actual": "42bffa55e52c531142221eff4a2e59d11f27d01600ef59cc9d117a6303e78a7e"
+    }
+  },
+  "verified_at": "2026-10-31T00:57:33.788446+00:00",
+  "test_command": "BRACKET_FD04_SQL_DB=bracket_db38_1793407089368602000 npm test -- tests/events/provider-fd04-quarantine-db.test.ts",
+  "checks": {
+    "sql_vitest": {
+      "files_passed": 1,
+      "tests_passed": 1,
+      "tests_skipped": 0,
+      "exit": 0,
+      "duration_ms": 6009
+    },
+    "typescript_exit": 0,
+    "scoped_eslint_exit": 0,
+    "baseline_matches": 26
+  },
+  "safety_closeout": "true:false:false:0:0",
+  "git_head": "3ca08fbd7d3cfa5266a2114ab3bb3f9f391d83e8",
+  "git_branch": "agent/bracket-roadmap-20261026",
+  "source_hashes_current": {
+    "lib/ingestion/providers/football-data.ts": "2d6332b2caca70886bf9b69ec1b296fe1bf9b51670333f28d9ca4489816b022a",
+    "lib/ingestion/quarantine/adapter-rejection.ts": "df846687866ba046fc3434e630a11d2baecea0ae4de52f3e598923030003a0e7",
+    "lib/ingestion/quarantine/repository.ts": "ec9856563831cf702583f4c30ba3334936dfa807317f1acdf8f35fd94ece3a77",
+    "lib/ingestion/evidence/repository.ts": "0363ed3e54e4d24aa4d1289987bf28a8dfbc582d34bf736f667cea25b2664ded",
+    "lib/ingestion/orchestrator/orchestrator.ts": "09261f99998418bc3104908f3ea56922dee6a3ae9780c8cf34b071ee79717ec9",
+    "lib/ingestion/orchestrator/run-ledger-repository.ts": "4ecfe470da3795abd79a4fc20c28282f91358e68038423d25b2bc0da96e23aa9",
+    "tests/events/provider-fd04-quarantine-db.test.ts": "ba0531586332c3e9cfa50124a10956454c74baed67869889d1beeafcdb2ec0aa"
+  }
+}
